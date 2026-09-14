@@ -1,0 +1,129 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    function currentUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function currentUserExists() {
+      return signedIn() && exists(currentUserPath());
+    }
+
+    function currentUserData() {
+      return get(currentUserPath()).data;
+    }
+
+    function activeUser() {
+      return currentUserExists() && currentUserData().active == true;
+    }
+
+    function isSuperAdmin() {
+      return activeUser() && currentUserData().role == "superadmin";
+    }
+
+    function isAdmin() {
+      return activeUser()
+        && (currentUserData().role == "superadmin"
+          || currentUserData().role == "admin");
+    }
+
+    function isBCN() {
+      return activeUser() && currentUserData().role == "bcn";
+    }
+
+    function canViewEvents() {
+      return isAdmin()
+        || (isBCN() && currentUserData().permissions.viewEvents == true);
+    }
+
+    function canViewLookup() {
+      return isAdmin()
+        || (isBCN() && currentUserData().permissions.viewLookup == true);
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow read: if isAdmin();
+
+      // SuperAdmin quản lý mọi vai trò.
+      // Admin chỉ được tạo/chỉnh tài khoản BCN, không tự nâng thành SuperAdmin/Admin.
+      allow create: if isSuperAdmin()
+        || (isAdmin() && request.resource.data.role == "bcn");
+
+      allow update: if isSuperAdmin()
+        || (isAdmin()
+          && resource.data.role == "bcn"
+          && request.resource.data.role == "bcn");
+
+      allow delete: if isSuperAdmin()
+        || (isAdmin() && resource.data.role == "bcn");
+    }
+
+    // Toàn bộ dữ liệu CLB dùng cho nhiều thiết bị.
+    match /clubState/{docId} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cổng tra cứu theo từng học kỳ.
+    match /publicLookupSemesters/{semesterId} {
+      allow get: if canViewLookup() || resource.data.enabled == true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /publicLookupSemesters/{semesterId}/members/{mssvKey} {
+      allow get: if canViewLookup()
+        || get(/databases/$(database)/documents/publicLookupSemesters/$(semesterId)).data.enabled == true;
+      allow list: if canViewLookup();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cổng sự kiện: cấu hình được đọc công khai chỉ khi đang mở.
+    match /eventPortals/{eventId} {
+      allow get: if isAdmin() || resource.data.isOpen == true;
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+
+      match /submissions/{submissionId} {
+        allow create: if
+          get(/databases/$(database)/documents/eventPortals/$(eventId)).data.isOpen == true
+          && request.resource.data.keys().hasOnly([
+            "eventId","semester","answers","submitterLabel","actionApplied","createdAt"
+          ])
+          && request.resource.data.eventId == eventId
+          && request.resource.data.actionApplied == false
+          && request.resource.data.createdAt == request.time;
+        allow read: if canViewEvents();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /members/{memberId} {
+      allow read: if isAdmin()
+        || (isBCN() && currentUserData().permissions.viewMembers == true);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /financeTransactions/{transactionId} {
+      allow read: if isAdmin()
+        || (isBCN() && currentUserData().permissions.viewFinance == true);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if activeUser();
+      allow update, delete: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

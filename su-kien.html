@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Our Stage - Cổng sự kiện</title>
+<link rel="icon" type="image/png" href="logo.png">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+:root{--burgundy:#70172d;--burgundy-dark:#4e0d1e;--soft:#f7e9ed;--line:#eadfe2}
+*{box-sizing:border-box}body{margin:0;background:#f7f3f4;color:#25191d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:760px;margin:40px auto;padding:20px}.head{background:#fff;border:1px solid var(--line);border-top:7px solid var(--burgundy);border-radius:18px;padding:24px;margin-bottom:14px}.brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:3px;font-size:11px}.brand img{width:58px;height:58px;object-fit:contain}.head h1{font-size:32px;margin:16px 0 8px}.head p{color:#74686c;line-height:1.55;margin:0}.field{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px}.field label{display:block;font-weight:750;margin-bottom:9px}.required{color:#a52240}.field input,.field textarea,.field select{width:100%;border:1px solid #ddcfd3;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.image-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px}.image-block h3{margin:0 0 8px}.image-block p{color:#74686c;line-height:1.5}.rich-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px;line-height:1.65}.rich-block h3{margin:0 0 10px}.choice-list{display:grid;gap:10px}.choice-row{display:flex;gap:9px;align-items:flex-start}.choice-row input{width:auto;margin-top:3px}.image-block img{display:block;max-width:100%;max-height:720px;object-fit:contain;margin:auto;border-radius:10px}.hint{font-size:11px;color:#7a7074;margin-top:7px}.btn{width:100%;border:0;border-radius:12px;background:var(--burgundy);color:#fff;font:inherit;font-weight:800;padding:14px;cursor:pointer}.btn:disabled{opacity:.6;cursor:not-allowed}.message{padding:18px;border-radius:14px;background:#fff;border:1px solid var(--line);line-height:1.5}.error{background:#fff2f4;color:#96243d;border-color:#efc5ce}.success{background:#f7e9ed;color:#5a1025}.file-name{font-size:12px;color:#6f6468;margin-top:6px}.closed{text-align:center;padding:40px}.progress{height:8px;background:#eee;border-radius:999px;overflow:hidden;margin-top:10px}.progress i{display:block;height:100%;background:var(--burgundy);width:0%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loading" class="message">Đang tải cổng sự kiện…</div>
+  <div id="closed" class="head closed" style="display:none">
+    <div class="brand"><img src="logo.png"><span>OUR STAGE</span></div>
+    <h1>Cổng sự kiện đã đóng</h1><p>Cổng này hiện không nhận thêm phản hồi.</p>
+  </div>
+  <div id="formView" style="display:none">
+    <div class="head">
+      <div class="brand"><img src="logo.png"><span>OUR STAGE</span></div>
+      <h1 id="title"></h1><p id="description"></p>
+    </div>
+    <form id="eventForm"></form>
+    <button id="submitBtn" class="btn">Gửi thông tin</button>
+    <div id="formError" class="message error" style="display:none;margin-top:12px"></div>
+  </div>
+  <div id="successView" class="head success" style="display:none">
+    <div class="brand"><img src="logo.png"><span>OUR STAGE</span></div>
+    <h1 id="successTitle"></h1><p id="successMessage"></p>
+  </div>
+</div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),$=s=>document.querySelector(s);
+const eventId=new URLSearchParams(location.search).get("event")||"";
+let eventConfig=null;
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function renderRichText(md){
+  let s=esc(md||"");
+  s=s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  s=s.replace(/\*(.+?)\*/g,"<em>$1</em>");
+  return s.replace(/\n/g,"<br>");
+}
+function safeName(n){return String(n||"file").replace(/[^a-zA-Z0-9._-]/g,"_")}
+async function init(){
+  if(!eventId){showClosed();return}
+  try{
+    const snap=await db.collection("eventPortals").doc(eventId).get();
+    if(!snap.exists||snap.data()?.isOpen!==true){showClosed();return}
+    eventConfig=snap.data();
+    $("#loading").style.display="none";$("#formView").style.display="block";
+    $("#title").textContent=eventConfig.title||"Cổng sự kiện";
+    $("#description").textContent=eventConfig.description||"";
+    renderFields();
+  }catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}
+}
+function showClosed(){$("#loading").style.display="none";$("#closed").style.display="block"}
+function renderFields(){
+  $("#eventForm").innerHTML=(eventConfig.fields||[]).map(f=>{
+    if(f.type==="content"){
+      return `<div class="rich-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}<div>${renderRichText(f.content||"")}</div></div>`;
+    }
+    if(f.type==="image"){
+      return `<div class="image-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}${f.caption?`<p>${esc(f.caption)}</p>`:""}${f.imageData?`<img src="${f.imageData}" alt="Hình ảnh sự kiện">`:""}</div>`;
+    }
+    const req=f.required?'<span class="required">*</span>':"";
+    let input="";
+    if(f.type==="textarea"){
+      input=`<textarea id="f_${f.id}" ${f.required?"required":""}></textarea>`;
+    }else if(f.type==="select"){
+      input=`<select id="f_${f.id}" ${f.required?"required":""}><option value="">-- Chọn --</option>${(f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
+    }else if(f.type==="radio"){
+      input=`<div class="choice-list">${(f.options||[]).map((o,idx)=>`<label class="choice-row"><input type="radio" name="f_${f.id}" value="${esc(o)}" ${f.required&&idx===0?"data-required-group='1'":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
+    }else if(f.type==="checkboxes"){
+      input=`<div class="choice-list">${(f.options||[]).map(o=>`<label class="choice-row"><input type="checkbox" name="f_${f.id}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join("")}</div>`;
+    }else{
+      const t=f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":f.type==="email"?"email":f.type==="phone"?"tel":"text";
+      input=`<input id="f_${f.id}" type="${t}" ${f.required?"required":""}>`;
+    }
+    return `<div class="field"><label>${esc(f.label)} ${req}</label>${input}</div>`;
+  }).join("");
+}
+$("#submitBtn").onclick=async()=>{
+  const form=$("#eventForm");
+  if(!form.reportValidity())return;
+  $("#submitBtn").disabled=true;$("#formError").style.display="none";
+  const submissionId="sub_"+uid(),answers={};
+  try{
+    const fields=eventConfig.fields||[];
+    for(const f of fields){
+      if(["image","content"].includes(f.type))continue;
+      if(f.type==="radio"){
+        answers[f.id]=document.querySelector(`input[name="f_${f.id}"]:checked`)?.value||"";
+      }else if(f.type==="checkboxes"){
+        answers[f.id]=[...document.querySelectorAll(`input[name="f_${f.id}"]:checked`)].map(x=>x.value);
+      }else{
+        const el=$("#f_"+f.id);
+        answers[f.id]=el?.value??"";
+      }
+      if(f.required){
+        const v=answers[f.id];
+        if((Array.isArray(v)&&v.length===0)||(!Array.isArray(v)&&String(v).trim()==="")){
+          throw new Error(`Vui lòng trả lời câu bắt buộc: ${f.label}`);
+        }
+      }
+    }
+    const mssvField=fields.find(f=>f.type==="mssv");
+    const nameField=fields.find(f=>!["image","content"].includes(f.type)&&String(f.label||"").toLowerCase().includes("họ")&&String(f.label||"").toLowerCase().includes("tên"));
+    await db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).set({
+      eventId,
+      semester:eventConfig.semester||"",
+      answers,
+      submitterLabel:(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||"Phản hồi",
+      actionApplied:false,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    $("#formView").style.display="none";$("#successView").style.display="block";
+    $("#successTitle").textContent=eventConfig.successTitle||"Gửi thông tin thành công";
+    $("#successMessage").textContent=eventConfig.successMessage||"CLB đã ghi nhận thông tin của bạn.";
+  }catch(e){
+    console.error(e);$("#formError").style.display="block";$("#formError").textContent="Không gửi được: "+(e.message||e);
+  }finally{$("#submitBtn").disabled=false}
+};
+init();
+</script>
+</body>
+</html>

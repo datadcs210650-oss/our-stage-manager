@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Our Stage - Tra cứu thành viên</title>
+<link rel="icon" type="image/png" href="logo.png">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f3f4;color:#25191d}.hidden{display:none!important}.wrap{max-width:980px;margin:auto;padding:28px}.brand{font-size:11px;font-weight:900;letter-spacing:4px}.logo-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}.logo-top img{width:56px;height:56px;object-fit:contain;border-radius:12px;background:#fff;padding:3px;border:1px solid #eceef0}.lookup{max-width:540px;margin:10vh auto}.card{background:#fff;border:1px solid #eadfe2;border-radius:16px;padding:20px;margin-bottom:14px}.lookup h1{font-size:34px;margin:14px 0 8px}.lookup p{color:#70767c;line-height:1.55}.semester-pill{display:inline-flex;border:1px solid #dfe3e7;background:#fff;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800;margin:8px 0 4px}.lookup label{display:grid;gap:6px;font-size:14px;font-weight:700;margin:18px 0}input{width:100%;padding:16px 18px;border:1px solid #d8dde3;border-radius:14px;background:#fff;font:inherit}button{font:inherit;cursor:pointer}.btn{width:100%;padding:16px;border-radius:14px;border:0;background:#70172d;color:white;font-weight:800;font-size:18px}.error{margin-top:14px;background:#fff4f4;border:1px solid #efcaca;border-radius:14px;padding:16px;color:#b3312d}.notice{margin-top:14px;background:#f7f2df;border:1px solid #e3d090;border-radius:14px;padding:16px;color:#6f6225;line-height:1.45}.head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0 22px}.head h1{font-size:32px;margin:0}.back{border:1px solid #d6dbe1;background:#fff;border-radius:12px;padding:10px 14px}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px}.stat{background:#fff;border:1px solid #eadfe2;border-radius:14px;padding:18px}.stat span{display:block;color:#767d85;font-size:13px;margin-bottom:7px}.stat strong{font-size:28px}.section-title{font-size:18px;margin:14px 0 8px}.custom-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.custom{border:1px solid #edf0f2;border-radius:12px;padding:12px;background:#fafbfc}.custom span{display:block;color:#777;font-size:12px;margin-bottom:6px}.activities{display:grid;gap:10px}.activity{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;align-items:center;border-bottom:1px solid #eef1f3;padding:10px 0}.activity:last-child{border-bottom:0}.activity small{display:block;color:#7a8087;margin-top:4px}.yes{color:#1c7a4f;font-weight:800}.no{color:#a33c3c;font-weight:800}.finance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px}.finance-stat{border:1px solid #eceff2;border-radius:12px;padding:14px;background:#fafbfc}.finance-stat span{display:block;color:#777;font-size:12px}.finance-stat strong{display:block;font-size:20px;margin-top:5px}.finance-table-public{width:100%;border-collapse:collapse}.finance-table-public th,.finance-table-public td{padding:10px;border-bottom:1px solid #edf0f2;text-align:left;font-size:13px}.finance-table-public th:nth-child(3),.finance-table-public td:nth-child(3){text-align:right}.invalid{max-width:560px;margin:14vh auto;text-align:center}.invalid h1{font-size:30px}.invalid p{color:#6e747a;line-height:1.5}
+@media(max-width:720px){.head{display:block}.head button{margin-top:12px}.activity{grid-template-columns:1fr}.lookup{margin:5vh auto}.wrap{padding:18px}}
+</style>
+</head>
+<body>
+
+<div id="invalidView" class="wrap invalid hidden">
+  <div class="logo-top"><img src="logo.png" alt="Our Stage Club Logo"><div class="logo-top"><img src="logo.png" alt="Our Stage Club Logo"><div class="logo-top"><img src="logo.png" alt="Our Stage Club Logo"><div class="brand">OUR STAGE</div></div></div></div>
+  <h1>Cổng tra cứu chưa mở hoặc đã đóng</h1>
+  <p>Vui lòng sử dụng đúng đường link do CLB cung cấp. Nếu cổng đã được đóng, thành viên sẽ tạm thời không tra cứu được.</p>
+</div>
+
+<div id="lookupView" class="wrap lookup hidden">
+  <div class="brand">OUR STAGE</div>
+  <div id="semesterPill" class="semester-pill">HỌC KỲ</div><div id="semesterPeriod" style="color:#777;font-size:13px;margin:4px 0 0"></div>
+  <h1>Tra cứu điểm thành viên</h1>
+  <p>Cổng này chỉ tra cứu dữ liệu của học kỳ được ghi trên đường link.</p>
+  <label>Mã số sinh viên
+    <input id="mssv" autocomplete="off" placeholder="Nhập MSSV">
+  </label>
+  <button class="btn" id="lookupBtn">Tra cứu</button>
+  <div id="error" class="error hidden"></div>
+  <div class="notice">Dữ liệu điểm và hoạt động được đồng bộ tự động từ hệ thống quản trị của CLB.</div>
+</div>
+
+<div id="resultView" class="hidden">
+  <div class="wrap">
+    <div class="brand">OUR STAGE</div>
+    <div class="head">
+      <div>
+        <div id="resultSemesterPill" class="semester-pill">HỌC KỲ</div><div id="resultSemesterPeriod" style="color:#777;font-size:13px;margin:4px 0 5px"></div>
+        <h1>Kết quả tra cứu</h1>
+        <div id="lookupMssvLabel"></div>
+      </div>
+      <button class="back" id="backBtn">Tra cứu khác</button>
+    </div>
+    <div id="record"></div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),$=s=>document.querySelector(s);
+const PUBLIC_LOOKUP_ROOT="publicLookupSemesters";
+const params=new URLSearchParams(location.search);
+const semesterKey=params.get("semester")||"";
+let semesterMeta=null;
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function normalizeMssvKey(v){return String(v??"").trim().toUpperCase().replace(/[^A-Z0-9_-]/g,"")}
+function showError(t){$("#error").textContent=t;$("#error").classList.toggle("hidden",!t)}
+function money(n){return new Intl.NumberFormat("vi-VN",{style:"currency",currency:"VND",maximumFractionDigits:0}).format(Number(n||0))}
+function formatDateVN(v){if(!v)return "";const d=new Date(v+"T00:00:00");return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString("vi-VN")}
+function metaPeriodText(){
+  const s=semesterMeta?.startDate||"",e=semesterMeta?.endDate||"";
+  if(s&&e)return `${formatDateVN(s)} - ${formatDateVN(e)}`;
+  if(s)return `Từ ${formatDateVN(s)}`;
+  if(e)return `Đến ${formatDateVN(e)}`;
+  return "";
+}
+function semesterMembers(){return db.collection(PUBLIC_LOOKUP_ROOT).doc(semesterKey).collection("members")}
+
+async function init(){
+  if(!semesterKey){
+    $("#invalidView").classList.remove("hidden");
+    return;
+  }
+  try{
+    const meta=await db.collection(PUBLIC_LOOKUP_ROOT).doc(semesterKey).get();
+    if(!meta.exists || meta.data()?.enabled!==true){
+      $("#invalidView").classList.remove("hidden");
+      return;
+    }
+    semesterMeta=meta.data()||{};
+    const title=semesterMeta.semesterName||semesterMeta.semesterCode||semesterKey;
+    $("#semesterPill").textContent=title;
+    $("#resultSemesterPill").textContent=title;
+    $("#semesterPeriod").textContent=metaPeriodText();
+    $("#resultSemesterPeriod").textContent=metaPeriodText();
+    $("#lookupView").classList.remove("hidden");
+  }catch(e){
+    $("#invalidView").classList.remove("hidden");
+  }
+}
+$("#lookupBtn").onclick=lookup;
+$("#mssv").addEventListener("keydown",e=>{if(e.key==="Enter")lookup()});
+$("#backBtn").onclick=()=>{
+  $("#resultView").classList.add("hidden");
+  $("#lookupView").classList.remove("hidden");
+  $("#mssv").focus();
+  showError("");
+};
+
+async function lookup(){
+  showError("");
+  const key=normalizeMssvKey($("#mssv").value);
+  if(!key)return showError("Vui lòng nhập MSSV.");
+  $("#lookupBtn").disabled=true;
+  $("#lookupBtn").textContent="Đang tra cứu…";
+  try{
+    const snap=await semesterMembers().doc(key).get();
+    if(!snap.exists){
+      return showError("Không tìm thấy MSSV này trong cổng tra cứu của học kỳ hiện tại.");
+    }
+    renderResult(key,snap.data()||{});
+  }catch(e){
+    console.error(e);
+    showError("Không thể tra cứu: "+(e.code||e.message||e));
+  }finally{
+    $("#lookupBtn").disabled=false;
+    $("#lookupBtn").textContent="Tra cứu";
+  }
+}
+function renderResult(mssv,d){
+  $("#lookupView").classList.add("hidden");
+  $("#resultView").classList.remove("hidden");
+  $("#lookupMssvLabel").textContent="MSSV: "+mssv;
+
+  const profile=[];
+  if("name" in d)profile.push(`<b style="font-size:20px">${esc(d.name)}</b>`);
+  if("mssv" in d)profile.push(`<div style="color:#777;margin-top:4px">${esc(d.mssv)}</div>`);
+
+  const stats=[];
+  if("total" in d)stats.push(["Điểm tổng",d.total]);
+  if("bonus" in d)stats.push(["Điểm cộng",d.bonus]);
+  if("conversion" in d)stats.push(["Quy đổi",d.conversion]);
+  if("fundPaid" in d)stats.push(["Đóng quỹ",d.fundPaid?"Đã đóng":"Chưa đóng"]);
+
+  const custom=d.customFields||[];
+  const acts=d.activities||[];
+
+  $("#record").innerHTML=`
+    ${profile.length?`<div class="card">${profile.join("")}</div>`:""}
+    ${stats.length?`<div class="summary">${stats.map(([k,v])=>`<div class="stat"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join("")}</div>`:""}
+    ${custom.length?`<h3 class="section-title">Thông tin thành viên</h3><div class="card"><div class="custom-grid">${custom.map(f=>`<div class="custom"><span>${esc(f.label)}</span><strong>${esc(f.value||"—")}</strong></div>`).join("")}</div></div>`:""}
+    ${acts.length?`<h3 class="section-title">Hoạt động trong kỳ</h3><div class="card"><div class="activities">${acts.map(a=>`<div class="activity"><div><b>${esc(a.name)}</b><small>${esc(a.group||"")}</small></div><div>${esc(a.date||"—")}</div><div class="${a.participated?"yes":"no"}">${a.participated?"Đã tham gia":"Không tham gia"}</div><div>${Number(a.earnedPoints||0)} điểm</div></div>`).join("")}</div></div>`:""}
+    ${semesterMeta?.finance?`<h3 class="section-title">Thu chi CLB trong kỳ</h3><div class="card">
+      <div class="finance-grid">
+        <div class="finance-stat"><span>Tổng thu</span><strong>${money(semesterMeta.finance.totalIncome)}</strong></div>
+        <div class="finance-stat"><span>Tổng chi</span><strong>${money(semesterMeta.finance.totalExpense)}</strong></div>
+        <div class="finance-stat"><span>Số dư hiện tại</span><strong>${money(semesterMeta.finance.balance)}</strong></div>
+        <div class="finance-stat"><span>Thành viên đã đóng quỹ</span><strong>${Number(semesterMeta.finance.paidCount||0)}</strong></div>
+      </div>
+      <div style="overflow:auto"><table class="finance-table-public"><thead><tr><th>Nội dung</th><th>Ngày</th><th>Số tiền</th><th>Minh chứng</th></tr></thead><tbody>
+        ${(semesterMeta.finance.transactions||[]).map(x=>`<tr><td>${esc(x.description||"")}</td><td>${esc(x.date?formatDateVN(x.date):"—")}</td><td>${x.type==="expense"?"−":"+"}${money(x.amount)}</td><td>${esc(x.proof||"—")}</td></tr>`).join("")||`<tr><td colspan="4">Chưa có hoạt động thu chi.</td></tr>`}
+      </tbody></table></div>
+    </div>`:""}
+  `;
+}
+init();
+</script>
+</body>
+</html>
