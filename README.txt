@@ -1,29 +1,11 @@
-OUR STAGE CLUB MANAGER V17 — EVENT THEO HỌC KỲ
+OUR STAGE CLUB MANAGER V23 — ACCOUNT FIX
 
-MỚI TRONG V17
+- Sửa xóa tài khoản BCN: API có timeout và Firestore fallback nếu Failed to fetch.
+- Thêm menu Tài khoản của tôi cho mọi role.
+- Hiển thị tên, email, vai trò, trạng thái, mật khẩu dạng che.
+- Đổi mật khẩu trực tiếp bằng mật khẩu hiện tại, không gửi email.
+- Bỏ reset password qua email.
+- account-create/update/delete có fallback có giới hạn khi Vercel API tạm lỗi.
+- Firestore Rules V23 giới hạn fallback theo role.
 
-1. Sự kiện theo đúng học kỳ
-- Mỗi sự kiện thuộc duy nhất một học kỳ.
-- Menu Cổng sự kiện chỉ hiển thị sự kiện của học kỳ đang chọn.
-- Khi đổi học kỳ ở sidebar, danh sách sự kiện tự đổi theo ngay.
-- Khi tạo sự kiện, học kỳ được cố định theo học kỳ hiện tại.
-- Không thể vô tình chuyển một sự kiện cũ sang kỳ khác khi chỉnh sửa.
-
-2. Xóa sự kiện
-- Admin/Super Admin có nút "Xóa sự kiện".
-- Xóa luôn document sự kiện trên Firestore.
-- Xóa toàn bộ submissions/phản hồi của sự kiện.
-- Xóa sự kiện khỏi dữ liệu CLB.
-- Có bước xác nhận vì thao tác không hoàn tác.
-
-3. Vẫn giữ toàn bộ V16
-- Vercel routes /tra-cuu và /su-kien
-- Cổng sự kiện kiểu Google Forms
-- Trắc nghiệm, checkbox, văn bản, ngày, giờ, ghi chú đậm/nghiêng/xuống dòng
-- Hình ảnh / QR miễn phí bằng Firestore
-- Tài khoản Admin / BCN và phân quyền
-- Spark Free, không cần Firebase Storage
-
-CẬP NHẬT
-- Upload toàn bộ thư mục package lên Vercel.
-- Firestore Rules V17 không thay đổi logic quyền so với V16 nhưng nên Publish file đi kèm để đồng bộ phiên bản.
+Cập nhật: commit toàn bộ package, Publish firestore_rules_v23.rules, rồi Command+Shift+R.
