@@ -1,1 +1,54 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Điểm danh • Our Stage</title><link rel="icon" href="/favicon.png"><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><style>*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 20% 0,#f3dde4,transparent 35%),#f7f2f4;color:#28181e;min-height:100vh;padding:28px}.wrap{width:min(650px,100%);margin:auto}.brand{display:flex;gap:10px;align-items:center;margin-bottom:16px}.brand img{width:58px;height:58px;object-fit:contain;border-radius:12px}.brand b{letter-spacing:.22em}.card{background:#fff;border:1px solid #eadce1;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(75,20,39,.1)}h1{margin:4px 0 7px;font-size:27px}.muted{color:#7d6f74;line-height:1.5}.field{margin-top:13px}.field label{display:block;font-size:11px;font-weight:850;margin-bottom:6px}.field input{width:100%;padding:13px 14px;border:1px solid #d9ced2;border-radius:11px;font:inherit}.field input:focus{outline:none;border-color:#9c4d64;box-shadow:0 0 0 4px rgba(112,23,45,.09)}button{margin-top:15px;width:100%;border:0;border-radius:11px;padding:13px;background:linear-gradient(135deg,#7c1833,#541021);color:#fff;font-weight:850;cursor:pointer}.state{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f3f5;font-size:12px}.state.error{background:#fff0f2;color:#a1243e}.hidden{display:none!important}</style></head><body><div class="wrap"><div class="brand"><img src="/logo.png" alt="Our Stage Club"><b>OUR STAGE</b></div><div class="card"><div style="font-size:10px;font-weight:900;letter-spacing:.14em;color:#8a6d77">QR ĐIỂM DANH</div><h1 id="title">Đang tải…</h1><p id="instruction" class="muted">Vui lòng chờ.</p><div id="form" class="hidden"><div class="field"><label>MSSV</label><input id="mssv" autocomplete="off" maxlength="50" placeholder="Nhập MSSV"></div><div class="field"><label>Họ và tên</label><input id="name" autocomplete="name" maxlength="120" placeholder="Nhập họ và tên"></div><button id="submit">Gửi điểm danh</button></div><div id="state" class="state">Đang kiểm tra QR…</div></div></div><script>const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};firebase.initializeApp(firebaseConfig);const db=firebase.firestore(),$=s=>document.querySelector(s),token=new URLSearchParams(location.search).get("token");try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}let portal=null;function st(t,e=false){$("#state").textContent=t;$("#state").classList.toggle("error",e)}async function init(){if(!token)return st("Link QR không hợp lệ.",true);try{const s=await db.collection("attendancePortals").doc(token).get();if(!s.exists)throw new Error("QR không tồn tại.");portal=s.data();const now=new Date(),start=portal.startAt?.toDate(),end=portal.endAt?.toDate();if(portal.open!==true)throw new Error("QR đã đóng.");if(start&&now<start)throw new Error("Chưa đến thời gian điểm danh.");if(end&&now>end)throw new Error("QR đã hết hạn.");$("#title").textContent=portal.itemName||"Điểm danh";$("#instruction").textContent=portal.instruction||"Nhập thông tin để gửi điểm danh.";$("#form").classList.remove("hidden");st("Thông tin sẽ chờ BTC duyệt trước khi tính điểm.")}catch(e){st(e.message||"Không mở được QR.",true)}}$("#submit").onclick=async()=>{const mssv=$("#mssv").value.trim(),name=$("#name").value.trim();if(!mssv||!name)return st("Vui lòng nhập MSSV và họ tên.",true);$("#submit").disabled=true;try{const id=(mssv.toUpperCase().replace(/[^A-Z0-9_-]/g,"_").replace(/_+/g,"_").slice(0,100)||Date.now().toString());await db.collection("attendancePortals").doc(token).collection("checkins").doc(id).set({mssv,name,status:"pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});$("#form").classList.add("hidden");st("Đã gửi điểm danh thành công. Lượt gửi đã được đồng bộ về giao diện quản trị và đang chờ BTC duyệt.")}catch(e){console.error(e);const msg=e?.code==="permission-denied"?"Không gửi được: QR đã đóng, hết hạn hoặc học kỳ đã bị khóa.":"Không gửi được. MSSV này có thể đã điểm danh hoặc kết nối Firestore đang gặp lỗi.";st(msg,true)}finally{$("#submit").disabled=false}};init();</script></body></html>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Điểm danh • Our Stage</title><link rel="icon" href="/favicon.png"><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><style>*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 20% 0,#f3dde4,transparent 35%),#f7f2f4;color:#28181e;min-height:100vh;padding:28px}.wrap{width:min(650px,100%);margin:auto}.brand{display:flex;gap:10px;align-items:center;margin-bottom:16px}.brand img{width:58px;height:58px;object-fit:contain;border-radius:12px}.brand b{letter-spacing:.22em}.card{background:#fff;border:1px solid #eadce1;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(75,20,39,.1)}h1{margin:4px 0 7px;font-size:27px}.muted{color:#7d6f74;line-height:1.5}.field{margin-top:13px}.field label{display:block;font-size:11px;font-weight:850;margin-bottom:6px}.field input{width:100%;padding:13px 14px;border:1px solid #d9ced2;border-radius:11px;font:inherit}.field input:focus{outline:none;border-color:#9c4d64;box-shadow:0 0 0 4px rgba(112,23,45,.09)}button{margin-top:15px;width:100%;border:0;border-radius:11px;padding:13px;background:linear-gradient(135deg,#7c1833,#541021);color:#fff;font-weight:850;cursor:pointer}.state{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f3f5;font-size:12px}.state.error{background:#fff0f2;color:#a1243e}.hidden{display:none!important}</style></head><body><div class="wrap"><div class="brand"><img src="/logo.png" alt="Our Stage Club"><b>OUR STAGE</b></div><div class="card"><div style="font-size:10px;font-weight:900;letter-spacing:.14em;color:#8a6d77">QR ĐIỂM DANH</div><h1 id="title">Đang tải…</h1><div id="semesterInfo" class="muted" style="font-size:12px;font-weight:800;margin-top:-2px"></div><p id="instruction" class="muted">Vui lòng chờ.</p><div id="form" class="hidden"><div class="field"><label>MSSV</label><input id="mssv" autocomplete="off" maxlength="50" placeholder="Nhập MSSV"></div><div class="field"><label>Họ và tên</label><input id="name" autocomplete="name" maxlength="120" placeholder="Nhập họ và tên"></div><button id="submit">Gửi điểm danh</button></div><div id="state" class="state">Đang kiểm tra QR…</div></div></div><script>
+const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),$=s=>document.querySelector(s),params=new URLSearchParams(location.search),token=params.get("token"),expectedSemester=params.get("semester")||"";
+try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
+let portal=null,portalUnsub=null,timeTimer=null,disabledReason="";
+function st(t,e=false){$("#state").textContent=t;$("#state").classList.toggle("error",e)}
+function stopTimer(){if(timeTimer){clearTimeout(timeTimer);timeTimer=null}}
+function disableQr(reason){disabledReason=reason||"QR đã hết hiệu lực.";$("#form").classList.add("hidden");$("#submit").disabled=true;st(disabledReason,true)}
+function scheduleTimeCheck(){
+  stopTimer();if(!portal)return;
+  const now=Date.now(),start=portal.startAt?.toDate?.()?.getTime?.()||0,end=portal.endAt?.toDate?.()?.getTime?.()||0;
+  let next=0;if(start&&now<start)next=start-now+120;else if(end&&now<end)next=end-now+120;
+  if(next>0)timeTimer=setTimeout(()=>applyPortal(portal),Math.min(next,2147483000));
+}
+function applyPortal(data){
+  portal=data||null;if(!portal)return disableQr("QR không tồn tại.");
+  const sem=portal.semester||portal.semesterCode||"";
+  $("#semesterInfo").textContent=`Học kỳ: ${portal.semesterName||sem||"Không rõ"}`;
+  $("#title").textContent=portal.itemName||"Điểm danh";
+  $("#instruction").textContent=portal.instruction||"Nhập thông tin để gửi điểm danh.";
+  if(expectedSemester&&sem&&expectedSemester!==sem)return disableQr("Link QR không đúng học kỳ. Vui lòng quét lại mã QR được tạo cho học kỳ hiện tại.");
+  const now=new Date(),start=portal.startAt?.toDate?.(),end=portal.endAt?.toDate?.();
+  if(portal.open!==true)return disableQr("QR đã được BTC đóng và không còn hiệu lực.");
+  if(start&&now<start){disableQr(`QR chưa đến thời gian điểm danh. Bắt đầu lúc ${start.toLocaleString("vi-VN")}.`);scheduleTimeCheck();return}
+  if(end&&now>end)return disableQr("QR đã hết hạn.");
+  disabledReason="";$("#form").classList.remove("hidden");$("#submit").disabled=false;
+  st("QR đang mở. Thông tin sẽ chờ BTC duyệt trước khi tính điểm.");scheduleTimeCheck();
+}
+function init(){
+  if(!token)return disableQr("Link QR không hợp lệ.");
+  portalUnsub=db.collection("attendancePortals").doc(token).onSnapshot(s=>{
+    if(!s.exists)return disableQr("QR không tồn tại.");
+    applyPortal(s.data());
+  },e=>{console.error("QR realtime",e);disableQr("QR đã đóng, hết hạn hoặc không còn hiệu lực.")});
+}
+$("#submit").onclick=async()=>{
+  const mssv=$("#mssv").value.trim(),name=$("#name").value.trim();
+  if(!mssv||!name)return st("Vui lòng nhập MSSV và họ tên.",true);
+  if(disabledReason||!portal||portal.open!==true)return disableQr(disabledReason||"QR không còn hiệu lực.");
+  $("#submit").disabled=true;
+  try{
+    const id=(mssv.toUpperCase().replace(/[^A-Z0-9_-]/g,"_").replace(/_+/g,"_").slice(0,100)||Date.now().toString());
+    await db.collection("attendancePortals").doc(token).collection("checkins").doc(id).set({mssv,name,status:"pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
+    $("#form").classList.add("hidden");st("Đã gửi điểm danh thành công. Lượt gửi đã đồng bộ về giao diện quản trị và đang chờ BTC duyệt.");
+  }catch(e){
+    console.error(e);
+    if(e?.code==="permission-denied")disableQr("QR đã đóng, hết hạn, sai học kỳ hoặc học kỳ đã bị khóa.");
+    else st("Không gửi được. MSSV này có thể đã điểm danh hoặc kết nối Firestore đang gặp lỗi.",true);
+  }finally{if(!disabledReason)$("#submit").disabled=false}
+};
+window.addEventListener("beforeunload",()=>{try{portalUnsub&&portalUnsub()}catch{}stopTimer()});
+init();
+</script></body></html>
