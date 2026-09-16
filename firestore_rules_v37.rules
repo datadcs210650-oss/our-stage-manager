@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn(){return request.auth!=null;}
+  function userPath(){return /databases/$(database)/documents/users/$(request.auth.uid);}
+  function userExists(){return signedIn()&&exists(userPath());}
+  function me(){return get(userPath()).data;}
+  function active(){return userExists()&&me().active==true;}
+  function superAdmin(){return active()&&me().role=="superadmin";}
+  function adminOnly(){return active()&&me().role=="admin";}
+  function admin(){return active()&&(me().role=="admin"||me().role=="superadmin");}
+  function bcn(){return active()&&me().role=="bcn";}
+  function perm(k){return bcn()&&me().permissions is map&&me().permissions[k]==true;}
+  function viewAttendance(){return admin()||perm("viewAttendance");}
+  function editAttendance(){return admin()||(viewAttendance()&&perm("editAttendance"));}
+  function viewMembers(){return admin()||perm("viewMembers");}
+  function editMembers(){return admin()||(viewMembers()&&perm("editMembers"));}
+  function viewFinance(){return admin()||perm("viewFinance");}
+  function editFinance(){return admin()||(viewFinance()&&perm("editFinance"));}
+  function viewEvents(){return admin()||perm("viewEvents");}
+  function editEvents(){return admin()||(viewEvents()&&perm("editEvents"));}
+  function viewLookup(){return admin()||perm("viewLookup");}
+  function semesterUnlocked(code){let p=/databases/$(database)/documents/clubState/main;return code==""||(code is string&&exists(p)&&get(p).data.state is map&&get(p).data.state.semesters is map&&get(p).data.state.semesters.keys().hasAny([code])&&get(p).data.state.semesters[code].locked!=true);}
+  function customAdminPortalUnlocked(portalId){let p=/databases/$(database)/documents/customLookupAdmin/$(portalId);return !exists(p)||!get(p).data.keys().hasAny(["scopeSemester"])||get(p).data.scopeSemester==""||semesterUnlocked(get(p).data.scopeSemester);}
+  function customPublicPortalUnlocked(portalId){let p=/databases/$(database)/documents/customLookupPortals/$(portalId);return !exists(p)||!get(p).data.keys().hasAny(["scopeSemester"])||get(p).data.scopeSemester==""||semesterUnlocked(get(p).data.scopeSemester);}
+  match /users/{uid}{allow get:if signedIn()&&request.auth.uid==uid;allow read:if admin();allow create:if (superAdmin()&&request.resource.data.role in ["admin","bcn"]&&request.resource.data.active==true&&request.resource.data.permissions is map)||(adminOnly()&&request.resource.data.role=="bcn"&&request.resource.data.active==true&&request.resource.data.permissions is map);allow update:if request.auth.uid!=uid&&resource.data.role!="superadmin"&&request.resource.data.permissions is map&&((superAdmin()&&request.resource.data.role in ["admin","bcn"])||(adminOnly()&&resource.data.role=="bcn"&&request.resource.data.role=="bcn"));allow delete:if request.auth.uid!=uid&&resource.data.role!="superadmin"&&(superAdmin()||(adminOnly()&&resource.data.role=="bcn"));}
+  match /clubState/{id}{allow read:if active();allow create,update,delete:if admin();}
+  match /members/{id}{allow read:if admin()||viewMembers()||viewAttendance()||viewFinance();allow create:if editMembers()&&semesterUnlocked(request.resource.data.semester);allow delete:if editMembers()&&semesterUnlocked(resource.data.semester);allow update:if semesterUnlocked(resource.data.semester)&&(editMembers()||(editAttendance()&&request.resource.data.diff(resource.data).affectedKeys().hasOnly(["scores","updatedAt","updatedBy"]))||(editFinance()&&request.resource.data.diff(resource.data).affectedKeys().hasOnly(["fundPaid","updatedAt","updatedBy"])));}
+  match /financeTransactions/{id}{allow read:if viewFinance();allow create:if editFinance()&&semesterUnlocked(request.resource.data.semester);allow update,delete:if editFinance()&&semesterUnlocked(resource.data.semester);}
+  match /publicLookupSemesters/{semesterId}{allow get:if viewLookup()||resource.data.enabled==true;allow list:if viewLookup();allow create,update,delete:if admin()&&semesterUnlocked(semesterId);}
+  match /publicLookupSemesters/{semesterId}/members/{key}{allow get:if viewLookup()||get(/databases/$(database)/documents/publicLookupSemesters/$(semesterId)).data.enabled==true;allow list:if viewLookup();allow create,update,delete:if admin()&&semesterUnlocked(semesterId);}
+  match /eventPortals/{eventId}{allow get:if viewEvents()||resource.data.isOpen==true;allow list:if viewEvents();allow create:if editEvents()&&semesterUnlocked(request.resource.data.semester);allow update,delete:if editEvents()&&semesterUnlocked(resource.data.semester);match /submissions/{sid}{allow create:if get(/databases/$(database)/documents/eventPortals/$(eventId)).data.isOpen==true&&semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester)&&request.resource.data.keys().hasOnly(["eventId","semester","answers","submitterLabel","actionApplied","createdAt"])&&request.resource.data.eventId==eventId&&request.resource.data.semester==get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester&&request.resource.data.answers is map&&request.resource.data.answers.size()<=60&&request.resource.data.submitterLabel is string&&request.resource.data.submitterLabel.size()<=200&&request.resource.data.actionApplied==false&&request.resource.data.createdAt==request.time;allow read:if viewEvents();allow update:if (editEvents()||editFinance()||editAttendance())&&semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester);allow delete:if editEvents()&&semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester);}}
+  match /customLookupAdmin/{portalId}{
+    allow read:if admin();
+    allow create:if admin()
+      &&request.resource.data.scopeSemester is string
+      &&request.resource.data.scopeSemester.size()>0
+      &&semesterUnlocked(request.resource.data.scopeSemester);
+    allow update:if admin()
+      &&request.resource.data.scopeSemester is string
+      &&request.resource.data.scopeSemester.size()>0
+      &&semesterUnlocked(request.resource.data.scopeSemester);
+    allow delete:if admin()&&customAdminPortalUnlocked(portalId);
+    match /records/{recordId}{
+      allow read:if admin();
+      allow create,update,delete:if admin()&&customAdminPortalUnlocked(portalId);
+    }
+  }
+  match /customLookupPortals/{portalId}{
+    allow get:if admin()||resource.data.open==true;
+    allow list:if admin();
+    allow create:if admin()
+      &&request.resource.data.scopeSemester is string
+      &&request.resource.data.scopeSemester.size()>0
+      &&semesterUnlocked(request.resource.data.scopeSemester);
+    allow update:if admin()
+      &&request.resource.data.scopeSemester is string
+      &&request.resource.data.scopeSemester.size()>0
+      &&semesterUnlocked(request.resource.data.scopeSemester);
+    allow delete:if admin()&&customPublicPortalUnlocked(portalId);
+    match /records/{recordId}{
+      allow get:if admin()||get(/databases/$(database)/documents/customLookupPortals/$(portalId)).data.open==true;
+      allow list:if admin();
+      allow create,update,delete:if admin()&&customPublicPortalUnlocked(portalId);
+    }
+  }
+  match /userPreferences/{uid}{allow read,create,update,delete:if signedIn()&&request.auth.uid==uid;}
+  match /auditLogs/{id}{allow read:if admin();allow create:if active()&&request.resource.data.actorUid==request.auth.uid&&request.resource.data.semester is string&&request.resource.data.semester.size()>0;allow update:if admin();allow delete:if false;}
+  match /importHistory/{id}{allow read:if admin();allow create:if active()&&request.resource.data.actorUid==request.auth.uid&&request.resource.data.semester is string&&request.resource.data.semester.size()>0;allow update,delete:if false;}
+  match /systemNotifications/{id}{allow read:if active();allow create:if active()&&request.resource.data.semester is string&&request.resource.data.semester.size()>0;allow update:if active();allow delete:if admin();}
+  match /trashBin/{id}{allow read,update,delete:if admin();allow create:if active()&&request.resource.data.semester is string&&request.resource.data.semester.size()>0;}
+  match /approvalRequests/{id}{allow create:if active()&&request.resource.data.requesterUid==request.auth.uid&&request.resource.data.semester is string&&request.resource.data.semester.size()>0;allow get:if admin()||(active()&&resource.data.requesterUid==request.auth.uid);allow list:if admin();allow update,delete:if admin();}
+  match /attendancePortals/{token}{allow get:if viewAttendance()||(resource.data.open==true&&semesterUnlocked(resource.data.semester));allow list:if viewAttendance();allow create:if editAttendance()&&semesterUnlocked(request.resource.data.semester);allow update,delete:if editAttendance()&&semesterUnlocked(resource.data.semester);match /checkins/{checkinId}{allow create:if get(/databases/$(database)/documents/attendancePortals/$(token)).data.open==true&&semesterUnlocked(get(/databases/$(database)/documents/attendancePortals/$(token)).data.semester)&&request.time>=get(/databases/$(database)/documents/attendancePortals/$(token)).data.startAt&&request.time<=get(/databases/$(database)/documents/attendancePortals/$(token)).data.endAt&&request.resource.data.keys().hasOnly(["mssv","name","status","createdAt"])&&request.resource.data.mssv is string&&request.resource.data.mssv.size()>0&&request.resource.data.mssv.size()<=50&&request.resource.data.name is string&&request.resource.data.name.size()>0&&request.resource.data.name.size()<=120&&request.resource.data.status=="pending"&&request.resource.data.createdAt==request.time;allow read:if viewAttendance();allow update,delete:if editAttendance()&&semesterUnlocked(get(/databases/$(database)/documents/attendancePortals/$(token)).data.semester);}}
+  match /settings/{id}{allow read:if active();allow create,update,delete:if admin();}
+ }
+}

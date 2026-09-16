@@ -558,6 +558,81 @@ input:focus,select:focus,textarea:focus{
   color:#775c13;font-size:11px;line-height:1.5;margin-bottom:10px
 }
 
+
+/* ===== V35 Event points + QR time editor ===== */
+.event-points-note{
+  margin-top:5px;font-size:10px;color:#7d6f74;line-height:1.45
+}
+.event-points-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;
+  background:#eef7f1;color:#176d49;border:1px solid #cae6d5;font-size:9px;font-weight:900
+}
+.event-points-badge.off{
+  background:#f4f1f2;color:#7c6d72;border-color:#e4dade
+}
+.event-point-status{
+  display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:850;
+  background:#eef8f2;color:#18714b;border:1px solid #cae7d6
+}
+.qr-time-editor-note{
+  margin-top:10px;padding:10px 11px;border:1px solid #eadfe2;border-radius:10px;
+  background:#fff9fb;color:#74676c;font-size:11px;line-height:1.5
+}
+
+
+/* ===== V37 Wide attendance table ===== */
+.wide-table-scroll-wrap{position:relative;min-width:0}
+.wide-table-scrollbar{
+  overflow-x:auto;overflow-y:hidden;height:18px;margin:0 2px 8px;
+  border:1px solid #e8dde0;border-radius:999px;background:#f8f2f4;
+  scrollbar-width:auto;scrollbar-color:#8a4055 #f1e7ea
+}
+.wide-table-scrollbar>div{height:1px;min-width:100%}
+.wide-table-scrollbar::-webkit-scrollbar{height:14px}
+.wide-table-scrollbar::-webkit-scrollbar-track{background:#f1e7ea;border-radius:999px}
+.wide-table-scrollbar::-webkit-scrollbar-thumb{background:#8a4055;border:3px solid #f1e7ea;border-radius:999px}
+.wide-table-scrollbar::-webkit-scrollbar-thumb:hover{background:#6d2439}
+.qltv-scroll-card{
+  overflow-x:auto!important;overflow-y:auto!important;
+  max-height:68vh;overscroll-behavior:contain;
+  scrollbar-gutter:stable both-edges;
+  scrollbar-width:auto;scrollbar-color:#8a4055 #f1e7ea
+}
+.qltv-scroll-card::-webkit-scrollbar{height:14px;width:10px}
+.qltv-scroll-card::-webkit-scrollbar-track{background:#f1e7ea}
+.qltv-scroll-card::-webkit-scrollbar-thumb{background:#8a4055;border:3px solid #f1e7ea;border-radius:999px}
+#qltvTable{width:max-content!important;min-width:100%!important}
+#qltvTable th,#qltvTable td{min-width:86px}
+#qltvTable th:nth-child(1),#qltvTable td:nth-child(1){min-width:58px}
+#qltvTable th:nth-child(2),#qltvTable td:nth-child(2){min-width:210px}
+#qltvTable th:nth-child(3),#qltvTable td:nth-child(3){min-width:120px}
+.qltv-scroll-hint{
+  display:flex;align-items:center;gap:7px;margin:0 0 7px;color:#786a6f;font-size:10px
+}
+.qltv-scroll-hint:before{content:"↔";font-weight:900;color:#6f1730}
+@media(max-width:800px){
+  .qltv-scroll-card{max-height:64vh}
+  .wide-table-scrollbar{height:20px}
+}
+
+/* ===== V37 Companion event ===== */
+.companion-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;
+  background:#edf8f1;color:#176e49;border:1px solid #c9e7d5;font-size:9px;font-weight:900
+}
+.companion-note{
+  margin:10px 0 12px;padding:11px 12px;border:1px solid #cce6d6;border-radius:11px;
+  background:#f2fbf5;color:#265f43;font-size:11px;line-height:1.55
+}
+
+/* ===== V37 Privacy / security note ===== */
+.security-note{
+  display:flex;gap:9px;align-items:flex-start;padding:10px 12px;margin:10px 0 14px;
+  border:1px solid #e5d9dd;border-radius:11px;background:#fbf8f9;color:#6f6267;
+  font-size:10px;line-height:1.5
+}
+.security-note b{color:#5d172b}
+
 </style>
 </head>
 <body>
@@ -677,7 +752,16 @@ input:focus,select:focus,textarea:focus{
         <input id="searchManage" placeholder="Tìm thành viên để điểm danh…">
         <button class="primary" id="addMemberBtn">+ Thêm thành viên</button>
       </div>
-      <div class="table-card"><table><thead id="qltvHead"></thead><tbody id="qltvBody"></tbody></table><div id="qltvEmpty" class="empty hidden">Chưa có thành viên.</div></div>
+      <div class="qltv-scroll-hint">Kéo thanh ngang để xem toàn bộ các cột hoạt động.</div>
+      <div class="wide-table-scroll-wrap">
+        <div class="wide-table-scrollbar" id="qltvTopScroll" aria-label="Thanh cuộn ngang bảng điểm danh">
+          <div id="qltvTopScrollInner"></div>
+        </div>
+        <div class="table-card qltv-scroll-card" id="qltvScrollCard">
+          <table id="qltvTable"><thead id="qltvHead"></thead><tbody id="qltvBody"></tbody></table>
+          <div id="qltvEmpty" class="empty hidden">Chưa có thành viên.</div>
+        </div>
+      </div>
     </section>
 
     <section id="memberList" class="hidden">
@@ -850,9 +934,11 @@ input:focus,select:focus,textarea:focus{
       <div class="toolbar">
         <input id="eventSearch" placeholder="Tìm cổng sự kiện trong học kỳ này…">
         <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
+        <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
         <button class="primary edit-only" id="createEventBtn">+ Tạo cổng sự kiện</button>
       </div>
       <div class="section-note">Mỗi cổng sự kiện thuộc đúng <b>một học kỳ</b>. Khi bạn đổi học kỳ ở menu bên trái, danh sách cổng sự kiện và kết quả hiển thị ở đây cũng tự chuyển sang học kỳ đó.</div>
+      <div class="security-note"><span>🔒</span><div><b>Bảo mật dữ liệu:</b> phản hồi sự kiện không được công khai để đọc. Chỉ tài khoản Admin/BCN có quyền Cổng sự kiện mới xem được kết quả.</div></div>
       <div id="eventList" class="event-card-list"></div>
       <div id="eventEmpty" class="empty hidden">Học kỳ này chưa có cổng sự kiện nào.</div>
     </section>
@@ -978,6 +1064,12 @@ try{fbDb.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false}
 const STORAGE_KEY="osc_dynamic_manager_v1";
 const DEFAULT_STATE={
   semesters:{
+    SP26:{code:"SP26",name:"Spring 2026",fee:0,openingBalance:0,
+      groups:[
+        {id:"sp_meetings",name:"Họp CLB",mode:"checkbox",items:[{id:"sp_m1",name:"Họp CLB",date:"",points:5}]},
+        {id:"sp_club",name:"Hoạt động CLB",mode:"checkbox",items:[{id:"sp_c1",name:"Hoạt động 1",date:"",points:5}]},
+        {id:"sp_support",name:"Hỗ trợ hoạt động Trường + CLB",mode:"number",items:[{id:"sp_s1",name:"Hoạt động hỗ trợ 1",date:"",points:5}]}
+      ]},
     SU26:{code:"SU26",name:"Summer 2026",fee:60000,openingBalance:4627000,
       groups:[
         {id:"meetings",name:"Họp CLB",mode:"checkbox",items:[{id:"m1",name:"Đầu kỳ",date:"29/09/2026",points:5},{id:"m2",name:"Họp 2",date:"",points:5}]},
@@ -1003,8 +1095,37 @@ const DEFAULT_STATE={
   members:[],transactions:[]
 };
 let state=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||structuredClone(DEFAULT_STATE);
+/* Không giữ dữ liệu cá nhân từ cache cũ trước khi đăng nhập. Dữ liệu vận hành sẽ tải lại từ Firestore sau khi xác thực. */
+state.members=[];
+state.transactions=[];
+state.events=[];
+try{
+  const bootSafe=structuredClone(state);
+  bootSafe.members=[];bootSafe.transactions=[];bootSafe.events=[];
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(bootSafe));
+}catch(e){console.warn("Không làm sạch được cache cũ",e)}
 state.lookupConfig=state.lookupConfig||{};
 state.events=state.events||[];
+
+function parseMainSemester(code){
+  const m=String(code||"").toUpperCase().match(/^(SP|SU|FA)(\d{2})$/);
+  if(!m)return null;
+  const year=2000+Number(m[2]);
+  const names={SP:"Spring",SU:"Summer",FA:"Fall"};
+  return {prefix:m[1],year,code:m[1]+m[2],name:`${names[m[1]]} ${year}`};
+}
+function nextMainSemesterCode(code){
+  const p=parseMainSemester(code);if(!p)return "";
+  const yy=y=>String(y%100).padStart(2,"0");
+  if(p.prefix==="SP")return `SU${yy(p.year)}`;
+  if(p.prefix==="SU")return `FA${yy(p.year)}`;
+  return `SP${yy(p.year+1)}`;
+}
+function nextMainSemesterName(code){
+  const next=nextMainSemesterCode(code);
+  return state.semesters?.[next]?.name||parseMainSemester(next)?.name||next;
+}
+
 function defaultLookupConfig(){
   return {enabled:false,open:false,showName:true,showMssv:true,showTotal:true,showBonus:true,showConversion:true,showFundPaid:true,showActivities:true,showFinance:true,customFields:[],lastSyncAt:""};
 }
@@ -1017,7 +1138,7 @@ function lookupConfig(){
   return cfg;
 }
 
-let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
+let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:""};
 let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[];
@@ -1116,7 +1237,7 @@ async function loadCloudState(){
     if(snap.exists && snap.data()?.state){
       state=snap.data().state;
       normalizeState();
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      persistSafeLocalState();
       return true;
     }
     if(canEditClub()){
@@ -1170,7 +1291,7 @@ function watchCloudStateRealtime(){
     if(snap.exists && snap.data()?.state){
       const liveMembers=state.members||[],liveTransactions=state.transactions||[],liveEvents=state.events||[];
       state={...snap.data().state,members:liveMembers,transactions:liveTransactions,events:liveEvents};
-      normalizeState();localStorage.setItem(STORAGE_KEY,JSON.stringify(state));renderAll();
+      normalizeState();persistSafeLocalState();renderAll();
     }
   },err=>console.warn("cloud config watch",err));
 }
@@ -1203,33 +1324,55 @@ async function ensureRealtimeCollectionsV19(){
   }catch(e){console.error("ensureRealtimeCollectionsV19",e);return false}
 }
 async function loadRealtimeCollectionsOnce(){
-  if(!realtimeCollectionsReady)return;
   try{
     if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
-      const s=await fbDb.collection("members").get();state.members=s.docs.map(d=>({id:d.id,...d.data()}));
-    }
+      const s=await fbDb.collection("members").get();
+      state.members=s.docs.map(d=>({id:d.id,...d.data()}));
+    }else state.members=[];
     if(canEditClub()||hasViewPermission("viewFinance")){
-      const s=await fbDb.collection("financeTransactions").get();state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));
-    }
+      const s=await fbDb.collection("financeTransactions").get();
+      state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));
+    }else state.transactions=[];
     if(canEditClub()||hasViewPermission("viewEvents")){
-      const s=await fbDb.collection("eventPortals").get();state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));
-    }
+      const s=await fbDb.collection("eventPortals").get();
+      state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));
+    }else state.events=[];
     persistStateOnly();
   }catch(e){console.warn("loadRealtimeCollectionsOnce",e)}
 }
 function renderRealtimeData(){persistStateOnly();renderQLTV();renderMemberList();renderInfo();renderFinance();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();applyRoleAccess()}
 function watchRealtimeCollections(){
-  if(memberRealtimeUnsub){memberRealtimeUnsub();memberRealtimeUnsub=null}if(financeRealtimeUnsub){financeRealtimeUnsub();financeRealtimeUnsub=null}if(eventRealtimeUnsub){eventRealtimeUnsub();eventRealtimeUnsub=null}
+  if(memberRealtimeUnsub){memberRealtimeUnsub();memberRealtimeUnsub=null}
+  if(financeRealtimeUnsub){financeRealtimeUnsub();financeRealtimeUnsub=null}
+  if(eventRealtimeUnsub){eventRealtimeUnsub();eventRealtimeUnsub=null}
   if(!realtimeCollectionsReady||!currentFirebaseUser)return;
+
   if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
-    memberRealtimeUnsub=fbDb.collection("members").onSnapshot(s=>{state.members=s.docs.map(d=>({id:d.id,...d.data()}));renderRealtimeData();if(canEditClub())scheduleAutoLookupSync()},e=>console.warn("member realtime",e));
-  }
+    memberRealtimeUnsub=fbDb.collection("members").onSnapshot(s=>{
+      state.members=s.docs.map(d=>({id:d.id,...d.data()}));
+      renderRealtimeData();
+      if(canEditClub())scheduleAutoLookupSync();
+    },e=>console.warn("member realtime",e));
+  }else state.members=[];
+
   if(canEditClub()||hasViewPermission("viewFinance")){
-    financeRealtimeUnsub=fbDb.collection("financeTransactions").onSnapshot(s=>{state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));renderRealtimeData();if(canEditClub())scheduleAutoLookupSync()},e=>console.warn("finance realtime",e));
-  }
+    financeRealtimeUnsub=fbDb.collection("financeTransactions").onSnapshot(s=>{
+      state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));
+      renderRealtimeData();
+      if(canEditClub())scheduleAutoLookupSync();
+    },e=>console.warn("finance realtime",e));
+  }else state.transactions=[];
+
   if(canEditClub()||hasViewPermission("viewEvents")){
-    eventRealtimeUnsub=fbDb.collection("eventPortals").onSnapshot(s=>{state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));persistStateOnly();if($("#events")&&!$("#events").classList.contains("hidden")){renderEvents();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair realtime",e))}},e=>console.warn("event realtime",e));
-  }
+    eventRealtimeUnsub=fbDb.collection("eventPortals").onSnapshot(s=>{
+      state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));
+      persistStateOnly();
+      if($("#events")&&!$("#events").classList.contains("hidden")){
+        renderEvents();
+        repairCurrentSemesterEventFields().catch(e=>console.warn("event repair realtime",e));
+      }
+    },e=>console.warn("event realtime",e));
+  }else state.events=[];
 }
 async function upsertMemberRealtime(m){await fbDb.collection("members").doc(m.id).set(memberDocPayload(m),{merge:true})}
 async function deleteMemberRealtime(id){await fbDb.collection("members").doc(id).delete()}
@@ -1274,8 +1417,8 @@ async function logAudit({action,module="system",entityType="",entityId="",summar
   if(!currentFirebaseUser)return;
   try{await fbDb.collection("auditLogs").add({action,module,entityType,entityId,summary,before:firestorePlain(before),after:firestorePlain(after),undo:firestorePlain(undo),semester:semesterKey||"",actorUid:currentFirebaseUser.uid,actorName:currentUserLabel(),actorEmail:currentFirebaseUser.email||"",createdAt:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){console.warn("audit",e)}
 }
-async function pushNotification({title,message,type="info",targetRoles=["admin","superadmin"],targetUid="",linkTab=""}){
-  try{await fbDb.collection("systemNotifications").add({title,message,type,targetRoles,targetUid,linkTab,readBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||""})}catch(e){console.warn("notification",e)}
+async function pushNotification({title,message,type="info",targetRoles=["admin","superadmin"],targetUid="",linkTab="",semesterKey=semester}){
+  try{await fbDb.collection("systemNotifications").add({title,message,type,targetRoles,targetUid,linkTab,semester:semesterKey||"",readBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||""})}catch(e){console.warn("notification",e)}
 }
 async function logImportHistory({type,fileName,total=0,added=0,updated=0,skipped=0,details=""}){
   try{await fbDb.collection("importHistory").add({type,fileName,total,added,updated,skipped,details,semester,actorUid:currentFirebaseUser?.uid||"",actorName:currentUserLabel(),createdAt:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){console.warn("import history",e)}
@@ -1303,8 +1446,19 @@ function canEditModule(module){
   const [v,e]=pair,p=currentProfile?.permissions||{};return p[v]===true&&p[e]===true;
 }
 let lookupSyncTimer=null;
+function safeLocalStateSnapshot(){
+  const safe=structuredClone(state);
+  safe.members=[];
+  safe.transactions=[];
+  safe.events=[];
+  return safe;
+}
+function persistSafeLocalState(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(safeLocalStateSnapshot()))}
+  catch(e){console.warn("safe local cache",e)}
+}
 function save(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  persistSafeLocalState();
   renderAll();
   if(canEditClub()){
     scheduleAutoLookupSync();
@@ -1312,7 +1466,7 @@ function save(){
   }
 }
 function persistStateOnly(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  persistSafeLocalState();
 }
 function toast(t){$("#toast").textContent=t;$("#toast").classList.remove("hidden");setTimeout(()=>$("#toast").classList.add("hidden"),1600)}
 window.addEventListener("error",e=>{
@@ -1440,6 +1594,7 @@ async function validateAccess(user){
 fbAuth.onAuthStateChanged(async user=>{
   if(!user){
     stopAttendancePortalWatchers();if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
+    persistSafeLocalState();
     currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
     $("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden");
     return;
@@ -1494,16 +1649,38 @@ $("#adminChip").onclick=()=>{
   if(btn)btn.click();
 };
 
+function timestampMs(v){return v?.toMillis?.()||((v?.seconds||0)*1000)||0}
+function sortByTimeDesc(rows,field){return rows.sort((a,b)=>timestampMs(b?.[field])-timestampMs(a?.[field]))}
 function watchSuiteCollections(){
   [notificationUnsub,approvalUnsub,auditUnsub,trashUnsub].forEach(fn=>{try{fn&&fn()}catch{}});
-  if(!currentFirebaseUser)return;
-  notificationUnsub=fbDb.collection("systemNotifications").orderBy("createdAt","desc").limit(40).onSnapshot(s=>{
-    notificationRows=s.docs.map(d=>({id:d.id,...d.data()})).filter(n=>!n.targetUid||n.targetUid===currentFirebaseUser.uid||(n.targetRoles||[]).includes(role()));renderNotificationBadge();
+  notificationUnsub=approvalUnsub=auditUnsub=trashUnsub=null;
+  if(!currentFirebaseUser||!semester)return;
+
+  notificationUnsub=fbDb.collection("systemNotifications").where("semester","==",semester).limit(100).onSnapshot(s=>{
+    notificationRows=sortByTimeDesc(
+      s.docs.map(d=>({id:d.id,...d.data()}))
+       .filter(n=>!n.targetUid||n.targetUid===currentFirebaseUser.uid||(n.targetRoles||[]).includes(role())),
+      "createdAt"
+    );
+    renderNotificationBadge();
   },e=>console.warn("notifications",e));
+
   if(canEditClub()){
-    approvalUnsub=fbDb.collection("approvalRequests").orderBy("createdAt","desc").limit(100).onSnapshot(s=>{approvalRows=s.docs.map(d=>({id:d.id,...d.data()}));if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests()},e=>console.warn("approvals",e));
-    auditUnsub=fbDb.collection("auditLogs").orderBy("createdAt","desc").limit(120).onSnapshot(s=>{auditRows=s.docs.map(d=>({id:d.id,...d.data()}));renderDashboardRecentAudit();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs()},e=>console.warn("audit",e));
-    trashUnsub=fbDb.collection("trashBin").orderBy("deletedAt","desc").limit(120).onSnapshot(s=>{trashRows=s.docs.map(d=>({id:d.id,...d.data()}));if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin()},e=>console.warn("trash",e));
+    approvalUnsub=fbDb.collection("approvalRequests").where("semester","==",semester).limit(150).onSnapshot(s=>{
+      approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");
+      if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests();
+    },e=>console.warn("approvals",e));
+
+    auditUnsub=fbDb.collection("auditLogs").where("semester","==",semester).limit(180).onSnapshot(s=>{
+      auditRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");
+      renderDashboardRecentAudit();
+      if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs();
+    },e=>console.warn("audit",e));
+
+    trashUnsub=fbDb.collection("trashBin").where("semester","==",semester).limit(180).onSnapshot(s=>{
+      trashRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");
+      if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin();
+    },e=>console.warn("trash",e));
   }
   watchAttendancePortals(true);
 }
@@ -1514,7 +1691,7 @@ function applyRoleAccess(){
   const toggle=(s,show)=>{const el=$(s);if(el)el.classList.toggle("hidden",!show)};
   const ea=canEditModule("attendance"),em=canEditModule("members"),ef=canEditModule("finance"),ee=canEditModule("events"),el=canEditModule("lookup");
   $$("#qltvBody input.num-score,#qltvBody input.check:not(.fund-check)").forEach(x=>x.disabled=!ea);$$("#qltvBody input.fund-check").forEach(x=>x.disabled=!ef);
-  ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn"].forEach(s=>toggle(s,em));toggle("#uploadFundBtn",ef);$$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);
+  ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn"].forEach(s=>toggle(s,em));toggle("#uploadFundBtn",ef);$$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);toggle("#continuationEventBtn",ee);
   ["#createPortalBtn","#syncPortalNowBtn","#closePortalBtn","#reopenPortalBtn","#saveLookupSettingsBtn"].forEach(s=>toggle(s,el));
   $$("#lookupCoreFields input,#lookupCustomFields input").forEach(x=>x.disabled=!el);
   if($("#readonlyBannerEvents")){$("#readonlyBannerEvents").classList.toggle("hidden",!isBCN()&&!semesterLocked());$("#readonlyBannerEvents").textContent=semesterLocked()?"Học kỳ đã khóa — Cổng sự kiện đang ở chế độ chỉ xem.":(ee?"BCN — Bạn được cấp quyền chỉnh sửa cổng sự kiện.":"BCN — Bạn chỉ được xem cổng sự kiện và kết quả.")}
@@ -1534,7 +1711,14 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="dashboard")renderDashboard();if(b.dataset.tab==="attention")renderAttention();if(b.dataset.tab==="settings")renderSettings();if(b.dataset.tab==="lookupPortal")renderLookupPortal();if(b.dataset.tab==="freeLookup")renderFreeLookup();if(b.dataset.tab==="events"){renderEvents();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(b.dataset.tab==="myAccount")renderMyAccount();if(b.dataset.tab==="approvals")loadApprovalRequests();if(b.dataset.tab==="audit")loadAuditLogs();if(b.dataset.tab==="trash")loadTrashBin();if(b.dataset.tab==="accounts")renderAccounts();
   applyRoleAccess();
 });
-$("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selectedMemberIds.clear();renderAll();watchAttendancePortals(true)};
+$("#semester").onchange=e=>{
+  semester=e.target.value;
+  selectedInfoId=null;
+  selectedMemberIds.clear();
+  renderAll();
+  watchSuiteCollections();
+  watchAttendancePortals(true);
+};
 
 
 /* sidebar scrolling */
@@ -1664,8 +1848,37 @@ function renderQLTV(){
   $("#qltvHead").innerHTML=`<tr><th rowspan="2">STT</th><th rowspan="2">HỌ VÀ TÊN</th><th rowspan="2">MSSV</th><th rowspan="2">ĐIỂM TỔNG</th><th rowspan="2">ĐIỂM CỘNG</th><th rowspan="2">QUY ĐỔI</th>${groups.map(g=>`<th class="group ${g.id==="support"?"support":""}" colspan="${g.items.length}">${esc(g.name)}</th>`).join("")}<th rowspan="2">ĐÓNG QUỸ<br>(10 điểm)</th><th rowspan="2"></th></tr><tr>${groups.flatMap(g=>g.items.map(it=>`<th class="event-head">${esc(it.name)}<span class="date-head">${esc(it.date||"")} • ${Number(it.points||0)}đ</span></th>`)).join("")}</tr>`;
   const q=$("#searchManage").value.trim().toLowerCase(),list=members().filter(m=>!q||(m.name+" "+m.mssv).toLowerCase().includes(q));
   $("#qltvBody").innerHTML=list.map((m,i)=>{ensureMemberScores(m);const s=scoreMember(m);return `<tr><td>${i+1}</td><td class="name">${esc(m.name)}</td><td>${esc(m.mssv||"")}</td><td><span class="score-pill">${s.total}</span></td><td>${s.bonus}</td><td><b>${s.conversion}</b></td>${groups.flatMap(g=>g.items.map(it=>g.mode==="checkbox"?`<td><input class="check" type="checkbox" ${m.scores[it.id]?"checked":""} onchange="setScore('${m.id}','${it.id}',this.checked)"></td>`:`<td><input class="num-score num-clear" type="number" value="${Number(m.scores[it.id]||0)}" onchange="setScore('${m.id}','${it.id}',Number(this.value||0))"></td>`)).join("")}<td><input class="check fund-check" type="checkbox" ${m.fundPaid?"checked":""} onchange="setFund('${m.id}',this.checked)"></td><td class="row-actions">${canEditModule("members")?`<button onclick="editMember('${m.id}')">Sửa</button><button onclick="deleteMember('${m.id}')">Xóa</button>`:""}</td></tr>`}).join("");
-  $("#qltvEmpty").classList.toggle("hidden",list.length>0)
+  $("#qltvEmpty").classList.toggle("hidden",list.length>0);
+  requestAnimationFrame(syncQLTVHorizontalScroll);
 }
+
+let qltvScrollSyncing=false;
+function syncQLTVHorizontalScroll(){
+  const card=$("#qltvScrollCard"),top=$("#qltvTopScroll"),inner=$("#qltvTopScrollInner"),table=$("#qltvTable");
+  if(!card||!top||!inner||!table)return;
+  const width=Math.max(table.scrollWidth,card.clientWidth);
+  inner.style.width=width+"px";
+  top.classList.toggle("hidden",table.scrollWidth<=card.clientWidth+2);
+
+  if(!top.dataset.bound){
+    top.dataset.bound="1";
+    top.addEventListener("scroll",()=>{
+      if(qltvScrollSyncing)return;
+      qltvScrollSyncing=true;
+      card.scrollLeft=top.scrollLeft;
+      requestAnimationFrame(()=>qltvScrollSyncing=false);
+    },{passive:true});
+    card.addEventListener("scroll",()=>{
+      if(qltvScrollSyncing)return;
+      qltvScrollSyncing=true;
+      top.scrollLeft=card.scrollLeft;
+      requestAnimationFrame(()=>qltvScrollSyncing=false);
+    },{passive:true});
+  }
+  top.scrollLeft=card.scrollLeft;
+}
+window.addEventListener("resize",()=>requestAnimationFrame(syncQLTVHorizontalScroll));
+
 function findMember(id){return state.members.find(m=>m.id===id)}
 async function setScore(id,itemId,val){if(!canEditModule("attendance"))return;const m=findMember(id);if(!m)return;ensureMemberScores(m);const before=m.scores[itemId];m.scores[itemId]=val;persistStateOnly();renderQLTV();try{await fbDb.collection("members").doc(id).update({[`scores.${itemId}`]:val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""});const act=getAllActivities().find(a=>a.item.id===itemId);await logAudit({action:"update",module:"attendance",entityType:"member",entityId:id,summary:`Sửa điểm ${m.name} • ${act?.item.name||itemId}`,before,after:val,undo:{type:"memberScore",memberId:id,itemId,value:before}})}catch(e){alert("Không lưu được điểm: "+(e.message||e))}}
 async function setFund(id,val){if(!canEditModule("finance"))return;const m=findMember(id);if(!m)return;const before=!!m.fundPaid;m.fundPaid=!!val;persistStateOnly();renderQLTV();renderFinance();try{await fbDb.collection("members").doc(id).set({fundPaid:!!val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true});await logAudit({action:"update",module:"finance",entityType:"member",entityId:id,summary:`${m.name}: ${val?"Đã đóng quỹ":"Chưa đóng quỹ"}`,before,after:!!val,undo:{type:"fund",memberId:id,value:before}})}catch(e){alert("Không lưu được trạng thái đóng quỹ: "+(e.message||e))}}
@@ -2065,7 +2278,7 @@ function freeLookupLink(id){
 }
 function freeLookupPortalLocked(p){return !!(p?.scopeSemester&&state.semesters?.[p.scopeSemester]?.locked)}
 function freeLookupScopeLabel(p){
-  if(!p.scopeSemester)return "Độc lập học kỳ";
+  if(!p.scopeSemester)return "Chưa gắn học kỳ (dữ liệu cũ)";
   return state.semesters[p.scopeSemester]?.name||p.scopeSemester;
 }
 function formatFreeLookupAdminValue(v,type){
@@ -2081,6 +2294,7 @@ function publicFreeLookupMeta(p){
     description:p.description||"",
     instructionText:p.instructionText||"",
     open:p.open===true,
+    scopeSemester:p.scopeSemester||semester||"",
     searchLabel:p.searchLabel||p.searchFieldLabel||"Mã tra cứu",
     searchPlaceholder:p.searchPlaceholder||"Nhập thông tin cần tra cứu",
     searchButtonLabel:p.searchButtonLabel||"Tra cứu",
@@ -2121,7 +2335,10 @@ async function renderFreeLookup(){
   root.innerHTML='<div class="empty">Đang tải cổng tra cứu…</div>';
   try{
     const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).get();
-    freeLookupPortals=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.updatedAt?.toMillis?.()||0).localeCompare(String(a.updatedAt?.toMillis?.()||0))||String(a.title||"").localeCompare(String(b.title||""),"vi"));
+    freeLookupPortals=snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(p=>p.scopeSemester===semester)
+      .sort((a,b)=>(b.updatedAt?.toMillis?.()||0)-(a.updatedAt?.toMillis?.()||0)||String(a.title||"").localeCompare(String(b.title||""),"vi"));
     const q=($("#freeLookupSearch")?.value||"").trim().toLowerCase();
     const list=freeLookupPortals.filter(p=>!q||(`${p.title||""} ${p.description||""}`).toLowerCase().includes(q));
     $("#freeLookupPortalCount").textContent=freeLookupPortals.length;
@@ -2222,10 +2439,14 @@ function validateFreeLookupBuilderFields({silent=false}={}){
 }
 function openFreeLookupBuilder(id=""){
   if(!canEditClub())return;
+  if(!semester||!state.semesters?.[semester])return alert("Không xác định được học kỳ đang chọn.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi tạo hoặc chỉnh sửa cổng tra cứu.");
+
   const p=id?freeLookupPortalById(id):null;
+  if(p?.scopeSemester&&p.scopeSemester!==semester)return alert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+
   freeLookupBuilderFields=structuredClone((p?.fields||[]).length?p.fields:defaultFreeLookupBuilderFields());
   freeLookupBuilderSearchFieldId=p?.searchFieldId||freeLookupBuilderFields[0]?.id||"";
-  const semOptions=`<option value="">Không gắn học kỳ</option>`+Object.entries(state.semesters).map(([k,v])=>`<option value="${esc(k)}" ${(p?.scopeSemester||"")===k?"selected":""}>${esc(v.name)}</option>`).join("");
   const recordCount=Number(p?.recordCount||0);
 
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1180px,100%)">
@@ -2244,7 +2465,10 @@ function openFreeLookupBuilder(id=""){
       <p>Nội dung này sẽ xuất hiện trên trang tra cứu công khai.</p>
       <div class="form-grid">
         <label>Tên cổng<input id="flTitle" maxlength="120" value="${esc(p?.title||"")}" placeholder="VD: Tra cứu kết quả Casting FA26"></label>
-        <label>Gắn với học kỳ<select id="flScope">${semOptions}</select></label>
+        <label>Học kỳ
+          <input id="flScope" value="${esc(semester)}" readonly>
+          <div class="permission-note">${esc(state.semesters?.[semester]?.name||semester)} • Cổng này chỉ thuộc học kỳ đang chọn.</div>
+        </label>
         <label class="full">Mô tả<textarea id="flDescription" maxlength="1000" placeholder="VD: Cổng tra cứu kết quả vòng Casting thành viên Our Stage FA26.">${esc(p?.description||"")}</textarea></label>
         <label class="full">Hướng dẫn trước khi tra cứu<textarea id="flInstructionText" maxlength="1000" placeholder="VD: Nhập chính xác số báo danh được BTC cung cấp.">${esc(p?.instructionText||"")}</textarea></label>
       </div>
@@ -2288,7 +2512,7 @@ function openFreeLookupBuilder(id=""){
     </div>
 
     <div class="free-lookup-help" style="margin-top:12px">
-      Cổng này hoàn toàn độc lập với danh sách thành viên CLB. Chỉ các trường được bật <b>Công khai</b> mới được đưa sang vùng dữ liệu người tra cứu có thể đọc.
+      Cổng này độc lập với danh sách thành viên CLB nhưng được gắn cố định với <b>${esc(state.semesters?.[semester]?.name||semester)}</b>. Chỉ các trường bật <b>Công khai</b> mới được đưa sang vùng dữ liệu người tra cứu có thể đọc.
     </div>
 
     <div class="modal-actions">
@@ -2355,11 +2579,21 @@ async function syncFreeLookupPublicRecords(p){
 }
 async function saveFreeLookupBuilder(id=""){
   if(!canEditClub())return;
-  const title=$("#flTitle").value.trim();if(!title)return alert("Vui lòng nhập tên cổng.");
-  const checked=validateFreeLookupBuilderFields();if(!checked)return;
-  const existing=id?freeLookupPortalById(id):null;
-  const recordCount=Number(existing?.recordCount||0);
+  if(!semester||!state.semesters?.[semester])return alert("Không xác định được học kỳ đang chọn.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi lưu cổng tra cứu.");
 
+  const title=$("#flTitle").value.trim();
+  if(!title)return alert("Vui lòng nhập tên cổng.");
+
+  const checked=validateFreeLookupBuilderFields();
+  if(!checked)return;
+
+  const existing=id?freeLookupPortalById(id):null;
+  if(existing?.scopeSemester&&existing.scopeSemester!==semester){
+    return alert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+  }
+
+  const recordCount=Number(existing?.recordCount||0);
   if(recordCount>0&&existing?.searchFieldId&&checked.search.id!==existing.searchFieldId){
     return alert("Cổng đang có dữ liệu nên không thể đổi khóa tra cứu trong phần Thiết lập. Hãy Upload Excel và dùng chế độ Thay toàn bộ dữ liệu cũ.");
   }
@@ -2371,7 +2605,7 @@ async function saveFreeLookupBuilder(id=""){
     title,
     description:$("#flDescription").value.trim(),
     instructionText:$("#flInstructionText").value.trim(),
-    scopeSemester:$("#flScope").value,
+    scopeSemester:semester,
     searchLabel:$("#flSearchLabel").value.trim()||checked.search.label||"Mã tra cứu",
     searchPlaceholder:$("#flSearchPlaceholder").value.trim()||"Nhập thông tin cần tra cứu",
     searchButtonLabel:$("#flSearchButtonLabel").value.trim()||"Tra cứu",
@@ -2386,22 +2620,46 @@ async function saveFreeLookupBuilder(id=""){
   };
 
   try{
-    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).set(
-      {...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:existing?.createdAt||firebase.firestore.FieldValue.serverTimestamp()},
-      {merge:true}
-    );
-    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).set(publicFreeLookupMeta(p),{merge:true});
+    const adminRef=fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId);
+    const publicRef=fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId);
+    const batch=fbDb.batch();
+
+    batch.set(adminRef,{
+      ...p,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt:existing?.createdAt||firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentFirebaseUser?.uid||"",
+      createdBy:existing?.createdBy||currentFirebaseUser?.uid||""
+    },{merge:true});
+
+    batch.set(publicRef,publicFreeLookupMeta(p),{merge:true});
+
+    // Atomic metadata save: either both admin/public docs are written, or neither is.
+    await batch.commit();
+
     if(existing&&recordCount>0)await syncFreeLookupPublicRecords(p);
+
     closeModal();
     toast(existing?"Đã lưu cổng và trường dữ liệu":"Đã tạo cổng tra cứu");
     await renderFreeLookup();
   }catch(e){
-    console.error(e);
-    alert("Không lưu được cổng: "+(e.message||e));
+    console.error("saveFreeLookupBuilder",e);
+
+    const message=String(e?.message||e||"");
+    if(e?.code==="permission-denied"||/permission/i.test(message)){
+      if(semesterLocked()){
+        return alert("Không lưu được cổng vì học kỳ đang bị khóa. Hãy vào Thiết lập → mở khóa học kỳ rồi thử lại.");
+      }
+      return alert("Không lưu được cổng do Firestore Rules chưa cho phép dữ liệu của học kỳ này. Hãy cập nhật Firestore Rules V36 và Publish lại.");
+    }
+
+    alert("Không lưu được cổng: "+message);
   }
 }
 async function toggleFreeLookup(id){
   const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
+  if(p.scopeSemester!==semester)return alert("Cổng này không thuộc học kỳ đang chọn.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa.");
   if(!p.searchFieldId||!(p.fields||[]).length||!p.recordCount){
     if(p.open!==true)return alert("Hãy upload dữ liệu và cấu hình trường tra cứu trước khi mở cổng.");
   }
@@ -2605,6 +2863,120 @@ $("#createFreeLookupBtn").onclick=()=>openFreeLookupBuilder();
 $("#freeLookupSearch").oninput=()=>renderFreeLookup();
 
 function eventFor(id){return state.events.find(e=>e.id===id)}
+
+function eventPointsValue(ev){
+  const n=Number(ev?.eventPoints||0);
+  return Number.isFinite(n)&&n>0?n:0;
+}
+function eventPointItemId(eventId){
+  return `event_point_${String(eventId||"").replace(/[^A-Za-z0-9_-]/g,"_")}`.slice(0,180);
+}
+function eventPointGroup(semKey,{create=false}={}){
+  const cfg=state.semesters?.[semKey];if(!cfg)return null;
+  cfg.groups=cfg.groups||[];
+  let g=cfg.groups.find(x=>x.specialType==="eventPoints"||x.id==="event_portal_points");
+  if(!g&&create){
+    g={id:"event_portal_points",name:"Điểm từ cổng sự kiện",mode:"number",specialType:"eventPoints",items:[]};
+    cfg.groups.push(g);
+  }
+  if(g){
+    g.mode="number";
+    g.items=g.items||[];
+  }
+  return g;
+}
+async function ensureEventPointActivity(ev){
+  const points=eventPointsValue(ev);
+  if(!points)return null;
+  const cfg=state.semesters?.[ev.semester];if(!cfg)throw new Error("Không tìm thấy học kỳ của sự kiện.");
+  const g=eventPointGroup(ev.semester,{create:true});
+  const itemId=eventPointItemId(ev.id);
+  let item=g.items.find(x=>x.id===itemId);
+  if(!item){
+    item={id:itemId,name:ev.title||"Cổng sự kiện",date:"",points,sourceEventId:ev.id,specialType:"eventPoints"};
+    g.items.push(item);
+  }else{
+    item.name=ev.title||item.name||"Cổng sự kiện";
+    item.points=points;
+    item.sourceEventId=ev.id;
+  }
+  persistStateOnly();
+  await saveCloudStateNow();
+  if(ev.semester===semester){
+    renderAttendanceSelector();
+    renderQLTV();
+  }
+  return item;
+}
+async function applyEventPoints(eventId,submissionId,{silent=false}={}){
+  if(!canEditModule("attendance")){
+    if(!silent)alert("Tài khoản này chưa có quyền chỉnh sửa Điểm danh / điểm.");
+    return false;
+  }
+  const ev=eventFor(eventId);if(!ev)return false;
+  const points=eventPointsValue(ev);
+  if(!points){
+    if(!silent)alert("Cổng sự kiện này không cấu hình điểm.");
+    return false;
+  }
+  if(semesterLocked(ev.semester)){
+    if(!silent)alert("Học kỳ của sự kiện đang bị khóa.");
+    return false;
+  }
+
+  const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
+  const snap=await ref.get();if(!snap.exists)return false;
+  const sub={id:snap.id,...snap.data()};
+  if(sub.pointsApplied===true)return true;
+
+  const mssv=submissionMssv(ev,sub);
+  if(!mssv){
+    await ref.set({pointsStatus:"Không tìm thấy trường MSSV",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(!silent)alert("Phản hồi này không có MSSV để đối chiếu thành viên.");
+    return false;
+  }
+
+  const target=(state.members||[]).find(m=>m.semester===ev.semester&&normalizeMssvKey(m.mssv)===mssv);
+  if(!target){
+    await ref.set({pointsStatus:"Không tìm thấy MSSV trong học kỳ",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(!silent)alert("Không tìm thấy thành viên có MSSV này trong học kỳ của sự kiện.");
+    return false;
+  }
+
+  const item=await ensureEventPointActivity(ev);
+  target.scores=target.scores||{};
+  const before=Number(target.scores[item.id]||0);
+  target.scores[item.id]=points;
+
+  await fbDb.collection("members").doc(target.id).update({
+    [`scores.${item.id}`]:points,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:currentFirebaseUser?.uid||""
+  });
+  await ref.set({
+    pointsApplied:true,
+    pointsValue:points,
+    pointsStatus:`Đã cộng ${points} điểm`,
+    pointsAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    pointsAppliedBy:currentFirebaseUser?.uid||""
+  },{merge:true});
+
+  await logAudit({
+    action:"event-points",
+    module:"attendance",
+    entityType:"member",
+    entityId:target.id,
+    summary:`Cộng ${points} điểm từ sự kiện ${ev.title} cho ${target.name}`,
+    before:{itemId:item.id,value:before},
+    after:{itemId:item.id,value:points},
+    undo:{type:"memberScore",memberId:target.id,itemId:item.id,value:before},
+    semesterKey:ev.semester
+  });
+
+  if(!silent)toast(`Đã cộng ${points} điểm`);
+  return true;
+}
+
 $("#eventSearch").oninput=renderEvents;
 $("#createEventBtn").onclick=()=>openEventBuilder();
 
@@ -2626,9 +2998,12 @@ function renderEvents(){
             ${ev.isOpen?'<span class="portal-state-open">Đang mở</span>':'<span class="portal-state-closed">Đã đóng</span>'}
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
             • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${(ev.fields||[]).filter(f=>!["image","content"].includes(f.type)).length} trường`:"Thiếu trường"}</span>
+            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span>
           </div>
         </div>
-        <span class="account-role">${esc(ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form")}</span>
+        ${ev.specialType==="continuation"
+          ? `<span class="companion-badge">Đồng hành → ${esc(state.semesters?.[ev.targetSemester]?.name||parseMainSemester(ev.targetSemester)?.name||ev.targetSemester||"kỳ tiếp theo")}</span>`
+          : `<span class="account-role">${esc(ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form")}</span>`}
       </div>
       <div class="event-actions">
         <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
@@ -2729,10 +3104,69 @@ async function repairCurrentSemesterEventFields(){
   if(broken.length)renderEvents();
 }
 
-const EVENT_TEMPLATES={casting:{name:"Casting thành viên",description:"Thu thập thông tin đăng ký và kết quả casting.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Ban đăng ký",type:"radio",required:true,options:["Diễn viên & Biên kịch","Truyền thông & Sản xuất"]},{label:"Ghi chú",type:"textarea",required:false}]},fund:{name:"Xác nhận đóng quỹ",description:"Form xác nhận thông tin đóng quỹ CLB.",resultAction:"fundPaidApprove",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Tôi xác nhận đã chuyển khoản",type:"radio",required:true,options:["Đã chuyển khoản"]}]},workshop:{name:"Đăng ký Workshop",description:"Thu thập đăng ký tham gia workshop.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Bạn mong đợi điều gì?",type:"textarea",required:false}]},event:{name:"Đăng ký sự kiện",description:"Form đăng ký sự kiện chung.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Số điện thoại",type:"phone",required:false}]},poll:{name:"Bình chọn / Khảo sát",description:"Khảo sát nhanh hoặc bình chọn.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:false},{label:"Lựa chọn",type:"radio",required:true,options:["Phương án 1","Phương án 2"]},{label:"Ý kiến khác",type:"textarea",required:false}]}};
-function openEventTemplatePicker(){if(!canEditModule("events"))return;$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Mẫu cổng sự kiện</h2><div class="small-help">Chọn mẫu để tạo nhanh, sau đó vẫn sửa được mọi câu hỏi.</div></div><button onclick="closeModal()">×</button></div><div class="event-template-grid">${Object.entries(EVENT_TEMPLATES).map(([k,t])=>`<div class="event-template-card" onclick="useEventTemplate('${k}')"><h4>${esc(t.name)}</h4><p>${esc(t.description)}</p></div>`).join("")}</div></div></div>`;$("#modalWrap").classList.remove("hidden")}
-function useEventTemplate(k){const t=EVENT_TEMPLATES[k];if(!t)return;closeModal();window.__eventTemplate=t;openEventBuilder("")}
+const EVENT_TEMPLATES={
+  casting:{name:"Casting thành viên",description:"Thu thập thông tin đăng ký và kết quả casting.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Ban đăng ký",type:"radio",required:true,options:["Diễn viên & Biên kịch","Truyền thông & Sản xuất"]},{label:"Ghi chú",type:"textarea",required:false}]},
+  fund:{name:"Xác nhận đóng quỹ",description:"Form xác nhận thông tin đóng quỹ CLB.",resultAction:"fundPaidApprove",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Tôi xác nhận đã chuyển khoản",type:"radio",required:true,options:["Đã chuyển khoản"]}]},
+  workshop:{name:"Đăng ký Workshop",description:"Thu thập đăng ký tham gia workshop.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Bạn mong đợi điều gì?",type:"textarea",required:false}]},
+  event:{name:"Đăng ký sự kiện",description:"Form đăng ký sự kiện chung.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Số điện thoại",type:"phone",required:false}]},
+  poll:{name:"Bình chọn / Khảo sát",description:"Khảo sát nhanh hoặc bình chọn.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:false},{label:"Lựa chọn",type:"radio",required:true,options:["Phương án 1","Phương án 2"]},{label:"Ý kiến khác",type:"textarea",required:false}]}
+};
+function buildContinuationEventTemplate(){
+  const target=nextMainSemesterCode(semester);
+  const targetName=nextMainSemesterName(semester);
+  return {
+    name:`Đồng hành kỳ tiếp theo – ${targetName}`,
+    description:`Xác nhận thành viên có tiếp tục đồng hành cùng Our Stage từ ${sem()?.name||semester} sang ${targetName}.`,
+    resultAction:"continuationAuto",
+    specialType:"continuation",
+    targetSemester:target,
+    fields:[
+      {label:"Họ và tên",type:"text",required:true,systemKey:"memberName"},
+      {label:"MSSV",type:"mssv",required:true,systemKey:"mssv"},
+      {label:`Bạn có tiếp tục đồng hành cùng CLB trong ${targetName} không?`,type:"radio",required:true,systemKey:"continueNextSemester",options:["Có, tôi tiếp tục đồng hành cùng CLB","Không, tôi không tiếp tục"]},
+      {label:"Ghi chú gửi Ban Chủ Nhiệm",type:"textarea",required:false,systemKey:"continuationNote"}
+    ]
+  };
+}
+function continuationTargetReady({alertIfMissing=false}={}){
+  const target=nextMainSemesterCode(semester);
+  if(!target){
+    if(alertIfMissing)alert("Mã học kỳ hiện tại không theo định dạng SP/SU/FA.");
+    return false;
+  }
+  if(!state.semesters?.[target]){
+    if(alertIfMissing)alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi mở form đồng hành.`);
+    return false;
+  }
+  if(semesterLocked(target)){
+    if(alertIfMissing)alert(`${state.semesters[target].name||target} đang bị khóa. Hãy mở khóa kỳ tiếp theo trước.`);
+    return false;
+  }
+  return true;
+}
+function openEventTemplatePicker(){
+  if(!canEditModule("events"))return;
+  const cards=Object.entries(EVENT_TEMPLATES).map(([k,t])=>`<div class="event-template-card" onclick="useEventTemplate('${k}')"><h4>${esc(t.name)}</h4><p>${esc(t.description)}</p></div>`).join("");
+  const continuation=buildContinuationEventTemplate();
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Mẫu cổng sự kiện</h2><div class="small-help">Chọn mẫu để tạo nhanh, sau đó vẫn sửa được mọi câu hỏi.</div></div><button onclick="closeModal()">×</button></div><div class="event-template-grid">${cards}<div class="event-template-card" onclick="useEventTemplate('continuation')"><h4>${esc(continuation.name)}</h4><p>${esc(continuation.description)}</p><span class="companion-badge">Tự chuyển thành viên sang kỳ tiếp theo</span></div></div></div></div>`;
+  $("#modalWrap").classList.remove("hidden");
+}
+function useEventTemplate(k){
+  let t;
+  if(k==="continuation"){
+    if(!continuationTargetReady({alertIfMissing:true}))return;
+    t=buildContinuationEventTemplate();
+  }else t=EVENT_TEMPLATES[k];
+  if(!t)return;
+  closeModal();window.__eventTemplate=t;openEventBuilder("");
+}
 $("#eventTemplateBtn").onclick=openEventTemplatePicker;
+$("#continuationEventBtn").onclick=()=>{
+  if(!canEditModule("events"))return;
+  if(!continuationTargetReady({alertIfMissing:true}))return;
+  window.__eventTemplate=buildContinuationEventTemplate();
+  openEventBuilder("");
+};
 async function openEventBuilder(eventId=""){
   if(!canEditModule("events"))return;
   eventBuilderId=eventId;
@@ -2748,6 +3182,8 @@ async function openEventBuilder(eventId=""){
     }catch(e){console.warn("Không tải được cấu hình sự kiện đầy đủ",e)}
   }
   const tpl=!eventId?window.__eventTemplate:null;window.__eventTemplate=null;
+  eventBuilderSpecialType=ev?.specialType||tpl?.specialType||"";
+  eventBuilderTargetSemester=ev?.targetSemester||tpl?.targetSemester||(eventBuilderSpecialType==="continuation"?nextMainSemesterCode(ev?.semester||semester):"");
   const rawBuilderFields=(Array.isArray(ev?.fields)&&ev.fields.length)
     ? ev.fields
     : ((Array.isArray(tpl?.fields)&&tpl.fields.length)?tpl.fields:defaultEventFieldsFor(ev||tpl||{}));
@@ -2765,10 +3201,16 @@ async function openEventBuilder(eventId=""){
         <option value="none" ${(ev?.resultAction||tpl?.resultAction||"none")==="none"?"selected":""}>Chỉ lưu phản hồi</option>
         <option value="fundPaidApprove" ${(ev?.resultAction||tpl?.resultAction)==="fundPaidApprove"?"selected":""}>Admin duyệt → Đã đóng quỹ</option>
         <option value="fundPaidAuto" ${(ev?.resultAction||tpl?.resultAction)==="fundPaidAuto"?"selected":""}>Tự động → Đã đóng quỹ khi hệ thống Admin đang online</option>
+        ${eventBuilderSpecialType==="continuation"?`<option value="continuationAuto" selected>Tự động → Đồng hành kỳ tiếp theo</option>`:""}
       </select></label>
+      <label>Điểm hoạt động <span style="font-weight:500">(không bắt buộc)</span>
+        <input id="eventPoints" type="number" min="0" max="1000" step="1" value="${eventPointsValue(ev||tpl||{})||""}" placeholder="Để trống = không tính điểm">
+        <div class="event-points-note">Có thể dùng cho mọi cổng, kể cả đóng quỹ hoặc đồng hành. Nếu nhập điểm, form cần có trường MSSV để đối chiếu thành viên.</div>
+      </label>
       <label>Tiêu đề sau khi gửi<input id="eventSuccessTitle" value="${esc(ev?.successTitle||"Gửi thông tin thành công")}"></label>
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
     </div>
+    ${eventBuilderSpecialType==="continuation"?`<div class="companion-note"><b>Form đồng hành kỳ tiếp theo</b><br>Kỳ hiện tại: ${esc(eventSemesterName)} → Kỳ đích: <b>${esc(state.semesters?.[eventBuilderTargetSemester]?.name||nextMainSemesterName(eventSemesterKey))}</b>.<br>Nếu thành viên chọn “Có”, hệ thống sẽ tạo/cập nhật hồ sơ ở kỳ đích và đánh dấu hoạt động Đồng hành kỳ tiếp theo trong bảng Điểm danh.</div>`:""}
     <div class="section-title"><h4>Các trường trong form</h4><button class="secondary" onclick="addEventField()">+ Thêm trường</button></div>
     <div class="event-builder-tools">
       <div class="small-help">Các trường bên dưới sẽ được lưu trực tiếp vào Firestore và hiển thị ở cổng public. Tối thiểu cần 1 trường trả lời.</div>
@@ -2936,6 +3378,158 @@ function previewEventBuilderForm(){
   }).join("");
   $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="eventPreviewOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Xem trước form</h2><div class="small-help">${esc($("#eventTitle")?.value||"Cổng sự kiện")}</div></div><button onclick="document.getElementById('eventPreviewOverlay')?.remove()">×</button></div>${preview||'<div class="event-field-empty-warning">Chưa có trường nào.</div>'}<div class="modal-actions"><button class="primary" onclick="document.getElementById('eventPreviewOverlay')?.remove()">Đóng xem trước</button></div></div></div>`);
 }
+
+function continuationActivityId(sourceSem,targetSem){return `continuation_${sourceSem}_${targetSem}`}
+async function ensureContinuationActivity(ev){
+  if(!ev||ev.specialType!=="continuation")return null;
+  const sourceSem=ev.semester,targetSem=ev.targetSemester||nextMainSemesterCode(sourceSem);
+  const src=state.semesters?.[sourceSem],target=state.semesters?.[targetSem];
+  if(!src||!target)throw new Error("Chưa tạo học kỳ tiếp theo.");
+
+  src.groups=src.groups||[];
+  let group=src.groups.find(g=>g.specialType==="continuation"||g.id===`continuation_${sourceSem}`);
+  if(!group){
+    group={id:`continuation_${sourceSem}`,name:"Đồng hành CLB",mode:"checkbox",specialType:"continuation",items:[]};
+    src.groups.push(group);
+  }
+  group.mode="checkbox";
+  group.items=group.items||[];
+
+  const itemId=continuationActivityId(sourceSem,targetSem);
+  const points=eventPointsValue(ev);
+  let item=group.items.find(x=>x.id===itemId);
+  if(!item){
+    item={id:itemId,name:`Đồng hành kỳ tiếp theo → ${target.name||targetSem}`,date:"",points:points||0,specialType:"continuation",targetSemester:targetSem,sourceEventId:ev.id};
+    group.items.push(item);
+  }else{
+    item.name=`Đồng hành kỳ tiếp theo → ${target.name||targetSem}`;
+    item.points=points||0;
+    item.sourceEventId=ev.id;
+  }
+  persistStateOnly();
+  await saveCloudStateNow();
+  if(sourceSem===semester){renderAttendanceSelector();renderQLTV()}
+  return item;
+}
+function continuationDecision(ev,sub){
+  const field=(ev.fields||[]).find(f=>f.systemKey==="continueNextSemester")
+    ||(ev.fields||[]).find(f=>f.type==="radio"&&normalizeText(f.label).includes("tiep tuc dong hanh"));
+  const raw=field?sub.answers?.[field.id]:"";
+  const v=normalizeText(Array.isArray(raw)?raw[0]:raw);
+  return v==="co"||v.startsWith("co,")||v.startsWith("co ");
+}
+function continuationSubmissionMssv(ev,sub){
+  const field=(ev.fields||[]).find(f=>f.systemKey==="mssv")||(ev.fields||[]).find(f=>f.type==="mssv");
+  return normalizeMssvKey(field?sub.answers?.[field.id]:"");
+}
+async function findMemberInSemesterByMssv(semKey,mssv){
+  const snap=await fbDb.collection("members").where("semester","==",semKey).get();
+  const key=normalizeMssvKey(mssv);
+  const doc=snap.docs.find(d=>normalizeMssvKey(d.data()?.mssv)===key);
+  return doc?{id:doc.id,...doc.data()}:null;
+}
+async function processContinuationSubmission(ev,doc){
+  if(!canEditClub()||!ev||ev.specialType!=="continuation")return false;
+  const sub={id:doc.id,...doc.data()};
+  if(sub.continuationApplied===true)return true;
+
+  const sourceSem=ev.semester,targetSem=ev.targetSemester||nextMainSemesterCode(sourceSem);
+  if(!state.semesters?.[targetSem]){
+    await doc.ref.set({continuationStatus:`Chờ tạo ${parseMainSemester(targetSem)?.name||targetSem}`},{merge:true});
+    return false;
+  }
+  if(semesterLocked(sourceSem)||semesterLocked(targetSem)){
+    await doc.ref.set({continuationStatus:"Đang chờ vì học kỳ bị khóa"},{merge:true});
+    return false;
+  }
+
+  const mssv=continuationSubmissionMssv(ev,sub);
+  if(!mssv){
+    await doc.ref.set({continuationStatus:"Thiếu MSSV"},{merge:true});
+    return false;
+  }
+  const sourceMember=await findMemberInSemesterByMssv(sourceSem,mssv);
+  if(!sourceMember){
+    await doc.ref.set({continuationStatus:"Không tìm thấy MSSV trong kỳ hiện tại"},{merge:true});
+    return false;
+  }
+
+  if(!continuationDecision(ev,sub)){
+    await doc.ref.set({
+      continuationApplied:true,continuationDecision:"no",
+      continuationStatus:"Không tiếp tục đồng hành",
+      actionApplied:true,actionStatus:"Không tiếp tục đồng hành",
+      actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      actionAppliedBy:currentFirebaseUser?.uid||""
+    },{merge:true});
+    return true;
+  }
+
+  const activity=await ensureContinuationActivity(ev);
+  await fbDb.collection("members").doc(sourceMember.id).update({
+    [`scores.${activity.id}`]:true,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:currentFirebaseUser?.uid||""
+  });
+
+  let targetMember=await findMemberInSemesterByMssv(targetSem,mssv);
+  if(targetMember){
+    await fbDb.collection("members").doc(targetMember.id).set({
+      name:sourceMember.name||targetMember.name||"",
+      mssv:sourceMember.mssv||targetMember.mssv||mssv,
+      data:firestorePlain(sourceMember.data||targetMember.data||{}),
+      tags:Array.isArray(sourceMember.tags)?sourceMember.tags:(targetMember.tags||[]),
+      internalNote:sourceMember.internalNote||targetMember.internalNote||"",
+      continuedFromSemester:sourceSem,
+      continuedEventId:ev.id,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentFirebaseUser?.uid||""
+    },{merge:true});
+  }else{
+    const id=`cont_${targetSem}_${mssv}`.slice(0,180);
+    await fbDb.collection("members").doc(id).set({
+      semester:targetSem,
+      name:sourceMember.name||"",
+      mssv:sourceMember.mssv||mssv,
+      data:firestorePlain(sourceMember.data||{}),
+      scores:{},
+      fundPaid:false,
+      tags:Array.isArray(sourceMember.tags)?sourceMember.tags:[],
+      internalNote:sourceMember.internalNote||"",
+      continuedFromSemester:sourceSem,
+      continuedEventId:ev.id,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentFirebaseUser?.uid||""
+    },{merge:false});
+    targetMember={id};
+  }
+
+  await doc.ref.set({
+    continuationApplied:true,
+    continuationDecision:"yes",
+    continuationTargetSemester:targetSem,
+    continuationStatus:`Đã chuyển sang ${state.semesters[targetSem].name||targetSem}`,
+    actionApplied:true,
+    actionStatus:`Đã đồng hành sang ${state.semesters[targetSem].name||targetSem}`,
+    pointsApplied:eventPointsValue(ev)>0,
+    pointsValue:eventPointsValue(ev)||0,
+    pointsStatus:eventPointsValue(ev)>0?`Đã cộng ${eventPointsValue(ev)} điểm qua hoạt động đồng hành`:"Không cấu hình điểm",
+    actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    actionAppliedBy:currentFirebaseUser?.uid||""
+  },{merge:true});
+
+  await logAudit({
+    action:"continuation",
+    module:"events",
+    entityType:"member",
+    entityId:sourceMember.id,
+    summary:`${sourceMember.name} tiếp tục đồng hành → ${state.semesters[targetSem].name||targetSem}`,
+    semesterKey:sourceSem
+  });
+  return true;
+}
+
 async function saveEventBuilder(){
   if(!canEditModule("events"))return;
   const title=$("#eventTitle").value.trim();
@@ -2954,8 +3548,24 @@ async function saveEventBuilder(){
   if(approximateSize>850000)return alert("Form có quá nhiều/ảnh quá lớn. Hãy giảm số ảnh hoặc dùng ảnh nhỏ hơn.");
 
   const action=$("#eventResultAction").value;
+  const eventPointsRaw=String($("#eventPoints")?.value||"").trim();
+  const eventPoints=eventPointsRaw===""?0:Number(eventPointsRaw);
+  if(!Number.isFinite(eventPoints)||eventPoints<0||eventPoints>1000)return alert("Điểm sự kiện phải từ 0 đến 1000.");
   if(action.startsWith("fundPaid")&&!eventBuilderFields.some(f=>f.type==="mssv")){
     return alert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
+  }
+  if(eventPoints>0&&!eventBuilderFields.some(f=>f.type==="mssv")){
+    return alert("Muốn cộng điểm từ cổng sự kiện, form cần có một trường loại MSSV.");
+  }
+  if(eventBuilderSpecialType==="continuation"){
+    if(!eventBuilderTargetSemester||!state.semesters?.[eventBuilderTargetSemester]){
+      return alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi lưu form đồng hành.`);
+    }
+    if(semesterLocked(eventBuilderTargetSemester))return alert("Học kỳ tiếp theo đang bị khóa.");
+    if(!eventBuilderFields.some(f=>f.type==="mssv"))return alert("Form đồng hành bắt buộc phải có trường MSSV.");
+    if(!eventBuilderFields.some(f=>f.systemKey==="continueNextSemester")){
+      return alert("Form đồng hành đang thiếu câu hỏi xác nhận tiếp tục đồng hành.");
+    }
   }
 
   const eventId=eventBuilderId||( "event_"+uid() );
@@ -2972,8 +3582,11 @@ async function saveEventBuilder(){
     description:$("#eventDescription").value.trim(),
     semester:lockedSemester,
     isOpen:$("#eventIsOpen").value==="1",
-    resultAction:action,
-    fieldSchemaVersion:2,
+    resultAction:eventBuilderSpecialType==="continuation"?"continuationAuto":action,
+    specialType:eventBuilderSpecialType||"",
+    targetSemester:eventBuilderSpecialType==="continuation"?eventBuilderTargetSemester:"",
+    eventPoints:eventPoints||0,
+    fieldSchemaVersion:3,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
     fields:fullFields
@@ -2989,13 +3602,27 @@ async function saveEventBuilder(){
     ...fullEvent,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   },{merge:false});
-  closeModal();save();toast("Đã lưu cổng sự kiện");renderEvents();
+  if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
+  else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
+  closeModal();save();toast(fullEvent.specialType==="continuation"?"Đã lưu form đồng hành kỳ tiếp theo":(eventPoints>0?`Đã lưu cổng sự kiện • ${eventPoints} điểm`:"Đã lưu cổng sự kiện • Không tính điểm"));renderEvents();
 }
 async function toggleEventOpen(id){
   if(!canEditModule("events"))return;
   const ev=eventFor(id);if(!ev)return;
-  ev.isOpen=!ev.isOpen;
-  await fbDb.collection("eventPortals").doc(id).set({isOpen:ev.isOpen,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  const opening=!ev.isOpen;
+  if(opening&&ev.specialType==="continuation"){
+    const target=ev.targetSemester||nextMainSemesterCode(ev.semester);
+    if(!target||!state.semesters?.[target])return alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(ev.semester)}) trước khi mở form đồng hành.`);
+    if(semesterLocked(target))return alert(`${state.semesters[target].name||target} đang bị khóa.`);
+    ev.targetSemester=target;
+    await ensureContinuationActivity(ev);
+  }
+  ev.isOpen=opening;
+  await fbDb.collection("eventPortals").doc(id).set({
+    isOpen:ev.isOpen,
+    targetSemester:ev.targetSemester||"",
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true});
   save();renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện":"Đã đóng cổng sự kiện");
 }
 
@@ -3058,6 +3685,8 @@ function renderSubmissionCard(ev,s){
       </div>
       <div class="submission-meta">
         ${s.actionApplied?'<span class="status-badge paid">Đã áp dụng kết quả</span>':s.actionStatus?`<span class="small-help">${esc(s.actionStatus)}</span>`:""}
+        ${s.pointsApplied?`<span class="event-point-status">+${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm</span>`:s.pointsStatus?`<span class="small-help">${esc(s.pointsStatus)}</span>`:""}
+        ${ev.specialType==="continuation"&&s.continuationStatus?`<span class="companion-badge">${esc(s.continuationStatus)}</span>`:""}
         <span class="submission-id">${esc(s.id)}</span>
       </div>
     </div>
@@ -3071,6 +3700,7 @@ function renderSubmissionCard(ev,s){
 
     <div class="event-actions">
       ${ev.resultAction.startsWith("fundPaid")&&!s.actionApplied&&canEditModule("finance")?`<button class="primary" onclick="approveEventFundPaid('${ev.id}','${s.id}')">Đánh dấu đã đóng quỹ</button>`:""}
+      ${ev.specialType!=="continuation"&&eventPointsValue(ev)>0&&!s.pointsApplied&&canEditModule("attendance")?`<button class="secondary" onclick="applyEventPoints('${ev.id}','${s.id}')">Cộng ${eventPointsValue(ev)} điểm</button>`:""}
       ${canEditModule("events")?`<button class="danger" onclick="deleteSingleEventSubmission('${ev.id}','${s.id}')">Xóa phản hồi</button>`:""}
     </div>
   </div>`;
@@ -3109,6 +3739,8 @@ function eventSubmissionExportRows(ev,rows){
       row[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"");
     }
     row["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");
+    row["Điểm cổng sự kiện"]=eventPointsValue(ev)||"";
+    row["Trạng thái điểm"]=s.pointsApplied?`Đã cộng ${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm`:(s.pointsStatus||"Chưa cộng");
     return row;
   });
 }
@@ -3195,17 +3827,32 @@ async function approveEventFundPaid(eventId,submissionId,{silent=false}={}){
     semester=prevSemester;
     renderAll();
   }
-  if(!silent)toast("Đã cập nhật trạng thái đóng quỹ");
+  if(eventPointsValue(ev)>0&&canEditModule("attendance")){
+    try{await applyEventPoints(eventId,submissionId,{silent:true})}catch(e){console.warn("event points after fund approval",e)}
+  }
+  if(!silent)toast(eventPointsValue(ev)>0?"Đã cập nhật đóng quỹ và điểm sự kiện":"Đã cập nhật trạng thái đóng quỹ");
   return true;
 }
 async function processAutomaticEventActions(){
   if(!canEditClub())return;
-  for(const ev of (state.events||[]).filter(e=>e.resultAction==="fundPaidAuto"&&state.semesters[e.semester])){
+  for(const ev of (state.events||[]).filter(e=>state.semesters[e.semester])){
     try{
-      const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
-      for(const d of snap.docs){
-        const sub=d.data()||{};
-        if(!sub.actionApplied)await approveEventFundPaid(ev.id,d.id,{silent:true});
+      if(ev.resultAction==="fundPaidAuto"){
+        const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
+        for(const d of snap.docs){
+          const sub=d.data()||{};
+          if(!sub.actionApplied)await approveEventFundPaid(ev.id,d.id,{silent:true});
+        }
+      }
+      if(ev.specialType==="continuation"||ev.resultAction==="continuationAuto"){
+        if(ev.isOpen===true){
+          const target=ev.targetSemester||nextMainSemesterCode(ev.semester);
+          if(target&&state.semesters?.[target]&&!semesterLocked(target))await ensureContinuationActivity({...ev,targetSemester:target});
+        }
+        const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
+        for(const d of snap.docs){
+          if(d.data()?.continuationApplied!==true)await processContinuationSubmission(ev,d);
+        }
       }
     }catch(e){console.warn("auto event action",ev.id,e)}
   }
@@ -3794,20 +4441,20 @@ async function deleteAccountProfile(uid){
 
 
 /* ===== Audit / Trash / Approval ===== */
-async function loadAuditLogs(){if(!canEditClub())return;try{const s=await fbDb.collection("auditLogs").orderBy("createdAt","desc").limit(150).get();auditRows=s.docs.map(d=>({id:d.id,...d.data()}));renderAuditLogs();await loadImportHistory()}catch(e){console.warn(e)}}
+async function loadAuditLogs(){if(!canEditClub())return;try{const s=await fbDb.collection("auditLogs").where("semester","==",semester).limit(200).get();auditRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderAuditLogs();await loadImportHistory()}catch(e){console.warn(e)}}
 function renderAuditLogs(){const root=$("#auditList");if(!root)return;root.innerHTML=(auditRows||[]).map(a=>`<div class="audit-item"><div class="audit-item-main"><h4>${esc(a.summary||a.action||"Thay đổi")}</h4><p>${esc(a.actorName||a.actorEmail||"")} • ${dateTime(a.createdAt)} • ${esc(a.module||"")} ${a.semester?`• ${esc(a.semester)}`:""}</p>${a.before!==null&&a.before!==undefined?`<p><span class="diff-old">${esc(shortValue(a.before))}</span> → <span class="diff-new">${esc(shortValue(a.after))}</span></p>`:""}</div><div class="audit-actions">${a.undo?`<button class="secondary" onclick="undoAudit('${a.id}')">Hoàn tác</button>`:""}</div></div>`).join("")||`<div class="empty">Chưa có nhật ký.</div>`}
-async function loadImportHistory(){try{const s=await fbDb.collection("importHistory").orderBy("createdAt","desc").limit(100).get();importHistoryRows=s.docs.map(d=>({id:d.id,...d.data()}));renderImportHistory()}catch(e){console.warn(e)}}
+async function loadImportHistory(){try{const s=await fbDb.collection("importHistory").where("semester","==",semester).limit(160).get();importHistoryRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderImportHistory()}catch(e){console.warn(e)}}
 function renderImportHistory(){const root=$("#importHistoryList");if(!root)return;root.innerHTML=(importHistoryRows||[]).map(x=>`<div class="audit-item"><div><h4>${esc(x.type||"Import")} — ${esc(x.fileName||"Không rõ file")}</h4><p>${dateTime(x.createdAt)} • ${esc(x.actorName||"")} • Tổng ${x.total||0} • Thêm ${x.added||0} • Cập nhật ${x.updated||0} • Bỏ qua ${x.skipped||0}</p><p>${esc(x.details||"")}</p></div></div>`).join("")||`<div class="empty">Chưa có lịch sử import.</div>`}
 function showAuditTab(tab){$("#auditPanel").classList.toggle("hidden",tab!=="audit");$("#importHistoryPanel").classList.toggle("hidden",tab!=="imports");$("#auditTabBtn").classList.toggle("active",tab==="audit");$("#importTabBtn").classList.toggle("active",tab==="imports")}
 async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(!confirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore")await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return alert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){alert("Không hoàn tác được: "+(e.message||e))}}
-async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").orderBy("deletedAt","desc").limit(150).get();trashRows=s.docs.map(d=>({id:d.id,...d.data()}));renderTrashBin()}catch(e){console.warn(e)}}
+async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").where("semester","==",semester).limit(200).get();trashRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");renderTrashBin()}catch(e){console.warn(e)}}
 function renderTrashBin(){const root=$("#trashList");if(!root)return;root.innerHTML=(trashRows||[]).map(t=>`<div class="trash-item"><div class="trash-item-main"><h4>${esc(trashTypeLabel(t.type))}: ${esc(t.meta?.label||t.data?.name||t.data?.description||t.sourceId||"")}</h4><p>Xóa bởi ${esc(t.deletedByName||"")} • ${dateTime(t.deletedAt)} • Hết hạn ${dateTime(t.expiresAt)}</p></div><div class="trash-actions"><button class="secondary" onclick="restoreTrash('${t.id}')">Khôi phục</button><button class="danger" onclick="purgeTrash('${t.id}')">Xóa vĩnh viễn</button></div></div>`).join("")||`<div class="empty">Thùng rác trống.</div>`}
 function trashTypeLabel(t){return ({member:"Thành viên",finance:"Giao dịch",event:"Sự kiện",eventSubmission:"Phản hồi sự kiện"})[t]||t}
-async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission")await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
+async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission")await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
 async function purgeTrash(id){if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;try{await fbDb.collection("trashBin").doc(id).delete();toast("Đã xóa vĩnh viễn")}catch(e){alert(e.message||e)}}
-async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").orderBy("createdAt","desc").limit(120).get();approvalRows=s.docs.map(d=>({id:d.id,...d.data()}));renderApprovalRequests()}catch(e){console.warn(e)}}
+async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(180).get();approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
-async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
+async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return alert("Yêu cầu này không thuộc học kỳ đang chọn.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
 async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="deleteMember"){const m=(await fbDb.collection("members").doc(p.id).get()).data();if(m)await moveToTrash("member",p.id,m,{label:m.name,semester:m.semester});await fbDb.collection("members").doc(p.id).delete()}else if(r.kind==="deleteFinance"){const s=await fbDb.collection("financeTransactions").doc(p.id).get();if(s.exists)await moveToTrash("finance",p.id,s.data(),{label:s.data().description,semester:s.data().semester});await fbDb.collection("financeTransactions").doc(p.id).delete()}else if(r.kind==="bulkAttendance"){await commitInChunks((p.updates||[]).map(u=>b=>b.update(fbDb.collection("members").doc(u.id),{[`scores.${p.itemId}`]:u.val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid})))}else throw new Error("Loại yêu cầu không được hỗ trợ")}
 
 /* ===== QR Attendance ===== */
@@ -3840,10 +4487,90 @@ function renderAttendancePortalPanel(){
   for(const p of rows)totalPending+=(attendanceCheckinRowsByPortal[p.token||p.id]||[]).filter(x=>x.status==="pending").length;
   if(badge)badge.textContent=`${totalPending} chờ duyệt`;
   if(!rows.length){root.innerHTML=`<div class="empty">Chưa có QR điểm danh nào trong học kỳ này.</div>`;return}
-  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button><button class="secondary" onclick="downloadAttendanceQr('${esc(token)}')">Tải QR</button>${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");
+  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button><button class="secondary" onclick="downloadAttendanceQr('${esc(token)}')">Tải QR</button>${canEdit?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${esc(token)}')">Sửa thời gian</button>`:""}${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");
 }
 function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
 async function createAttendancePortal(gi,ii){if(!canEditModule("attendance"))return ensureSemesterEditable();const g=sem().groups[gi],it=g?.items[ii];if(!it)return;const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");const token=crypto.randomUUID?crypto.randomUUID():uid()+uid(),data={token,semester,semesterCode:semester,semesterName:sem().name||semester,groupId:g.id,itemId:it.id,itemName:it.name,groupName:g.name,points:Number(it.points||0),mode:g.mode,startAt:firebase.firestore.Timestamp.fromDate(start),endAt:firebase.firestore.Timestamp.fromDate(end),instruction:$("#qrInstruction").value.trim(),open:true,createdBy:currentFirebaseUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};try{await fbDb.collection("attendancePortals").doc(token).set(data);qrCurrentPortal={...data,token};toast("Đã tạo QR điểm danh");await logAudit({action:"create-qr",module:"attendance",summary:`Tạo QR điểm danh • ${it.name}`});watchAttendancePortals(true);showAttendancePortal(token)}catch(e){alert("Không tạo được QR: "+(e.message||e))}}
+
+function dateTimeLocalValue(ts){
+  try{
+    const d=ts?.toDate?ts.toDate():new Date(ts);
+    if(Number.isNaN(d.getTime()))return "";
+    const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+    return local.toISOString().slice(0,16);
+  }catch{return ""}
+}
+async function openAttendancePortalTimeEditor(token){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+  try{
+    const snap=await fbDb.collection("attendancePortals").doc(token).get();
+    if(!snap.exists)return alert("QR không còn tồn tại.");
+    const p={id:snap.id,...snap.data(),token};
+    if(p.semester!==semester)return alert("QR này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+    if(semesterLocked(p.semester))return alert("Học kỳ đang bị khóa.");
+
+    $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(650px,100%)">
+      <div class="modal-head">
+        <div><h2>Sửa thời gian QR</h2><div class="small-help">${esc(p.itemName||"Điểm danh")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")}</div></div>
+        <button onclick="closeModal()">×</button>
+      </div>
+      <div class="form-grid">
+        <label>Thời gian bắt đầu<input id="editQrStart" type="datetime-local" value="${dateTimeLocalValue(p.startAt)}"></label>
+        <label>Thời gian kết thúc<input id="editQrEnd" type="datetime-local" value="${dateTimeLocalValue(p.endAt)}"></label>
+      </div>
+      <div class="qr-time-editor-note">
+        Khi lưu, người đang mở link QR sẽ nhận thời gian mới theo real-time. Nếu dời giờ bắt đầu về tương lai, form sẽ tạm khóa; nếu dời giờ kết thúc về quá khứ, QR sẽ hết hạn ngay.
+        ${p.open===false?`<br><br><b>Lưu ý:</b> QR này đang bị đóng thủ công. Sửa thời gian không tự mở lại QR.`:""}
+      </div>
+      <div class="modal-actions">
+        <button class="ghost" onclick="closeModal()">Hủy</button>
+        <button class="primary" onclick="saveAttendancePortalTime('${esc(token)}')">Lưu thời gian</button>
+      </div>
+    </div></div>`;
+    $("#modalWrap").classList.remove("hidden");
+  }catch(e){
+    console.error(e);alert("Không mở được phần sửa thời gian: "+(e.message||e));
+  }
+}
+async function saveAttendancePortalTime(token){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+  const start=new Date($("#editQrStart")?.value||""),end=new Date($("#editQrEnd")?.value||"");
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return alert("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.");
+  if(end<=start)return alert("Thời gian kết thúc phải sau thời gian bắt đầu.");
+
+  try{
+    const ref=fbDb.collection("attendancePortals").doc(token);
+    const beforeSnap=await ref.get();if(!beforeSnap.exists)return alert("QR không còn tồn tại.");
+    const before=beforeSnap.data();
+    if(before.semester!==semester)return alert("QR này không thuộc học kỳ đang chọn.");
+    if(semesterLocked(before.semester))return alert("Học kỳ đang bị khóa.");
+
+    await ref.update({
+      startAt:firebase.firestore.Timestamp.fromDate(start),
+      endAt:firebase.firestore.Timestamp.fromDate(end),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentFirebaseUser?.uid||""
+    });
+
+    await logAudit({
+      action:"edit-qr-time",
+      module:"attendance",
+      entityType:"attendancePortal",
+      entityId:token,
+      summary:`Sửa thời gian QR • ${before.itemName||"Điểm danh"}`,
+      before:{startAt:dateTime(before.startAt),endAt:dateTime(before.endAt)},
+      after:{startAt:start.toLocaleString("vi-VN"),endAt:end.toLocaleString("vi-VN")}
+    });
+
+    closeModal();
+    toast("Đã cập nhật thời gian QR");
+    watchAttendancePortals(true);
+    setTimeout(()=>showAttendancePortal(token),80);
+  }catch(e){
+    console.error(e);alert("Không lưu được thời gian QR: "+(e.message||e));
+  }
+}
+
 function renderAttendanceCheckinList(token){const root=$("#checkinList");if(!root)return;const rows=attendanceCheckinRowsByPortal[token]||[];root.innerHTML=rows.map(r=>`<div class="checkin-card"><div><b>${esc(r.name||"—")}</b><div class="small-help">${esc(r.mssv||"")} • ${dateTime(r.createdAt)} • ${esc(r.status||"pending")}</div></div><div>${r.status==="pending"&&canEditModule("attendance")?`<button class="primary" onclick="approveCheckin('${token}','${r.id}',true)">Duyệt</button> <button class="danger" onclick="approveCheckin('${token}','${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Chưa có lượt điểm danh.</div>`}
 let attendanceQrObserver=null;
 function lockAttendanceQrToSingleCanvas(box){
@@ -3995,6 +4722,7 @@ async function showAttendancePortal(token){
           <div>
             <button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button>
             <button class="secondary" onclick="downloadAttendanceQr('${token}')">Tải QR PNG</button>
+            ${canEditModule("attendance")?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${token}')">Sửa thời gian</button>`:""}
             ${canEditModule("attendance")&&qrCurrentPortal.open===true?`<button id="qrModalCloseBtn" class="danger" onclick="closeAttendancePortal('${token}',true)">Đóng QR</button>`:""}
             ${canEditModule("attendance")?`<button class="danger" onclick="deleteAttendancePortal('${token}',true)">Xóa QR</button>`:""}
           </div>
@@ -4115,7 +4843,15 @@ $("#saveSemesterBtn").onclick=async()=>{
   }
   save();toast("Đã lưu học kỳ");
 };
-$("#newSemesterBtn").onclick=()=>{const code=prompt("Nhập mã học kỳ mới, ví dụ SP27");if(!code||state.semesters[code])return;state.semesters[code]={code,name:code,startDate:"",endDate:"",fee:0,openingBalance:0,groups:structuredClone(DEFAULT_STATE.semesters.FA26.groups)};semester=code;save();renderSettings()};
+$("#newSemesterBtn").onclick=()=>{
+  const code=String(prompt("Nhập mã học kỳ theo chuẩn SP / SU / FA, ví dụ SP27")||"").trim().toUpperCase();
+  const parsed=parseMainSemester(code);
+  if(!parsed)return alert("Mã học kỳ chỉ được theo dạng SP27, SU27 hoặc FA27.");
+  if(state.semesters[code])return alert("Học kỳ này đã tồn tại.");
+  state.semesters[code]={code,name:parsed.name,startDate:"",endDate:"",fee:0,openingBalance:0,groups:structuredClone(DEFAULT_STATE.semesters.FA26.groups).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))};
+  state.lookupConfig[code]=defaultLookupConfig();
+  semester=code;save();renderSettings();toast("Đã tạo "+parsed.name);
+};
 async function deleteLookupSemesterRemote(semCode){
   try{
     const membersSnap=await fbDb.collection(PUBLIC_LOOKUP_ROOT).doc(semCode).collection("members").get();
@@ -4176,7 +4912,18 @@ function applySettingsSemesterLock(){
   ["newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].forEach(id=>{const el=$("#"+id);if(el)el.disabled=false});
 }
 renderSettings=function(){__renderSettingsBase();if($("#semesterLockSetting"))$("#semesterLockSetting").value=sem().locked?"1":"0";if($("#approvalDeleteMember")){$("#approvalDeleteMember").checked=!!state.approvalConfig.deleteMember;$("#approvalDeleteFinance").checked=!!state.approvalConfig.deleteFinance;$("#approvalBulkAttendance").checked=!!state.approvalConfig.bulkAttendance}const el=$("#semesterChecklistSettings");if(el)el.innerHTML=semesterChecklist().map(x=>`<div class="check-item"><span>${esc(x.label)}</span><b class="${x.ok?"ok":"warn"}">${x.ok?"✓":"!"}</b></div>`).join("");applySettingsSemesterLock()};
-$("#duplicateSemesterBtn").onclick=async()=>{if(!canEditClub())return;const code=prompt("Mã học kỳ mới, ví dụ SP27");if(!code)return;if(state.semesters[code])return alert("Mã học kỳ đã tồn tại.");const name=prompt("Tên học kỳ mới",code)||code;const src=structuredClone(sem());state.semesters[code]={...src,code,name,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))};state.lookupConfig[code]=defaultLookupConfig();save();await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});toast("Đã nhân bản học kỳ")};
+$("#duplicateSemesterBtn").onclick=async()=>{
+  if(!canEditClub())return;
+  const code=nextMainSemesterCode(semester);
+  if(!code)return alert("Mã học kỳ hiện tại không đúng chuẩn SP/SU/FA.");
+  if(state.semesters[code])return alert(`${state.semesters[code].name||code} đã tồn tại.`);
+  const parsed=parseMainSemester(code),src=structuredClone(sem());
+  state.semesters[code]={...src,code,name:parsed?.name||code,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))};
+  state.lookupConfig[code]=defaultLookupConfig();
+  save();
+  await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});
+  toast("Đã nhân bản sang "+(parsed?.name||code));
+};
 $("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1",previous=!!sem().locked;if(want&&!confirm("Khóa toàn bộ dữ liệu học kỳ này? Sau khi khóa, Admin và BCN đều chỉ có thể xem. Muốn chỉnh sửa lại phải mở khóa tại Thiết lập.")){e.target.value="0";return}sem().locked=want;persistStateOnly();const ok=await saveCloudStateNow();if(!ok){sem().locked=previous;persistStateOnly();e.target.value=previous?"1":"0";renderAll();return alert("Không đồng bộ được trạng thái khóa lên Firestore. Hệ thống đã giữ trạng thái cũ để tránh xung đột.")}await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa toàn bộ dữ liệu học kỳ":"Đã mở khóa học kỳ")};
 for(const id of ["approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"]){const el=$("#"+id);if(el)el.onchange=()=>{state.approvalConfig={deleteMember:$("#approvalDeleteMember").checked,deleteFinance:$("#approvalDeleteFinance").checked,bulkAttendance:$("#approvalBulkAttendance").checked};save();toast("Đã lưu chế độ duyệt")}}
 function renderAll(){renderSemesterSelect();renderQLTV();renderMemberList();renderInfo();renderFinance();renderDashboard();if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();if($("#settings")&&!$("#settings").classList.contains("hidden"))renderSettings();if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();if($("#freeLookup")&&!$("#freeLookup").classList.contains("hidden"))renderFreeLookup();if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs();if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin();applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess()}
