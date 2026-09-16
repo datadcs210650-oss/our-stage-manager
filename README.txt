@@ -1,29 +1,26 @@
-OUR STAGE CLUB MANAGER V40 — PREMIUM DASHBOARD + SECURE SHELL
+OUR STAGE CLUB MANAGER V41 — UI ISOLATION + PUBLIC PORTAL REDESIGN
 
-GIAO DIỆN
-- Sidebar tối cố định, icon theo module, nhóm menu rõ ràng.
-- Topbar kiểu dashboard hiện đại.
-- Mỗi chức năng hiển thị như một cửa sổ ứng dụng.
-- Workspace Dock giữ các chức năng vừa mở để chuyển nhanh.
-- Sidebar thu gọn desktop / off-canvas mobile.
-- Dashboard card màu nhấn, khoảng trắng và hiệu ứng chuyển động nhẹ.
-- Cổng đăng nhập split-screen mới, đồng bộ phong cách với trang quản trị.
+ĐÃ SỬA LỖI V40 LOGIN ĐÈ APP
+Nguyên nhân: .login-screen và .app dùng display !important sau .hidden nên hai lớp cùng hiện.
+V41 dùng auth-login/auth-admin và CSS isolation riêng. Chưa đăng nhập chỉ thấy Login; đã đăng nhập chỉ thấy App.
+
+PUBLIC PORTAL ĐỒNG BỘ GIAO DIỆN
+- Cổng sự kiện
+- Tra cứu thành viên
+- Tra cứu tự do
+- QR điểm danh
+Tất cả dùng topbar OUR STAGE, nền/card cùng hệ thống Admin, responsive, privacy notice và footer thống nhất.
 
 BẢO MẬT
-- Firebase Auth dùng SESSION persistence cho lần đăng nhập mới.
-- Tự đăng xuất sau 30 phút không thao tác, cảnh báo tại phút 28.
-- Login error không phân biệt user-not-found / wrong-password.
-- Login không hiển thị UID/email hoặc chi tiết Firestore kỹ thuật cho người dùng.
-- Audit Logs chỉ cho cập nhật metadata hoàn tác, không sửa nội dung tùy ý.
-- Notification content không thể bị tài khoản active sửa tùy ý; client chỉ cập nhật readBy.
-- Bổ sung/giữ HSTS, CSP, X-Frame-Options, no-referrer, Permissions-Policy, COOP/CORP, no-store.
+- Giữ Firestore Rules V40, không nới quyền.
+- robots noindex/nofollow/noarchive trên các trang.
+- Cache-Control no-store cho mọi entry page.
+- CSP, HSTS, X-Frame-Options, COOP/CORP, Referrer-Policy, Permissions-Policy.
+- Sidebar Admin không thể lộ ở màn Login.
 
 CẬP NHẬT
-1. Commit toàn bộ package V40 lên GitHub.
-2. Chờ Vercel Ready.
-3. Firebase > Firestore Database > Rules.
-4. Dán firestore_rules_v40.rules và Publish.
+1. Thay toàn bộ các file HTML + vercel.json của V41 lên GitHub.
+2. GIỮ NGUYÊN thư mục api/ và lib/ hiện có trong repository nếu repo của bạn đang có chúng. Package này không xóa backend hiện tại.
+3. Chờ Vercel Ready.
+4. Rules V41 giống quyền V40; không bắt buộc publish lại nếu V40 đã chạy.
 5. Command + Shift + R.
-
-LƯU Ý
-Không có website nào có thể cam kết tuyệt đối không bị tấn công. Nên tiếp tục kiểm thử Firestore Rules bằng Firebase Emulator/CI và rà soát quyền Admin/BCN định kỳ.
