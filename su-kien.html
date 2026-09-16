@@ -10,6 +10,51 @@
 <style>
 :root{--burgundy:#70172d;--burgundy-dark:#4e0d1e;--soft:#f7e9ed;--line:#eadfe2}
 *{box-sizing:border-box}body{margin:0;background:#f7f3f4;color:#25191d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:760px;margin:40px auto;padding:20px}.head{background:#fff;border:1px solid var(--line);border-top:7px solid var(--burgundy);border-radius:18px;padding:24px;margin-bottom:14px}.brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:3px;font-size:11px}.brand img{width:58px;height:58px;object-fit:contain}.head h1{font-size:32px;margin:16px 0 8px}.head p{color:#74686c;line-height:1.55;margin:0}.field{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px}.field label{display:block;font-weight:750;margin-bottom:9px}.required{color:#a52240}.field input,.field textarea,.field select{width:100%;border:1px solid #ddcfd3;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.image-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px}.image-block h3{margin:0 0 8px}.image-block p{color:#74686c;line-height:1.5}.rich-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px;line-height:1.65}.rich-block h3{margin:0 0 10px}.choice-list{display:grid;gap:10px}.choice-row{display:flex;gap:9px;align-items:flex-start}.choice-row input{width:auto;margin-top:3px}.image-block img{display:block;max-width:100%;max-height:720px;object-fit:contain;margin:auto;border-radius:10px}.hint{font-size:11px;color:#7a7074;margin-top:7px}.btn{width:100%;border:0;border-radius:12px;background:var(--burgundy);color:#fff;font:inherit;font-weight:800;padding:14px;cursor:pointer}.btn:disabled{opacity:.6;cursor:not-allowed}.message{padding:18px;border-radius:14px;background:#fff;border:1px solid var(--line);line-height:1.5}.error{background:#fff2f4;color:#96243d;border-color:#efc5ce}.success{background:#f7e9ed;color:#5a1025}.file-name{font-size:12px;color:#6f6468;margin-top:6px}.closed{text-align:center;padding:40px}.progress{height:8px;background:#eee;border-radius:999px;overflow:hidden;margin-top:10px}.progress i{display:block;height:100%;background:var(--burgundy);width:0%}
+
+/* V25 Modern Event Form */
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 15% 0%,rgba(112,23,45,.11),transparent 28%),
+    radial-gradient(circle at 90% 85%,rgba(112,23,45,.07),transparent 27%),
+    linear-gradient(180deg,#faf6f7,#f2eaed);
+}
+.wrap{padding-top:34px;padding-bottom:50px}
+.head,.field,.image-block,.rich-block,.message{
+  background:rgba(255,255,255,.93);
+  backdrop-filter:blur(13px);
+  box-shadow:0 15px 48px rgba(72,24,40,.07);
+  border-color:rgba(112,23,45,.10);
+}
+.head{
+  border-top:0;
+  position:relative;
+  overflow:hidden;
+}
+.head::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:7px;
+  background:linear-gradient(90deg,#4e0d1e,#8d2946,#4e0d1e);
+}
+.brand img{filter:drop-shadow(0 8px 18px rgba(77,22,40,.12));transition:transform .25s ease}
+.brand:hover img{transform:rotate(-2deg) scale(1.04)}
+.field,.image-block,.rich-block{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.field:hover,.image-block:hover,.rich-block:hover{transform:translateY(-1px);box-shadow:0 20px 55px rgba(72,24,40,.10);border-color:#dcc4cb}
+.field input:focus,.field textarea:focus,.field select:focus{
+  outline:none;border-color:#9f5267;box-shadow:0 0 0 4px rgba(112,23,45,.09)
+}
+.btn{
+  background:linear-gradient(135deg,#7d1934,#531021);
+  box-shadow:0 13px 30px rgba(112,23,45,.22);
+  transition:transform .16s ease,box-shadow .16s ease
+}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 18px 38px rgba(112,23,45,.29)}
+.choice-row{border:1px solid transparent;border-radius:10px;padding:7px 8px;transition:background .15s ease,border-color .15s ease}
+.choice-row:hover{background:#fff8fa;border-color:#ead9df}
+@media(prefers-reduced-motion:no-preference){
+  @keyframes v25formIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .head,.field,.image-block,.rich-block,.message{animation:v25formIn .34s cubic-bezier(.2,.75,.25,1) both}
+}
+
 </style>
 </head>
 <body>

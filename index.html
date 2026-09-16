@@ -132,6 +132,249 @@ input,select,textarea{border:1px solid #d8dce0;background:#fff;border-radius:9px
 .password-strength-note{font-size:11px;color:#796c70;line-height:1.45}
 @media(max-width:760px){.self-account-fields{grid-template-columns:1fr}}
 
+
+.free-lookup-summary{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.free-lookup-list{display:grid;gap:13px}
+.free-lookup-card{background:#fff;border:1px solid var(--line);border-left:5px solid var(--burgundy);border-radius:14px;padding:17px}
+.free-lookup-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.free-lookup-card h3{margin:0 0 5px;font-size:17px}.free-lookup-card p{margin:0;color:#746d70;line-height:1.45}
+.free-lookup-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.free-lookup-meta span{font-size:10px;font-weight:750;background:#fbf5f7;border:1px solid #eadce1;border-radius:999px;padding:6px 9px;color:#6e5960}
+.free-lookup-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.free-lookup-field-table{max-height:48vh;overflow:auto;border:1px solid #e6dce0;border-radius:10px;margin-top:10px}
+.free-lookup-field-table table{width:100%;border-collapse:collapse;min-width:760px}.free-lookup-field-table th,.free-lookup-field-table td{text-align:left;padding:9px}
+.free-lookup-import-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.free-lookup-import-stats>div{background:#faf7f8;border:1px solid #eadfe2;border-radius:10px;padding:10px}.free-lookup-import-stats span{display:block;font-size:10px;color:#807276}.free-lookup-import-stats b{font-size:17px}
+.free-lookup-data-wrap{max-height:55vh;overflow:auto;border:1px solid #e8dfe2;border-radius:10px}.free-lookup-data-wrap table{width:100%;border-collapse:collapse;min-width:900px}
+.free-lookup-config-row{display:grid;grid-template-columns:1.2fr .7fr 110px 50px;gap:8px;align-items:center;margin-bottom:8px}.free-lookup-config-row input,.free-lookup-config-row select{min-width:0}
+.free-lookup-preview{border:1px dashed #dbc7ce;background:#fff9fa;border-radius:11px;padding:12px;margin-top:12px}
+.free-lookup-preview h4{margin:0 0 8px}.free-lookup-status-open{color:#17784c;font-weight:850}.free-lookup-status-closed{color:#8b1e35;font-weight:850}
+.free-lookup-help{font-size:11px;color:#776b70;line-height:1.5}
+@media(max-width:850px){.free-lookup-import-stats{grid-template-columns:1fr 1fr}.free-lookup-config-row{grid-template-columns:1fr}.free-lookup-card-head{display:block}}
+
+
+/* ===== V25 Modern UI ===== */
+:root{
+  --v25-shadow:0 18px 55px rgba(72,22,39,.09);
+  --v25-shadow-hover:0 24px 70px rgba(72,22,39,.14);
+  --v25-glass:rgba(255,255,255,.84);
+  --v25-ring:0 0 0 4px rgba(112,23,45,.10);
+}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(circle at 90% 8%,rgba(112,23,45,.07),transparent 28%),
+    radial-gradient(circle at 28% 92%,rgba(112,23,45,.045),transparent 24%),
+    var(--bg);
+}
+.sidebar{
+  background:
+    radial-gradient(circle at 15% 0%,rgba(255,255,255,.08),transparent 26%),
+    linear-gradient(180deg,#68132a 0%,#4a0d1d 58%,#350914 100%);
+  box-shadow:18px 0 55px rgba(48,5,18,.14);
+  border-right:1px solid rgba(255,255,255,.07);
+}
+.side-logo{
+  box-shadow:0 12px 35px rgba(0,0,0,.18);
+  transition:transform .28s ease,box-shadow .28s ease;
+}
+.brand-wrap:hover .side-logo{transform:translateY(-2px) rotate(-2deg) scale(1.035);box-shadow:0 18px 42px rgba(0,0,0,.25)}
+.nav{display:grid;gap:6px}
+.nav button{
+  border-radius:12px;
+  padding:11px 12px;
+  transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease;
+  position:relative;
+  overflow:hidden;
+}
+.nav button::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.08),transparent);
+  transform:translateX(-130%);
+  transition:transform .5s ease;
+}
+.nav button:hover::before{transform:translateX(130%)}
+.nav button:hover{transform:translateX(3px);background:rgba(255,255,255,.10)}
+.nav button.active{
+  background:rgba(255,255,255,.14);
+  box-shadow:inset 3px 0 0 rgba(255,255,255,.85),0 10px 26px rgba(0,0,0,.10);
+}
+.topbar{
+  background:rgba(247,243,244,.82);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(112,23,45,.08);
+}
+main{background:transparent}
+.card,.table-card,.settings-card,.event-card,.finance-table,.lookup-card,.free-lookup-card,.account-card{
+  border-color:rgba(112,23,45,.10)!important;
+  box-shadow:var(--v25-shadow);
+}
+.card,.settings-card,.event-card,.free-lookup-card{
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.card:hover,.settings-card:hover,.event-card:hover,.free-lookup-card:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--v25-shadow-hover);
+  border-color:rgba(112,23,45,.18)!important;
+}
+.table-card,.finance-table{overflow:hidden;background:rgba(255,255,255,.94)}
+table thead th{
+  background:linear-gradient(180deg,#fff,#fbf6f8)!important;
+  color:#5f1830;
+  font-size:11px;
+  letter-spacing:.02em;
+}
+table tbody tr{transition:background .16s ease,transform .16s ease}
+table tbody tr:hover{background:#fff9fb}
+.primary{
+  background:linear-gradient(135deg,#7d1a34,#5a1025);
+  box-shadow:0 10px 24px rgba(112,23,45,.18);
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+.primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(112,23,45,.25);filter:saturate(1.08)}
+.primary:active,.secondary:active,.danger:active{transform:translateY(0) scale(.985)}
+.secondary,.danger,.ghost{
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease;
+}
+.secondary:hover,.ghost:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(56,28,37,.08);border-color:#c9adb6}
+.danger:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(139,30,53,.10);background:#fff0f3}
+input,select,textarea{
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#9d5065!important;
+  box-shadow:var(--v25-ring)!important;
+}
+.overlay{
+  background:rgba(36,11,20,.48)!important;
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+.modal{
+  border:1px solid rgba(112,23,45,.12);
+  box-shadow:0 34px 100px rgba(48,5,18,.23)!important;
+}
+.event-card{
+  border-left:0!important;
+  position:relative;
+  overflow:hidden;
+}
+.event-card::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;width:5px;
+  background:linear-gradient(180deg,#9a3451,#5c1026);
+}
+.event-card::after{
+  content:"";
+  position:absolute;
+  width:150px;height:150px;
+  right:-85px;top:-100px;
+  background:radial-gradient(circle,rgba(112,23,45,.10),transparent 70%);
+  pointer-events:none;
+}
+.status-badge,.account-role,.semester-pill,.quick-chip{
+  box-shadow:inset 0 0 0 1px rgba(112,23,45,.05);
+}
+.realtime-badge{box-shadow:0 8px 18px rgba(23,120,76,.08)}
+.toast{box-shadow:0 20px 55px rgba(39,10,20,.20)!important}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#d8c0c8;border:3px solid transparent;background-clip:padding-box;border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* Event result modal */
+.event-result-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:12px 0 14px;padding:11px 12px;border:1px solid #eadfe2;border-radius:13px;
+  background:linear-gradient(135deg,#fff,#fff8fa);
+}
+.event-result-toolbar .left,.event-result-toolbar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.event-result-toolbar label{display:flex;gap:7px;align-items:center;font-size:12px;font-weight:750}
+.submission-card{
+  position:relative;
+  box-shadow:0 10px 35px rgba(63,23,37,.055);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.submission-card:hover{transform:translateY(-1px);box-shadow:0 16px 42px rgba(63,23,37,.09);border-color:#dcc5cc}
+.submission-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.submission-card-title{display:flex;gap:10px;align-items:flex-start}
+.submission-select{width:17px;height:17px;accent-color:var(--burgundy);margin-top:2px}
+.submission-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.submission-id{font-size:9px;color:#998a8f;background:#faf5f7;border:1px solid #eee1e5;padding:4px 7px;border-radius:999px}
+.event-result-empty{padding:34px 20px;text-align:center;border:1px dashed #dfcbd1;border-radius:14px;background:#fffafb;color:#806e74}
+.event-export-count{font-size:11px;color:#78696e}
+
+/* motion */
+@media (prefers-reduced-motion:no-preference){
+  @keyframes v25FadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes v25ModalIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+  @keyframes v25Pulse{0%,100%{box-shadow:0 0 0 0 rgba(33,163,102,.0)}50%{box-shadow:0 0 0 6px rgba(33,163,102,.08)}}
+  main>section:not(.hidden){animation:v25FadeUp .30s cubic-bezier(.2,.75,.25,1)}
+  .modal{animation:v25ModalIn .24s cubic-bezier(.2,.78,.25,1)}
+  .event-card,.free-lookup-card{animation:v25FadeUp .28s cubic-bezier(.2,.75,.25,1)}
+  .realtime-badge i{animation:v25Pulse 2.2s ease-in-out infinite}
+  .login-box{animation:v25FadeUp .38s ease both}
+}
+@media(max-width:720px){
+  .event-result-toolbar{align-items:stretch}
+  .event-result-toolbar .left,.event-result-toolbar .right{width:100%}
+  .event-result-toolbar .right button{flex:1}
+}
+
+
+/* ===== V26 Free Lookup Builder ===== */
+.free-lookup-builder-section{
+  border:1px solid #eadfe2;border-radius:14px;background:linear-gradient(180deg,#fff,#fffbfc);
+  padding:15px;margin-top:13px
+}
+.free-lookup-builder-section h3{margin:0 0 4px;font-size:15px;color:#541025}
+.free-lookup-builder-section>p{margin:0 0 12px;font-size:11px;color:#796d71;line-height:1.5}
+.free-lookup-builder-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.fl-builder-fields{display:grid;gap:8px}
+.fl-builder-head,.fl-builder-row{
+  display:grid;grid-template-columns:1.05fr 1.05fr .72fr 92px 92px 46px;
+  gap:8px;align-items:center
+}
+.fl-builder-head{
+  padding:0 8px;color:#7e6e73;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.03em
+}
+.fl-builder-row{
+  padding:9px;border:1px solid #eadfe2;border-radius:11px;background:#fff;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease
+}
+.fl-builder-row:hover{border-color:#d9bdc6;box-shadow:0 10px 28px rgba(80,26,44,.06);transform:translateY(-1px)}
+.fl-builder-row input,.fl-builder-row select{min-width:0}
+.fl-builder-check{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:750}
+.fl-builder-check input{width:16px;height:16px;accent-color:var(--burgundy)}
+.fl-template-box{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;
+  margin-top:12px;padding:12px 13px;border:1px dashed #d8bec7;border-radius:12px;background:#fff8fa
+}
+.fl-template-box b{display:block;color:#61152b;font-size:12px;margin-bottom:3px}
+.fl-template-box span{font-size:11px;color:#76686d;line-height:1.45}
+.fl-builder-warning{
+  border:1px solid #ead7a8;background:#fff9e9;color:#775c16;border-radius:10px;
+  padding:9px 11px;font-size:11px;line-height:1.5;margin-top:9px
+}
+.fl-portal-preview{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px
+}
+.fl-portal-preview>div{
+  border:1px solid #eadfe2;border-radius:10px;padding:10px 11px;background:#fff
+}
+.fl-portal-preview span{display:block;font-size:9px;color:#8b7b80;text-transform:uppercase;font-weight:850;letter-spacing:.04em}
+.fl-portal-preview b{display:block;margin-top:4px;font-size:12px;color:#3b2029}
+@media(max-width:980px){
+  .fl-builder-head{display:none}
+  .fl-builder-row{grid-template-columns:1fr 1fr}
+  .fl-builder-row .fl-builder-check{justify-content:flex-start}
+}
+@media(max-width:620px){
+  .fl-builder-row{grid-template-columns:1fr}
+  .fl-portal-preview{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -161,7 +404,8 @@ input,select,textarea{border:1px solid #d8dce0;background:#fff;border-radius:9px
       <button data-tab="info">Thông tin thành viên</button>
       <button data-tab="finance">Thu Chi CLB</button>
       <button data-tab="events">Cổng sự kiện</button>
-      <button data-tab="lookupPortal">Cổng tra cứu</button>
+      <button data-tab="lookupPortal">Tra cứu thành viên</button>
+      <button data-tab="freeLookup">Tra cứu tự do</button>
       <button data-tab="myAccount">Tài khoản của tôi</button>
       <button data-tab="accounts" class="admin-nav">Tài khoản BCN</button>
       <button data-tab="settings" class="admin-nav">Thiết lập</button>
@@ -333,6 +577,25 @@ input,select,textarea{border:1px solid #d8dce0;background:#fff;border-radius:9px
     </section>
 
 
+
+    <section id="freeLookup" class="hidden">
+      <div class="toolbar">
+        <input id="freeLookupSearch" placeholder="Tìm cổng tra cứu theo tên / mô tả…">
+        <button class="primary" id="createFreeLookupBtn">+ Tạo cổng tra cứu</button>
+        <input class="file-input" id="freeLookupExcelInput" type="file" accept=".xlsx,.xls,.csv">
+      </div>
+      <div class="section-note">
+        Đây là <b>cổng tra cứu dữ liệu tự do</b>, hoàn toàn tách biệt với Tra cứu thành viên. Admin có thể tạo nhiều cổng khác nhau như tra cứu kết quả casting, mã vé, danh sách hỗ trợ, chứng nhận, phân nhóm, kết quả cuộc thi… rồi upload Excel/CSV và tự chọn trường dùng để tra cứu cũng như các trường được công khai.
+      </div>
+      <div class="free-lookup-summary">
+        <div class="quick-chip">Tổng cổng: <b id="freeLookupPortalCount">0</b></div>
+        <div class="quick-chip">Đang mở: <b id="freeLookupOpenCount">0</b></div>
+        <div class="quick-chip">Dữ liệu này <b>không lấy từ danh sách thành viên</b></div>
+      </div>
+      <div id="freeLookupList" class="free-lookup-list"></div>
+      <div id="freeLookupEmpty" class="empty hidden">Chưa có cổng tra cứu tự do nào.</div>
+    </section>
+
     <section id="events" class="hidden">
       <div id="readonlyBannerEvents" class="readonly-banner hidden">Quyền BCN: bạn có thể chỉnh sửa mục này nếu Admin đã bật quyền chỉnh sửa tương ứng.</div>
       <div class="finance-toolbar" style="margin-bottom:12px">
@@ -476,7 +739,7 @@ function lookupConfig(){
   return cfg;
 }
 
-let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],eventBuilderFields=[],eventBuilderId=null,cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
+let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],eventBuilderFields=[],eventBuilderId=null,currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -859,6 +1122,7 @@ function applyRoleAccess(){
     finance:hasViewPermission("viewFinance"),
     events:hasViewPermission("viewEvents"),
     lookupPortal:canEditClub()||hasViewPermission("viewLookup"),
+    freeLookup:canEditClub(),
     myAccount:true,
     accounts:canEditClub(),
     settings:canEditClub()
@@ -909,6 +1173,7 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   $("#pageTitle").textContent=b.textContent.trim();
   if(b.dataset.tab==="settings")renderSettings();
   if(b.dataset.tab==="lookupPortal")renderLookupPortal();
+  if(b.dataset.tab==="freeLookup")renderFreeLookup();
   if(b.dataset.tab==="events")renderEvents();
   if(b.dataset.tab==="myAccount")renderMyAccount();
   if(b.dataset.tab==="accounts")renderAccounts();
@@ -1338,6 +1603,573 @@ function eventLink(ev){
     return url.href;
   }catch{return `su-kien.html?event=${encodeURIComponent(ev.id)}`}
 }
+
+/* Cổng tra cứu tự do — dữ liệu độc lập hoàn toàn với thành viên */
+const FREE_LOOKUP_ADMIN_ROOT="customLookupAdmin";
+const FREE_LOOKUP_PUBLIC_ROOT="customLookupPortals";
+let freeLookupPortals=[];
+let freeLookupImportPortalId="";
+let freeLookupImportHeaders=[];
+let freeLookupImportRows=[];
+let freeLookupConfigDraft=[];
+let freeLookupRecordCache=[];
+let freeLookupBuilderFields=[];
+let freeLookupBuilderSearchFieldId="";
+
+function normalizeFreeLookupKey(v){
+  return String(v??"").normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
+}
+function freeLookupDocId(v){
+  const n=normalizeFreeLookupKey(v);
+  const bytes=new TextEncoder().encode(n);
+  let binary="";for(const b of bytes)binary+=String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")||"_empty";
+}
+function freeLookupPortalById(id){return freeLookupPortals.find(x=>x.id===id)}
+function freeLookupLink(id){
+  try{const u=new URL("/tra-cuu-tu-do",location.origin);u.searchParams.set("portal",id);return u.href}
+  catch{return `tra-cuu-tu-do.html?portal=${encodeURIComponent(id)}`}
+}
+function freeLookupScopeLabel(p){
+  if(!p.scopeSemester)return "Độc lập học kỳ";
+  return state.semesters[p.scopeSemester]?.name||p.scopeSemester;
+}
+function formatFreeLookupAdminValue(v,type){
+  if(v===null||v===undefined||v==="")return "—";
+  if(type==="money"){const n=Number(String(v).replace(/[^0-9.-]/g,""));return Number.isFinite(n)?money(n):String(v)}
+  if(type==="number"){const n=Number(v);return Number.isFinite(n)?new Intl.NumberFormat("vi-VN").format(n):String(v)}
+  if(type==="date")return formatDateVN(String(v));
+  return String(v);
+}
+function publicFreeLookupMeta(p){
+  return {
+    title:p.title||"Cổng tra cứu",
+    description:p.description||"",
+    instructionText:p.instructionText||"",
+    open:p.open===true,
+    searchLabel:p.searchLabel||p.searchFieldLabel||"Mã tra cứu",
+    searchPlaceholder:p.searchPlaceholder||"Nhập thông tin cần tra cứu",
+    searchButtonLabel:p.searchButtonLabel||"Tra cứu",
+    resultTitle:p.resultTitle||"Kết quả tra cứu",
+    notFoundMessage:p.notFoundMessage||"Không tìm thấy dữ liệu phù hợp. Hãy kiểm tra lại thông tin đã nhập.",
+    resultNote:p.resultNote||"",
+    scopeLabel:freeLookupScopeLabel(p),
+    recordCount:Number(p.recordCount||0),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+}
+function publicFreeLookupRecord(p,privateRecord){
+  const values=(p.fields||[]).filter(f=>f.visible!==false).map(f=>({
+    label:f.label||f.sourceHeader||f.id,
+    type:f.type||"text",
+    value:privateRecord.data?.[f.id]??""
+  }));
+  return {values,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+}
+async function deleteFreeLookupCollection(ref){
+  while(true){
+    const snap=await ref.limit(300).get();
+    if(snap.empty)break;
+    const batch=fbDb.batch();snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();
+    if(snap.size<300)break;
+  }
+}
+async function refreshFreeLookupCount(id){
+  const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();
+  const count=snap.size;
+  await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).set({recordCount:count,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  const p=freeLookupPortalById(id);if(p){p.recordCount=count;await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).set(publicFreeLookupMeta(p),{merge:true})}
+  return count;
+}
+async function renderFreeLookup(){
+  if(!canEditClub())return;
+  const root=$("#freeLookupList");if(!root)return;
+  root.innerHTML='<div class="empty">Đang tải cổng tra cứu…</div>';
+  try{
+    const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).get();
+    freeLookupPortals=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.updatedAt?.toMillis?.()||0).localeCompare(String(a.updatedAt?.toMillis?.()||0))||String(a.title||"").localeCompare(String(b.title||""),"vi"));
+    const q=($("#freeLookupSearch")?.value||"").trim().toLowerCase();
+    const list=freeLookupPortals.filter(p=>!q||(`${p.title||""} ${p.description||""}`).toLowerCase().includes(q));
+    $("#freeLookupPortalCount").textContent=freeLookupPortals.length;
+    $("#freeLookupOpenCount").textContent=freeLookupPortals.filter(p=>p.open===true).length;
+    root.innerHTML=list.map(p=>`<div class="free-lookup-card">
+      <div class="free-lookup-card-head"><div><h3>${esc(p.title||"Cổng tra cứu")}</h3><p>${esc(p.description||"Không có mô tả")}</p></div><span class="${p.open===true?"free-lookup-status-open":"free-lookup-status-closed"}">${p.open===true?"ĐANG MỞ":"ĐÃ ĐÓNG"}</span></div>
+      <div class="free-lookup-meta">
+        <span>${esc(freeLookupScopeLabel(p))}</span>
+        <span>${Number(p.recordCount||0)} bản ghi</span>
+        <span>Tra cứu bằng: ${esc(p.searchLabel||p.searchFieldLabel||"Chưa cấu hình")}</span>
+        <span>${(p.fields||[]).filter(f=>f.visible!==false).length} trường công khai</span>
+      </div>
+      <div class="free-lookup-actions">
+        <button class="secondary" onclick="copyText('${esc(freeLookupLink(p.id))}')">Sao chép link</button>
+        <button class="secondary" onclick="window.open('${esc(freeLookupLink(p.id))}','_blank')">Mở cổng</button>
+        <button class="secondary" onclick="downloadFreeLookupTemplate('${p.id}')" ${(p.fields||[]).length?"":"disabled"}>Tải Excel mẫu</button>
+        <button class="primary" onclick="startFreeLookupImport('${p.id}')">Upload Excel/CSV</button>
+        <button class="secondary" onclick="openFreeLookupData('${p.id}')">Dữ liệu</button>
+        <button class="secondary" onclick="exportFreeLookupData('${p.id}')" ${(p.fields||[]).length?"":"disabled"}>Xuất dữ liệu</button>
+        <button class="secondary" onclick="openFreeLookupBuilder('${p.id}')">Thiết lập cổng & trường</button>
+        <button class="${p.open===true?"danger":"primary"}" onclick="toggleFreeLookup('${p.id}')">${p.open===true?"Đóng cổng":"Mở cổng"}</button>
+        <button class="danger" onclick="deleteFreeLookupPortal('${p.id}')">Xóa cổng</button>
+      </div>
+    </div>`).join("");
+    $("#freeLookupEmpty").classList.toggle("hidden",list.length>0);
+  }catch(e){console.error(e);root.innerHTML=`<div class="empty">Không tải được cổng tra cứu: ${esc(e.message||e)}</div>`}
+}
+function freeLookupBuilderTypeOptions(type="text"){
+  const options=[
+    ["text","Văn bản ngắn"],
+    ["multiline","Văn bản nhiều dòng"],
+    ["number","Số"],
+    ["money","Tiền tệ"],
+    ["date","Ngày"],
+    ["email","Email"],
+    ["phone","Số điện thoại"],
+    ["url","Liên kết"]
+  ];
+  return options.map(([v,l])=>`<option value="${v}" ${type===v?"selected":""}>${l}</option>`).join("");
+}
+function newFreeLookupBuilderField(sourceHeader,label,type="text",visible=true){
+  return {id:"field_"+uid(),sourceHeader,label,type,visible};
+}
+function defaultFreeLookupBuilderFields(){
+  return [
+    newFreeLookupBuilderField("MA_TRA_CUU","Mã tra cứu","text",true),
+    newFreeLookupBuilderField("HO_VA_TEN","Họ và tên","text",true),
+    newFreeLookupBuilderField("KET_QUA","Kết quả","text",true),
+    newFreeLookupBuilderField("GHI_CHU","Ghi chú","multiline",true)
+  ];
+}
+function renderFreeLookupBuilderFields(recordCount=0){
+  const root=$("#flBuilderFields");if(!root)return;
+  root.innerHTML=freeLookupBuilderFields.map((f,i)=>`
+    <div class="fl-builder-row">
+      <input value="${esc(f.sourceHeader||"")}" maxlength="80" placeholder="VD: KET_QUA" oninput="freeLookupBuilderFields[${i}].sourceHeader=this.value">
+      <input value="${esc(f.label||"")}" maxlength="100" placeholder="VD: Kết quả" oninput="freeLookupBuilderFields[${i}].label=this.value">
+      <select onchange="freeLookupBuilderFields[${i}].type=this.value">${freeLookupBuilderTypeOptions(f.type||"text")}</select>
+      <label class="fl-builder-check"><input type="checkbox" ${f.visible!==false?"checked":""} onchange="freeLookupBuilderFields[${i}].visible=this.checked"> Công khai</label>
+      <label class="fl-builder-check" title="${recordCount>0?"Cổng đã có dữ liệu. Muốn đổi khóa tra cứu, hãy upload lại file ở chế độ Thay toàn bộ dữ liệu.":""}">
+        <input type="radio" name="flBuilderSearchKey" ${freeLookupBuilderSearchFieldId===f.id?"checked":""} ${recordCount>0&&freeLookupBuilderSearchFieldId!==f.id?"disabled":""} onchange="freeLookupBuilderSearchFieldId='${f.id}'"> Khóa
+      </label>
+      <button class="danger" ${freeLookupBuilderFields.length<=1||freeLookupBuilderSearchFieldId===f.id?"disabled":""} onclick="removeFreeLookupBuilderField(${i})">×</button>
+    </div>`).join("");
+}
+function addFreeLookupBuilderField(){
+  if(freeLookupBuilderFields.length>=30)return alert("Một cổng hỗ trợ tối đa 30 trường dữ liệu.");
+  freeLookupBuilderFields.push(newFreeLookupBuilderField(`TRUONG_${freeLookupBuilderFields.length+1}`,`Trường ${freeLookupBuilderFields.length+1}`));
+  renderFreeLookupBuilderFields(Number($("#flExistingRecordCount")?.value||0));
+}
+function removeFreeLookupBuilderField(index){
+  const f=freeLookupBuilderFields[index];if(!f)return;
+  if(f.id===freeLookupBuilderSearchFieldId)return alert("Không thể xóa trường đang dùng làm khóa tra cứu. Hãy chọn trường khác trước.");
+  freeLookupBuilderFields.splice(index,1);
+  renderFreeLookupBuilderFields(Number($("#flExistingRecordCount")?.value||0));
+}
+function validateFreeLookupBuilderFields({silent=false}={}){
+  if(!freeLookupBuilderFields.length){if(!silent)alert("Cần ít nhất một trường dữ liệu.");return null}
+  const fields=freeLookupBuilderFields.map(f=>({
+    ...f,
+    sourceHeader:String(f.sourceHeader||"").trim(),
+    label:String(f.label||"").trim(),
+    type:f.type||"text",
+    visible:f.visible!==false
+  }));
+  if(fields.some(f=>!f.sourceHeader)){if(!silent)alert("Mỗi trường cần có Tên cột Excel.");return null}
+  if(fields.some(f=>!f.label)){if(!silent)alert("Mỗi trường cần có Tên hiển thị.");return null}
+  const normalized=fields.map(f=>normalizeText(f.sourceHeader));
+  if(new Set(normalized).size!==normalized.length){if(!silent)alert("Tên cột Excel không được trùng nhau.");return null}
+  const search=fields.find(f=>f.id===freeLookupBuilderSearchFieldId);
+  if(!search){if(!silent)alert("Hãy chọn một trường làm khóa tra cứu.");return null}
+  if(!search.visible){
+    search.visible=true;
+    const original=freeLookupBuilderFields.find(f=>f.id===search.id);if(original)original.visible=true;
+  }
+  if(!fields.some(f=>f.visible)){if(!silent)alert("Cần ít nhất một trường công khai.");return null}
+  return {fields,search};
+}
+function openFreeLookupBuilder(id=""){
+  if(!canEditClub())return;
+  const p=id?freeLookupPortalById(id):null;
+  freeLookupBuilderFields=structuredClone((p?.fields||[]).length?p.fields:defaultFreeLookupBuilderFields());
+  freeLookupBuilderSearchFieldId=p?.searchFieldId||freeLookupBuilderFields[0]?.id||"";
+  const semOptions=`<option value="">Không gắn học kỳ</option>`+Object.entries(state.semesters).map(([k,v])=>`<option value="${esc(k)}" ${(p?.scopeSemester||"")===k?"selected":""}>${esc(v.name)}</option>`).join("");
+  const recordCount=Number(p?.recordCount||0);
+
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1180px,100%)">
+    <div class="modal-head">
+      <div>
+        <h2>${p?"Thiết lập cổng tra cứu tự do":"Tạo cổng tra cứu tự do"}</h2>
+        <div class="small-help">${p?`${recordCount} bản ghi hiện có`:"Thiết lập cổng, trường dữ liệu và tải Excel mẫu ngay trong một bước."}</div>
+      </div>
+      <button onclick="closeModal()">×</button>
+    </div>
+
+    <input id="flExistingRecordCount" type="hidden" value="${recordCount}">
+
+    <div class="free-lookup-builder-section">
+      <h3>1. Thông tin cổng</h3>
+      <p>Nội dung này sẽ xuất hiện trên trang tra cứu công khai.</p>
+      <div class="form-grid">
+        <label>Tên cổng<input id="flTitle" maxlength="120" value="${esc(p?.title||"")}" placeholder="VD: Tra cứu kết quả Casting FA26"></label>
+        <label>Gắn với học kỳ<select id="flScope">${semOptions}</select></label>
+        <label class="full">Mô tả<textarea id="flDescription" maxlength="1000" placeholder="VD: Cổng tra cứu kết quả vòng Casting thành viên Our Stage FA26.">${esc(p?.description||"")}</textarea></label>
+        <label class="full">Hướng dẫn trước khi tra cứu<textarea id="flInstructionText" maxlength="1000" placeholder="VD: Nhập chính xác số báo danh được BTC cung cấp.">${esc(p?.instructionText||"")}</textarea></label>
+      </div>
+    </div>
+
+    <div class="free-lookup-builder-section">
+      <h3>2. Nội dung ô tra cứu & kết quả</h3>
+      <p>Admin có thể tự đổi cách gọi cho phù hợp từng loại dữ liệu: SBD, mã vé, email, mã hồ sơ…</p>
+      <div class="form-grid">
+        <label>Nhãn ô tra cứu<input id="flSearchLabel" maxlength="100" value="${esc(p?.searchLabel||p?.searchFieldLabel||"Mã tra cứu")}" placeholder="VD: Số báo danh"></label>
+        <label>Placeholder<input id="flSearchPlaceholder" maxlength="140" value="${esc(p?.searchPlaceholder||"")}" placeholder="VD: Nhập OSC001"></label>
+        <label>Nội dung nút<input id="flSearchButtonLabel" maxlength="40" value="${esc(p?.searchButtonLabel||"Tra cứu")}" placeholder="Tra cứu"></label>
+        <label>Tiêu đề kết quả<input id="flResultTitle" maxlength="100" value="${esc(p?.resultTitle||"Kết quả tra cứu")}" placeholder="Kết quả tra cứu"></label>
+        <label class="full">Thông báo khi không tìm thấy<textarea id="flNotFoundMessage" maxlength="500" placeholder="Không tìm thấy dữ liệu phù hợp…">${esc(p?.notFoundMessage||"Không tìm thấy dữ liệu phù hợp. Hãy kiểm tra lại thông tin đã nhập.")}</textarea></label>
+        <label class="full">Ghi chú sau kết quả<textarea id="flResultNote" maxlength="1000" placeholder="VD: Nếu có thắc mắc, vui lòng liên hệ BTC.">${esc(p?.resultNote||"")}</textarea></label>
+      </div>
+      <div class="fl-portal-preview">
+        <div><span>Ô tra cứu</span><b id="flPreviewSearchLabel">${esc(p?.searchLabel||p?.searchFieldLabel||"Mã tra cứu")}</b></div>
+        <div><span>Tiêu đề kết quả</span><b id="flPreviewResultTitle">${esc(p?.resultTitle||"Kết quả tra cứu")}</b></div>
+      </div>
+    </div>
+
+    <div class="free-lookup-builder-section">
+      <h3>3. Các trường thông tin</h3>
+      <p>
+        <b>Tên cột Excel</b> là tiêu đề dùng trong file mẫu. <b>Tên hiển thị</b> là nội dung người tra cứu nhìn thấy.
+        Chọn đúng một trường làm <b>Khóa tra cứu</b>.
+      </p>
+      <div class="free-lookup-builder-actions">
+        <button class="secondary" onclick="addFreeLookupBuilderField()">+ Thêm trường</button>
+        <button class="secondary" onclick="downloadFreeLookupTemplateFromBuilder()">Tải Excel mẫu</button>
+        <span class="small-help">Tối đa 30 trường • Trường khóa tra cứu sẽ tự được công khai.</span>
+      </div>
+      <div class="fl-builder-head"><span>Tên cột Excel</span><span>Tên hiển thị</span><span>Kiểu dữ liệu</span><span>Công khai</span><span>Khóa tra cứu</span><span></span></div>
+      <div id="flBuilderFields" class="fl-builder-fields"></div>
+      ${recordCount>0?`<div class="fl-builder-warning"><b>Cổng đã có dữ liệu.</b> Bạn có thể đổi tên hiển thị, kiểu dữ liệu, công khai/ẩn và thêm trường. Khóa tra cứu hiện tại được giữ cố định để tránh làm mất khả năng tra cứu dữ liệu cũ. Muốn đổi khóa, hãy Upload Excel và chọn <b>Thay toàn bộ dữ liệu cũ</b>.</div>`:""}
+      <div class="fl-template-box">
+        <div><b>Excel mẫu tự sinh theo các trường phía trên</b><span>File mẫu có sheet DỮ LIỆU và sheet HƯỚNG DẪN, không chứa dòng giả để tránh nhập nhầm dữ liệu mẫu.</span></div>
+        <button class="primary" onclick="downloadFreeLookupTemplateFromBuilder()">Tải Excel mẫu</button>
+      </div>
+    </div>
+
+    <div class="free-lookup-help" style="margin-top:12px">
+      Cổng này hoàn toàn độc lập với danh sách thành viên CLB. Chỉ các trường được bật <b>Công khai</b> mới được đưa sang vùng dữ liệu người tra cứu có thể đọc.
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost" onclick="closeModal()">Hủy</button>
+      <button class="primary" onclick="saveFreeLookupBuilder('${id}')">${p?"Lưu tất cả thay đổi":"Tạo cổng"}</button>
+    </div>
+  </div></div>`;
+  $("#modalWrap").classList.remove("hidden");
+  renderFreeLookupBuilderFields(recordCount);
+
+  $("#flSearchLabel").oninput=()=>{const el=$("#flPreviewSearchLabel");if(el)el.textContent=$("#flSearchLabel").value||"Mã tra cứu"};
+  $("#flResultTitle").oninput=()=>{const el=$("#flPreviewResultTitle");if(el)el.textContent=$("#flResultTitle").value||"Kết quả tra cứu"};
+}
+function buildFreeLookupTemplate(fields,search,title){
+  const headers=fields.map(f=>f.sourceHeader);
+  const ws=XLSX.utils.aoa_to_sheet([headers]);
+  ws["!cols"]=fields.map(f=>({wch:Math.max(14,Math.min(32,Math.max(String(f.sourceHeader).length,String(f.label).length)+3))}));
+  ws["!freeze"]={xSplit:0,ySplit:1};
+
+  const typeLabels={text:"Văn bản ngắn",multiline:"Văn bản nhiều dòng",number:"Số",money:"Tiền tệ",date:"Ngày",email:"Email",phone:"Số điện thoại",url:"Liên kết"};
+  const instruction=[
+    ["OUR STAGE CLUB - EXCEL MẪU CỔNG TRA CỨU TỰ DO"],
+    ["Tên cổng",title||"Cổng tra cứu"],
+    ["Cột dùng để tra cứu",search.sourceHeader],
+    ["Lưu ý","Không đổi tên các cột ở sheet DU LIEU. Mỗi giá trị trong cột khóa tra cứu phải duy nhất."],
+    [],
+    ["Tên cột Excel","Tên hiển thị","Kiểu dữ liệu","Công khai","Khóa tra cứu"],
+    ...fields.map(f=>[
+      f.sourceHeader,f.label,typeLabels[f.type]||f.type,f.visible!==false?"Có":"Không",f.id===search.id?"Có":""
+    ])
+  ];
+  const guide=XLSX.utils.aoa_to_sheet(instruction);
+  guide["!cols"]=[{wch:24},{wch:36},{wch:22},{wch:14},{wch:16}];
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"DU LIEU");
+  XLSX.utils.book_append_sheet(wb,guide,"HUONG DAN");
+  return wb;
+}
+function downloadFreeLookupTemplateFromBuilder(){
+  const checked=validateFreeLookupBuilderFields();if(!checked)return;
+  const title=$("#flTitle")?.value.trim()||"Cong_Tra_Cuu";
+  const wb=buildFreeLookupTemplate(checked.fields,checked.search,title);
+  const safe=title.replace(/[\/:*?"<>|]+/g,"_").replace(/\s+/g,"_").slice(0,60)||"Cong_Tra_Cuu";
+  XLSX.writeFile(wb,`Mau_Du_Lieu_${safe}.xlsx`);
+}
+function downloadFreeLookupTemplate(id){
+  const p=freeLookupPortalById(id);if(!p)return;
+  const fields=p.fields||[];
+  const search=fields.find(f=>f.id===p.searchFieldId);
+  if(!fields.length||!search)return alert("Cổng chưa có cấu hình trường dữ liệu.");
+  const wb=buildFreeLookupTemplate(fields,search,p.title||"Cong_Tra_Cuu");
+  const safe=(p.title||"Cong_Tra_Cuu").replace(/[\/:*?"<>|]+/g,"_").replace(/\s+/g,"_").slice(0,60);
+  XLSX.writeFile(wb,`Mau_Du_Lieu_${safe}.xlsx`);
+}
+async function syncFreeLookupPublicRecords(p){
+  const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).collection("records").get();
+  if(snap.empty)return;
+  const ops=snap.docs.map(d=>batch=>batch.set(
+    fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id).collection("records").doc(d.id),
+    publicFreeLookupRecord(p,d.data()),{merge:false}
+  ));
+  await commitInChunks(ops);
+}
+async function saveFreeLookupBuilder(id=""){
+  if(!canEditClub())return;
+  const title=$("#flTitle").value.trim();if(!title)return alert("Vui lòng nhập tên cổng.");
+  const checked=validateFreeLookupBuilderFields();if(!checked)return;
+  const existing=id?freeLookupPortalById(id):null;
+  const recordCount=Number(existing?.recordCount||0);
+
+  if(recordCount>0&&existing?.searchFieldId&&checked.search.id!==existing.searchFieldId){
+    return alert("Cổng đang có dữ liệu nên không thể đổi khóa tra cứu trong phần Thiết lập. Hãy Upload Excel và dùng chế độ Thay toàn bộ dữ liệu cũ.");
+  }
+
+  const portalId=id||("lookup_"+uid());
+  const p={
+    ...(existing||{}),
+    id:portalId,
+    title,
+    description:$("#flDescription").value.trim(),
+    instructionText:$("#flInstructionText").value.trim(),
+    scopeSemester:$("#flScope").value,
+    searchLabel:$("#flSearchLabel").value.trim()||checked.search.label||"Mã tra cứu",
+    searchPlaceholder:$("#flSearchPlaceholder").value.trim()||"Nhập thông tin cần tra cứu",
+    searchButtonLabel:$("#flSearchButtonLabel").value.trim()||"Tra cứu",
+    resultTitle:$("#flResultTitle").value.trim()||"Kết quả tra cứu",
+    notFoundMessage:$("#flNotFoundMessage").value.trim()||"Không tìm thấy dữ liệu phù hợp. Hãy kiểm tra lại thông tin đã nhập.",
+    resultNote:$("#flResultNote").value.trim(),
+    open:existing?.open===true,
+    fields:checked.fields,
+    searchFieldId:checked.search.id,
+    searchFieldLabel:checked.search.label,
+    recordCount
+  };
+
+  try{
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).set(
+      {...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:existing?.createdAt||firebase.firestore.FieldValue.serverTimestamp()},
+      {merge:true}
+    );
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).set(publicFreeLookupMeta(p),{merge:true});
+    if(existing&&recordCount>0)await syncFreeLookupPublicRecords(p);
+    closeModal();
+    toast(existing?"Đã lưu cổng và trường dữ liệu":"Đã tạo cổng tra cứu");
+    await renderFreeLookup();
+  }catch(e){
+    console.error(e);
+    alert("Không lưu được cổng: "+(e.message||e));
+  }
+}
+async function toggleFreeLookup(id){
+  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
+  if(!p.searchFieldId||!(p.fields||[]).length||!p.recordCount){
+    if(p.open!==true)return alert("Hãy upload dữ liệu và cấu hình trường tra cứu trước khi mở cổng.");
+  }
+  p.open=p.open!==true;
+  try{
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).set({open:p.open,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).set(publicFreeLookupMeta(p),{merge:true});
+    toast(p.open?"Đã mở cổng tra cứu":"Đã đóng cổng tra cứu");await renderFreeLookup();
+  }catch(e){alert("Không đổi được trạng thái cổng: "+(e.message||e))}
+}
+async function deleteFreeLookupPortal(id){
+  if(!canEditClub())return;const p=freeLookupPortalById(id);if(!p)return;
+  if(!confirm(`Xóa vĩnh viễn cổng "${p.title}"?\n\nToàn bộ dữ liệu upload của cổng này cũng sẽ bị xóa. Thao tác không thể hoàn tác.`))return;
+  try{
+    await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records"));
+    await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).collection("records"));
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).delete();
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).delete();
+    toast("Đã xóa cổng tra cứu");await renderFreeLookup();
+  }catch(e){alert("Không xóa được cổng: "+(e.message||e))}
+}
+function startFreeLookupImport(id){freeLookupImportPortalId=id;$("#freeLookupExcelInput").value="";$("#freeLookupExcelInput").click()}
+$("#freeLookupExcelInput").onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  try{
+    const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];
+    const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false,blankrows:false});
+    if(matrix.length<2)return alert("File cần có hàng tiêu đề và ít nhất 1 dòng dữ liệu.");
+    const rawHeaders=(matrix[0]||[]).map((x,i)=>String(x??"").trim()||`Cột ${i+1}`);
+    const normalized=rawHeaders.map(x=>normalizeText(x));
+    const duplicates=normalized.filter((x,i,a)=>x&&a.indexOf(x)!==i);
+    if(duplicates.length)return alert("File có tên cột bị trùng. Hãy đổi tên các cột để mỗi tiêu đề là duy nhất.");
+    const portal=freeLookupPortalById(freeLookupImportPortalId);
+    const configuredHeaders=(portal?.fields||[]).map(f=>String(f.sourceHeader||"").trim()).filter(Boolean);
+    const missingHeaders=configuredHeaders.filter(h=>!rawHeaders.some(rh=>normalizeText(rh)===normalizeText(h)));
+    if(missingHeaders.length){
+      return alert(
+        "File đang thiếu các cột đã cấu hình:\n- "+missingHeaders.join("\n- ")+
+        "\n\nHãy bấm “Tải Excel mẫu” của cổng để dùng đúng cấu trúc."
+      );
+    }
+    freeLookupImportHeaders=rawHeaders;
+    freeLookupImportRows=matrix.slice(1).filter(row=>row.some(v=>String(v??"").trim()!==""));
+    openFreeLookupImportPreview();
+  }catch(err){console.error(err);alert("Không đọc được file: "+(err.message||err))}
+  finally{e.target.value=""}
+};
+function existingFreeLookupFieldForHeader(p,header){return (p.fields||[]).find(f=>normalizeText(f.sourceHeader||"")===normalizeText(header))}
+function defaultFreeLookupFieldId(header,index){
+  const slug=normalizeText(header).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,40)||`field_${index+1}`;
+  return slug+"_"+String(index+1);
+}
+function openFreeLookupImportPreview(){
+  const p=freeLookupPortalById(freeLookupImportPortalId);if(!p)return;
+  const existingSearch=(p.fields||[]).find(f=>f.id===p.searchFieldId);
+  const defaultIndex=Math.max(0,freeLookupImportHeaders.findIndex(h=>normalizeText(h)===normalizeText(existingSearch?.sourceHeader||"")));
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(980px,100%)"><div class="modal-head"><div><h2>Quét dữ liệu trước khi nhập</h2><div class="small-help">${esc(p.title)} • ${freeLookupImportRows.length} dòng dữ liệu</div></div><button onclick="closeModal()">×</button></div>
+    <div class="form-grid">
+      <label>Trường dùng để tra cứu<select id="flImportSearchColumn" onchange="updateFreeLookupImportStats()">${freeLookupImportHeaders.map((h,i)=>`<option value="${i}" ${i===defaultIndex?"selected":""}>${esc(h)}</option>`).join("")}</select></label>
+      <label>Chế độ nhập<select id="flImportMode"><option value="replace">Thay toàn bộ dữ liệu cũ</option><option value="merge">Thêm / cập nhật theo khóa tra cứu</option></select></label>
+    </div>
+    <div class="free-lookup-import-stats"><div><span>Dòng dữ liệu</span><b id="flStatRows">0</b></div><div><span>Hợp lệ</span><b id="flStatValid">0</b></div><div><span>Thiếu khóa</span><b id="flStatMissing">0</b></div><div><span>Trùng khóa trong file</span><b id="flStatDuplicate">0</b></div></div>
+    <div class="free-lookup-field-table"><table><thead><tr><th>Cột trong file</th><th>Tên hiển thị</th><th>Kiểu dữ liệu</th><th>Hiển thị công khai</th></tr></thead><tbody>
+      ${freeLookupImportHeaders.map((h,i)=>{const old=existingFreeLookupFieldForHeader(p,h);return `<tr data-fl-field-row="${i}" data-field-id="${esc(old?.id||defaultFreeLookupFieldId(h,i))}"><td><b>${esc(h)}</b></td><td><input id="flLabel_${i}" value="${esc(old?.label||h)}"></td><td><select id="flType_${i}"><option value="text" ${(old?.type||"text")==="text"?"selected":""}>Văn bản ngắn</option><option value="multiline" ${old?.type==="multiline"?"selected":""}>Văn bản nhiều dòng</option><option value="number" ${old?.type==="number"?"selected":""}>Số</option><option value="money" ${old?.type==="money"?"selected":""}>Tiền tệ</option><option value="date" ${old?.type==="date"?"selected":""}>Ngày</option><option value="email" ${old?.type==="email"?"selected":""}>Email</option><option value="phone" ${old?.type==="phone"?"selected":""}>Số điện thoại</option><option value="url" ${old?.type==="url"?"selected":""}>Liên kết</option></select></td><td><input type="checkbox" id="flVisible_${i}" ${old?.visible===false?"":"checked"}></td></tr>`}).join("")}
+    </tbody></table></div>
+    <div class="free-lookup-preview"><h4>Nguyên tắc an toàn</h4><div class="free-lookup-help">Chỉ các cột được tick <b>Hiển thị công khai</b> mới được chép sang cổng công khai. Các cột ẩn chỉ nằm trong vùng dữ liệu Admin và người tra cứu không thể đọc được. Mỗi giá trị ở cột tra cứu phải duy nhất.</div></div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="applyFreeLookupImport()">Nhập dữ liệu</button></div>
+  </div></div>`;
+  $("#modalWrap").classList.remove("hidden");updateFreeLookupImportStats();
+}
+function freeLookupImportAnalysis(){
+  const idx=Number($("#flImportSearchColumn")?.value||0),seen=new Map();let missing=0,duplicate=0,valid=0;
+  for(const row of freeLookupImportRows){
+    const key=normalizeFreeLookupKey(row[idx]);
+    if(!key){missing++;continue}
+    if(seen.has(key)){duplicate++;continue}
+    seen.set(key,true);valid++;
+  }
+  return {idx,missing,duplicate,valid};
+}
+function updateFreeLookupImportStats(){
+  const a=freeLookupImportAnalysis();
+  if($("#flStatRows"))$("#flStatRows").textContent=freeLookupImportRows.length;
+  if($("#flStatValid"))$("#flStatValid").textContent=a.valid;
+  if($("#flStatMissing"))$("#flStatMissing").textContent=a.missing;
+  if($("#flStatDuplicate"))$("#flStatDuplicate").textContent=a.duplicate;
+}
+async function applyFreeLookupImport(){
+  if(!canEditClub())return;const p=freeLookupPortalById(freeLookupImportPortalId);if(!p)return;
+  const a=freeLookupImportAnalysis();
+  if(a.missing)return alert(`Có ${a.missing} dòng thiếu giá trị tra cứu. Hãy bổ sung trước khi nhập.`);
+  if(a.duplicate)return alert(`Có ${a.duplicate} giá trị tra cứu bị trùng trong file. Mỗi khóa phải duy nhất.`);
+  const fields=freeLookupImportHeaders.map((h,i)=>({
+    id:document.querySelector(`[data-fl-field-row="${i}"]`).dataset.fieldId,
+    sourceHeader:h,label:$("#flLabel_"+i).value.trim()||h,type:$("#flType_"+i).value,visible:$("#flVisible_"+i).checked
+  }));
+  if(!fields.some(f=>f.visible))return alert("Cần chọn ít nhất một trường hiển thị công khai.");
+  const searchField=fields[a.idx];if(!searchField)return alert("Không xác định được trường tra cứu.");
+  const mode=$("#flImportMode").value;
+  if(mode==="merge"&&Number(p.recordCount||0)>0&&p.searchFieldId&&searchField.id!==p.searchFieldId){
+    return alert("Không thể đổi khóa tra cứu khi dùng chế độ Thêm / cập nhật. Hãy chọn Thay toàn bộ dữ liệu cũ nếu muốn đổi khóa tra cứu.");
+  }
+  try{
+    if(mode==="replace"){
+      await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).collection("records"));
+      await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id).collection("records"));
+    }
+    const ops=[];
+    for(const row of freeLookupImportRows){
+      const searchValue=String(row[a.idx]??"").trim();if(!searchValue)continue;
+      const id=freeLookupDocId(searchValue),data={};fields.forEach((f,i)=>data[f.id]=row[i]??"");
+      const priv={searchValue,searchNormalized:normalizeFreeLookupKey(searchValue),data,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""};
+      const effective={...p,fields,searchFieldId:searchField.id,searchFieldLabel:searchField.label};
+      ops.push(batch=>batch.set(fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).collection("records").doc(id),priv,{merge:false}));
+      ops.push(batch=>batch.set(fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id).collection("records").doc(id),publicFreeLookupRecord(effective,priv),{merge:false}));
+    }
+    await commitInChunks(ops);
+    const count=(await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).collection("records").get()).size;
+    Object.assign(p,{fields,searchFieldId:searchField.id,searchFieldLabel:searchField.label,searchLabel:p.searchLabel||searchField.label,recordCount:count});
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).set({fields,searchFieldId:p.searchFieldId,searchFieldLabel:p.searchFieldLabel,searchLabel:p.searchLabel,recordCount:count,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id).set(publicFreeLookupMeta(p),{merge:true});
+    closeModal();toast(`Đã nhập ${freeLookupImportRows.length} dòng dữ liệu`);await renderFreeLookup();
+  }catch(e){console.error(e);alert("Không nhập được dữ liệu: "+(e.message||e))}
+}
+function openFreeLookupFieldConfig(id){
+  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;if(!(p.fields||[]).length)return alert("Hãy upload dữ liệu trước.");
+  freeLookupConfigDraft=structuredClone(p.fields||[]);
+  renderFreeLookupFieldConfigModal(p);
+}
+function renderFreeLookupFieldConfigModal(p){
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(920px,100%)"><div class="modal-head"><div><h2>Cấu hình trường hiển thị</h2><div class="small-help">${esc(p.title)} • Khóa tra cứu: ${esc(p.searchFieldLabel||"—")}</div></div><button onclick="closeModal()">×</button></div>
+    <div id="flConfigRows">${freeLookupConfigDraft.map((f,i)=>freeLookupConfigRowHTML(f,i,p.searchFieldId)).join("")}</div>
+    <button class="secondary" onclick="addFreeLookupManualField('${p.id}')">+ Thêm trường thủ công</button>
+    <div class="free-lookup-help" style="margin-top:10px">Trường thủ công sẽ trống ở dữ liệu cũ cho đến khi Admin sửa từng bản ghi. Trường đang dùng làm khóa tra cứu không thể xóa tại đây; muốn đổi khóa hãy upload lại file và chọn cột tra cứu mới.</div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveFreeLookupFieldConfig('${p.id}')">Lưu & cập nhật cổng công khai</button></div>
+  </div></div>`;$("#modalWrap").classList.remove("hidden");
+}
+function freeLookupConfigRowHTML(f,i,searchId){
+  return `<div class="free-lookup-config-row"><input value="${esc(f.label||"")}" oninput="freeLookupConfigDraft[${i}].label=this.value" placeholder="Tên hiển thị"><select onchange="freeLookupConfigDraft[${i}].type=this.value"><option value="text" ${f.type==="text"?"selected":""}>Văn bản</option><option value="number" ${f.type==="number"?"selected":""}>Số</option><option value="money" ${f.type==="money"?"selected":""}>Tiền tệ</option><option value="date" ${f.type==="date"?"selected":""}>Ngày</option><option value="multiline" ${f.type==="multiline"?"selected":""}>Nhiều dòng</option></select><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${f.visible!==false?"checked":""} onchange="freeLookupConfigDraft[${i}].visible=this.checked"> Công khai</label><button class="danger" ${f.id===searchId?"disabled title='Đây là khóa tra cứu'":""} onclick="removeFreeLookupConfigField(${i},'${searchId}')">×</button></div>`;
+}
+function addFreeLookupManualField(id){const p=freeLookupPortalById(id);freeLookupConfigDraft.push({id:"custom_"+uid(),sourceHeader:"",label:"Trường mới",type:"text",visible:true});renderFreeLookupFieldConfigModal(p)}
+function removeFreeLookupConfigField(i,searchId){if(freeLookupConfigDraft[i]?.id===searchId)return;freeLookupConfigDraft.splice(i,1);const p=freeLookupPortals.find(x=>x.searchFieldId===searchId);if(p)renderFreeLookupFieldConfigModal(p)}
+async function saveFreeLookupFieldConfig(id){
+  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
+  if(!freeLookupConfigDraft.length)return alert("Cần ít nhất một trường.");
+  if(freeLookupConfigDraft.some(f=>!String(f.label||"").trim()))return alert("Có trường chưa có tên hiển thị.");
+  if(!freeLookupConfigDraft.some(f=>f.visible!==false))return alert("Cần ít nhất một trường công khai.");
+  try{
+    const privateSnap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();
+    const effective={...p,fields:structuredClone(freeLookupConfigDraft)};
+    effective.searchFieldLabel=effective.fields.find(f=>f.id===p.searchFieldId)?.label||p.searchFieldLabel;
+    const ops=privateSnap.docs.map(d=>batch=>batch.set(fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).collection("records").doc(d.id),publicFreeLookupRecord(effective,d.data()),{merge:false}));
+    await commitInChunks(ops);
+    Object.assign(p,{fields:effective.fields,searchFieldLabel:effective.searchFieldLabel});
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).set({fields:p.fields,searchFieldLabel:p.searchFieldLabel,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).set(publicFreeLookupMeta(p),{merge:true});
+    closeModal();toast("Đã cập nhật trường hiển thị");await renderFreeLookup();
+  }catch(e){alert("Không lưu được cấu hình: "+(e.message||e))}
+}
+async function openFreeLookupData(id){
+  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
+  if(!(p.fields||[]).length)return alert("Cổng chưa có cấu trúc dữ liệu. Hãy upload Excel/CSV trước.");
+  try{
+    const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").limit(200).get();
+    freeLookupRecordCache=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const fields=p.fields||[];
+    $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1120px,100%)"><div class="modal-head"><div><h2>Dữ liệu tra cứu</h2><div class="small-help">${esc(p.title)} • Hiển thị tối đa 200 bản ghi để quản trị</div></div><button onclick="closeModal()">×</button></div>
+      <div class="toolbar"><input id="flDataSearch" placeholder="Tìm theo khóa tra cứu…" oninput="renderFreeLookupDataTable('${id}')"><button class="primary" onclick="openFreeLookupRecordEditor('${id}')">+ Thêm bản ghi</button><button class="secondary" onclick="exportFreeLookupData('${id}')">Xuất Excel</button></div>
+      <div id="flDataTable"></div>
+    </div></div>`;$("#modalWrap").classList.remove("hidden");renderFreeLookupDataTable(id);
+  }catch(e){alert("Không tải được dữ liệu: "+(e.message||e))}
+}
+function renderFreeLookupDataTable(id){
+  const p=freeLookupPortalById(id);if(!p)return;const q=($("#flDataSearch")?.value||"").trim().toUpperCase();const fields=p.fields||[];
+  const rows=freeLookupRecordCache.filter(r=>!q||String(r.searchValue||"").toUpperCase().includes(q));
+  $("#flDataTable").innerHTML=`<div class="free-lookup-data-wrap"><table><thead><tr><th>Khóa tra cứu</th>${fields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th>Thao tác</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.searchValue||"")}</b></td>${fields.map(f=>`<td>${esc(formatFreeLookupAdminValue(r.data?.[f.id],f.type))}</td>`).join("")}<td><button class="secondary" onclick="openFreeLookupRecordEditor('${id}','${r.id}')">Sửa</button> <button class="danger" onclick="deleteFreeLookupRecord('${id}','${r.id}')">Xóa</button></td></tr>`).join("")}</tbody></table></div>${rows.length?"":'<div class="empty">Không có bản ghi phù hợp.</div>'}`;
+}
+function openFreeLookupRecordEditor(portalId,recordId=""){
+  const p=freeLookupPortalById(portalId);if(!p)return;const r=recordId?freeLookupRecordCache.find(x=>x.id===recordId):null;
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>${r?"Sửa bản ghi":"Thêm bản ghi"}</h2><button onclick="closeModal()">×</button></div><div class="form-grid">${(p.fields||[]).map(f=>`<label class="${f.type==="multiline"?"full":""}">${esc(f.label)}${f.id===p.searchFieldId?' <span style="color:#8b1e35">(khóa tra cứu)</span>':""}${f.type==="multiline"?`<textarea id="flRec_${f.id}">${esc(r?.data?.[f.id]??"")}</textarea>`:`<input id="flRec_${f.id}" value="${esc(r?.data?.[f.id]??"")}">`}</label>`).join("")}</div><div class="modal-actions"><button class="ghost" onclick="openFreeLookupData('${portalId}')">Hủy</button><button class="primary" onclick="saveFreeLookupRecord('${portalId}','${recordId}')">Lưu bản ghi</button></div></div></div>`;
+}
+async function saveFreeLookupRecord(portalId,oldId=""){
+  const p=freeLookupPortalById(portalId);if(!p)return;const fields=p.fields||[],data={};fields.forEach(f=>data[f.id]=$("#flRec_"+f.id)?.value??"");
+  const searchValue=String(data[p.searchFieldId]??"").trim();if(!searchValue)return alert("Trường dùng để tra cứu không được để trống.");if(searchValue.length>300)return alert("Giá trị tra cứu quá dài.");
+  const newId=freeLookupDocId(searchValue),priv={searchValue,searchNormalized:normalizeFreeLookupKey(searchValue),data,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""};
+  try{
+    if(oldId&&oldId!==newId){await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(oldId).delete();await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(oldId).delete()}
+    await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(newId).set(priv,{merge:false});
+    await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(newId).set(publicFreeLookupRecord(p,priv),{merge:false});
+    p.recordCount=await refreshFreeLookupCount(portalId);toast("Đã lưu bản ghi");await renderFreeLookup();await openFreeLookupData(portalId);
+  }catch(e){alert("Không lưu được bản ghi: "+(e.message||e))}
+}
+async function deleteFreeLookupRecord(portalId,recordId){
+  const p=freeLookupPortalById(portalId);if(!p||!confirm("Xóa bản ghi này?"))return;
+  try{await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(recordId).delete();await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(recordId).delete();p.recordCount=await refreshFreeLookupCount(portalId);toast("Đã xóa bản ghi");await renderFreeLookup();await openFreeLookupData(portalId)}catch(e){alert("Không xóa được bản ghi: "+(e.message||e))}
+}
+async function exportFreeLookupData(id){
+  const p=freeLookupPortalById(id);if(!p)return;try{const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();const fields=p.fields||[];const rows=snap.docs.map((d,i)=>{const r=d.data(),o={STT:i+1};fields.forEach(f=>o[f.label]=r.data?.[f.id]??"");return o});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"DU LIEU");XLSX.writeFile(wb,`Tra_Cuu_${String(p.title||id).replace(/[^a-zA-Z0-9À-ỹ_-]+/g,"_")}.xlsx`)}catch(e){alert("Không xuất được dữ liệu: "+(e.message||e))}
+}
+$("#createFreeLookupBtn").onclick=()=>openFreeLookupBuilder();
+$("#freeLookupSearch").oninput=()=>renderFreeLookup();
+
 function eventFor(id){return state.events.find(e=>e.id===id)}
 $("#eventSearch").oninput=renderEvents;
 $("#createEventBtn").onclick=()=>openEventBuilder();
@@ -1648,34 +2480,176 @@ async function deleteEventPortal(id){
 
 async function openEventSubmissions(eventId){
   const ev=eventFor(eventId);if(!ev)return;
+  currentEventSubmissionEventId=eventId;
   try{
     const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();
     const rows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
       const ta=a.createdAt?.seconds||0,tb=b.createdAt?.seconds||0;return tb-ta;
     });
-    $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1050px,100%)">
-      <div class="modal-head"><div><h2>Kết quả: ${esc(ev.title)}</h2><div class="small-help">${rows.length} phản hồi</div></div><button onclick="closeModal()">×</button></div>
-      ${rows.length?rows.map(s=>renderSubmissionCard(ev,s)).join(""):`<div class="empty">Chưa có phản hồi nào.</div>`}
+    currentEventSubmissionRows=rows;
+
+    $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1100px,100%)">
+      <div class="modal-head">
+        <div>
+          <h2>Kết quả: ${esc(ev.title)}</h2>
+          <div class="small-help">${rows.length} phản hồi • ${esc(state.semesters[ev.semester]?.name||ev.semester||"")}</div>
+        </div>
+        <button onclick="closeModal()">×</button>
+      </div>
+
+      <div class="event-result-toolbar">
+        <div class="left">
+          ${canEditModule("events")&&rows.length?`
+            <label><input id="eventResultSelectAll" class="submission-select" type="checkbox" onchange="toggleAllEventSubmissions(this.checked)"> Chọn tất cả</label>
+            <span id="eventResultSelectedCount" class="event-export-count">Đã chọn 0</span>
+          `:`<span class="event-export-count">${rows.length?"Dữ liệu có thể xuất thành Excel.":"Chưa có dữ liệu để xuất."}</span>`}
+        </div>
+        <div class="right">
+          <button class="secondary" ${rows.length?"":"disabled"} onclick="exportEventSubmissions('${ev.id}')">Xuất Excel</button>
+          ${canEditModule("events")&&rows.length?`<button id="deleteSelectedEventResultsBtn" class="danger" disabled onclick="deleteSelectedEventSubmissions('${ev.id}')">Xóa đã chọn</button>`:""}
+        </div>
+      </div>
+
+      <div id="eventSubmissionList">
+        ${rows.length?rows.map(s=>renderSubmissionCard(ev,s)).join(""):`<div class="event-result-empty">Chưa có phản hồi nào cho sự kiện này.</div>`}
+      </div>
     </div></div>`;
     $("#modalWrap").classList.remove("hidden");
-  }catch(e){console.error(e);alert("Không tải được kết quả: "+(e.message||e))}
+  }catch(e){
+    console.error(e);
+    alert("Không tải được kết quả: "+(e.message||e));
+  }
 }
 function renderSubmissionCard(ev,s){
   const answers=s.answers||{};
   const fields=ev.fields||[];
-  return `<div class="submission-card">
-    <div style="display:flex;justify-content:space-between;gap:10px"><b>${esc(s.submitterLabel||"Phản hồi")}</b><span class="small-help">${s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):""}</span></div>
+  const created=s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"";
+  return `<div class="submission-card" id="submissionCard_${s.id}">
+    <div class="submission-card-head">
+      <div class="submission-card-title">
+        ${canEditModule("events")?`<input class="submission-select event-submission-check" type="checkbox" value="${esc(s.id)}" onchange="updateEventSubmissionSelection()">`:""}
+        <div>
+          <b>${esc(s.submitterLabel||"Phản hồi")}</b>
+          <div class="small-help">${esc(created||"Không rõ thời gian")}</div>
+        </div>
+      </div>
+      <div class="submission-meta">
+        ${s.actionApplied?'<span class="status-badge paid">Đã áp dụng kết quả</span>':s.actionStatus?`<span class="small-help">${esc(s.actionStatus)}</span>`:""}
+        <span class="submission-id">${esc(s.id)}</span>
+      </div>
+    </div>
+
     <div class="submission-grid">
       ${fields.filter(f=>!["image","content"].includes(f.type)).map(f=>{
         const v=answers[f.id],display=Array.isArray(v)?v.join(", "):(v??"—");
         return `<div class="submission-answer"><span>${esc(f.label)}</span><b>${esc(display)}</b></div>`;
       }).join("")}
     </div>
+
     <div class="event-actions">
       ${ev.resultAction.startsWith("fundPaid")&&!s.actionApplied&&canEditModule("finance")?`<button class="primary" onclick="approveEventFundPaid('${ev.id}','${s.id}')">Đánh dấu đã đóng quỹ</button>`:""}
-      ${s.actionApplied?'<span class="status-badge paid">Đã áp dụng kết quả</span>':s.actionStatus?`<span class="small-help">${esc(s.actionStatus)}</span>`:""}
+      ${canEditModule("events")?`<button class="danger" onclick="deleteSingleEventSubmission('${ev.id}','${s.id}')">Xóa phản hồi</button>`:""}
     </div>
   </div>`;
+}
+function selectedEventSubmissionIds(){
+  return $$(".event-submission-check:checked").map(x=>x.value);
+}
+function updateEventSubmissionSelection(){
+  const checks=$$(".event-submission-check");
+  const selected=checks.filter(x=>x.checked);
+  const count=$("#eventResultSelectedCount");
+  if(count)count.textContent=`Đã chọn ${selected.length}`;
+  const all=$("#eventResultSelectAll");
+  if(all){
+    all.checked=checks.length>0&&selected.length===checks.length;
+    all.indeterminate=selected.length>0&&selected.length<checks.length;
+  }
+  const del=$("#deleteSelectedEventResultsBtn");
+  if(del)del.disabled=selected.length===0;
+}
+function toggleAllEventSubmissions(checked){
+  $$(".event-submission-check").forEach(x=>x.checked=checked);
+  updateEventSubmissionSelection();
+}
+function eventSubmissionExportRows(ev,rows){
+  const fields=(ev.fields||[]).filter(f=>!["image","content"].includes(f.type));
+  return rows.map((s,i)=>{
+    const row={
+      "STT":i+1,
+      "Thời gian gửi":s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"",
+      "Người gửi":s.submitterLabel||"",
+      "Mã phản hồi":s.id
+    };
+    for(const f of fields){
+      const v=s.answers?.[f.id];
+      row[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"");
+    }
+    row["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");
+    return row;
+  });
+}
+async function exportEventSubmissions(eventId){
+  const ev=eventFor(eventId);if(!ev)return;
+  try{
+    let rows=currentEventSubmissionEventId===eventId?currentEventSubmissionRows:[];
+    if(!rows.length){
+      const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();
+      rows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    }
+    if(!rows.length)return alert("Sự kiện chưa có phản hồi để xuất.");
+
+    const data=eventSubmissionExportRows(ev,rows);
+    const ws=XLSX.utils.json_to_sheet(data);
+    ws["!cols"]=Object.keys(data[0]||{}).map(key=>({
+      wch:Math.min(42,Math.max(12,key.length+3,...data.slice(0,80).map(r=>String(r[key]??"").length+2)))
+    }));
+    ws["!autofilter"]={ref:ws["!ref"]};
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"KET QUA");
+    const meta=[
+      ["Sự kiện",ev.title||""],
+      ["Học kỳ",state.semesters[ev.semester]?.name||ev.semester||""],
+      ["Số phản hồi",rows.length],
+      ["Xuất lúc",new Date().toLocaleString("vi-VN")]
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(meta),"THONG TIN");
+    const safe=(ev.title||"Su_kien").replace(/[\/:*?"<>|]+/g,"_").slice(0,60);
+    XLSX.writeFile(wb,`Ket_qua_${safe}_${ev.semester||semester}.xlsx`);
+    toast("Đã xuất kết quả sự kiện");
+  }catch(e){
+    console.error("exportEventSubmissions",e);
+    alert("Không xuất được kết quả: "+(e.message||e));
+  }
+}
+async function deleteSingleEventSubmission(eventId,submissionId){
+  if(!canEditModule("events"))return;
+  if(!confirm("Xóa phản hồi này? Thao tác không thể hoàn tác."))return;
+  try{
+    await fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).delete();
+    toast("Đã xóa phản hồi");
+    await openEventSubmissions(eventId);
+  }catch(e){
+    console.error(e);
+    alert("Không xóa được phản hồi: "+(e.message||e));
+  }
+}
+async function deleteSelectedEventSubmissions(eventId){
+  if(!canEditModule("events"))return;
+  const ids=selectedEventSubmissionIds();
+  if(!ids.length)return;
+  if(!confirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nThao tác này không thể hoàn tác.`))return;
+  try{
+    await commitInChunks(ids.map(id=>batch=>batch.delete(
+      fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id)
+    )));
+    toast(`Đã xóa ${ids.length} phản hồi`);
+    await openEventSubmissions(eventId);
+  }catch(e){
+    console.error(e);
+    alert("Không xóa được các phản hồi đã chọn: "+(e.message||e));
+  }
 }
 function submissionMssv(ev,sub){
   const f=(ev.fields||[]).find(x=>x.type==="mssv");
@@ -2376,7 +3350,7 @@ function applyZeroClearBehavior(){
     });
   });
 }
-function renderAll(){renderSemesterSelect();renderQLTV();renderMemberList();renderInfo();renderFinance();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();if($("#settings")&&!$("#settings").classList.contains("hidden"))renderSettings();if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess()} 
+function renderAll(){renderSemesterSelect();renderQLTV();renderMemberList();renderInfo();renderFinance();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();if($("#settings")&&!$("#settings").classList.contains("hidden"))renderSettings();if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();if($("#freeLookup")&&!$("#freeLookup").classList.contains("hidden"))renderFreeLookup();applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess()} 
 </script>
 </body>
 </html>

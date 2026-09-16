@@ -7,6 +7,10 @@
     {
       "source": "/su-kien",
       "destination": "/su-kien.html"
+    },
+    {
+      "source": "/tra-cuu-tu-do",
+      "destination": "/tra-cuu-tu-do.html"
     }
   ],
   "headers": [
@@ -81,6 +85,15 @@
     },
     {
       "source": "/su-kien.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/tra-cuu-tu-do.html",
       "headers": [
         {
           "key": "Cache-Control",
