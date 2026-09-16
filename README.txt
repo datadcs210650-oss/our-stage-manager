@@ -1,45 +1,49 @@
-OUR STAGE CLUB MANAGER V33 — SEMESTER ISOLATION + COMPANION EVENT
+OUR STAGE CLUB MANAGER V34 — EVENT FIELDS FIX
 
-1. DỮ LIỆU TÁCH RIÊNG THEO HỌC KỲ
-- Nhật ký, Import, Thùng rác, Chờ duyệt, Thông báo dùng query semester == kỳ đang chọn.
-- Thành viên, điểm, thu chi, sự kiện, QR, tra cứu và dashboard tiếp tục chỉ dùng kỳ đang chọn.
-- Global Search chỉ tìm dữ liệu vận hành của kỳ đang xem.
-- Chuyển từ kỳ mới về kỳ cũ sẽ không thấy thay đổi của kỳ mới.
-- Hồ sơ cá nhân có thể xem lịch sử các kỳ trước, nhưng kỳ cũ không hiển thị kỳ tương lai.
-- Tài khoản BCN và thiết lập tài khoản là dữ liệu toàn hệ thống nên không thuộc kỳ.
+ĐÃ SỬA LỖI CỔNG SỰ KIỆN KHÔNG HIỆN CÂU HỎI
 
-2. MÔ HÌNH HỌC KỲ CỐ ĐỊNH
-Mỗi năm chỉ có 3 kỳ:
-- Spring (SP)
-- Summer (SU)
-- Fall (FA)
-Thứ tự: SP26 → SU26 → FA26 → SP27 → SU27 → FA27...
-Tên kỳ và mã kỳ được hệ thống chuẩn hóa. Không tạo Winter hoặc mã tùy ý.
+Nguyên nhân chính:
+- Một số sự kiện cũ / sự kiện bị lỗi có fields = [] hoặc không có fields trong Firestore.
+- Khi mở chỉnh sửa, mảng rỗng được xem như cấu hình hợp lệ nên giao diện builder tiếp tục giữ rỗng.
+- Cổng public vì vậy chỉ hiện tiêu đề + nút “Gửi thông tin”, không có ô nhập.
 
-3. SỰ KIỆN “ĐỒNG HÀNH KỲ TIẾP THEO”
-- Có nút riêng trong Cổng sự kiện.
-- Kỳ tiếp theo phải được tạo trước và không bị khóa.
-- Form mặc định hỏi Họ tên, MSSV, xác nhận tiếp tục đồng hành và ghi chú.
-Nếu chọn CÓ:
-- Tạo/cập nhật hồ sơ ở kỳ tiếp theo.
-- Giữ thông tin cơ bản/tags/ghi chú; điểm và quỹ của kỳ mới bắt đầu riêng.
-- Tự thêm hoạt động “Đồng hành kỳ tiếp theo → [kỳ]” vào Điểm danh hoạt động của kỳ nguồn.
-- Tick hoạt động này cho thành viên.
-- Ghi Audit Log ở cả kỳ nguồn và kỳ đích.
-Nếu chọn KHÔNG: chỉ lưu phản hồi, không chuyển hồ sơ.
+V34 xử lý 4 lớp:
 
-4. XÓA HỌC KỲ
-Dọn thêm sự kiện/submissions, QR/check-ins, tra cứu tự do, Audit, Trash, Import, Approval và Notification đúng kỳ.
+1. EVENT BUILDER
+- Nếu event.fields bị thiếu/rỗng, builder tự tạo bộ trường mặc định.
+- Đóng quỹ mặc định:
+  + Họ và tên
+  + MSSV
+  + Xác nhận
+- Form thường mặc định:
+  + Họ và tên
+  + MSSV
+  + Email
+- Tất cả trường luôn được chuẩn hóa và có id trước khi lưu.
 
-5. FIRESTORE RULES V33
-BẮT BUỘC Publish firestore_rules_v33.rules.
-Dữ liệu vận hành mới phải có semester; tra cứu tự do mới phải gắn học kỳ.
+2. KHÔI PHỤC EVENT CŨ
+- Card sự kiện hiển thị số trường.
+- Nếu một event bị mất fields, card hiển thị “Thiếu trường”.
+- Có nút “Khôi phục trường”.
+- Khi mở menu Cổng sự kiện, Admin cũng tự kiểm tra và sửa event bị rỗng trong Firestore.
+
+3. PUBLIC FORM
+- su-kien.html có fallback riêng.
+- Nếu Firestore event cũ chưa có fields, trang public vẫn dựng trường mặc định thay vì hiện form trống.
+- Khi Admin vào hệ thống, cấu hình đó sẽ được sửa lại vào Firestore.
+
+4. CÔNG CỤ BUILDER
+- Nút “Khôi phục trường mặc định”.
+- Nút “Xem trước form”.
+- Khi lưu, hệ thống kiểm tra lại toàn bộ field schema trước khi ghi Firestore.
+
+FIRESTORE RULES
+- Không thay đổi quyền.
+- Nếu Rules V33 đang hoạt động thì KHÔNG cần publish rules mới.
 
 CẬP NHẬT
-1. Commit toàn bộ package V33 lên GitHub.
+1. Commit toàn bộ package V34 lên GitHub.
 2. Chờ Vercel Ready.
-3. Firebase > Firestore Database > Rules > Publish firestore_rules_v33.rules.
-4. Command + Shift + R.
-
-DỮ LIỆU CŨ KHÔNG CÓ semester
-Sẽ không còn hiển thị trong các màn hình theo kỳ để tránh trộn dữ liệu. Dữ liệu đó không tự bị xóa.
+3. Command + Shift + R.
+4. Vào Cổng sự kiện một lần. Các event đang thiếu trường sẽ được kiểm tra/khôi phục.
+5. Mở lại link public để kiểm tra.

@@ -92,13 +92,51 @@ function renderRichText(md){
   s=s.replace(/\*(.+?)\*/g,"<em>$1</em>");
   return s.replace(/\n/g,"<br>");
 }
+
+function publicDefaultEventFields(config={}){
+  const title=String(config.title||"").toLowerCase();
+  const action=String(config.resultAction||"none");
+  const fund=action.startsWith("fundPaid")||title.includes("đóng quỹ")||title.includes("dong quy");
+  const base=[
+    {id:"fallback_name",label:"Họ và tên",type:"text",required:true,options:[]},
+    {id:"fallback_mssv",label:"MSSV",type:"mssv",required:true,options:[]}
+  ];
+  if(fund)base.push({id:"fallback_confirm",label:"Tôi xác nhận đã hoàn tất nội dung theo hướng dẫn của CLB",type:"radio",required:true,options:["Xác nhận"]});
+  else base.push({id:"fallback_email",label:"Email",type:"email",required:false,options:[]});
+  return base;
+}
+function publicNormalizeEventFields(config={}){
+  const src=Array.isArray(config.fields)&&config.fields.length?config.fields:publicDefaultEventFields(config);
+  return src.map((f,i)=>({
+    ...f,
+    id:String(f.id||`public_field_${i+1}`),
+    label:String(f.label||`Câu hỏi ${i+1}`),
+    type:String(f.type||"text"),
+    required:!!f.required,
+    options:Array.isArray(f.options)?f.options:[]
+  }));
+}
+
 function safeName(n){return String(n||"file").replace(/[^a-zA-Z0-9._-]/g,"_")}
-let eventUnsub=null;
-function applyEventConfig(data){eventConfig=data;if(!eventConfig||eventConfig.isOpen!==true){showClosed();return}$("#closed").style.display="none";$("#loading").style.display="none";$("#formView").style.display="block";$("#title").textContent=eventConfig.title||"Cổng sự kiện";$("#description").textContent=eventConfig.description||"";const target=eventConfig.specialType==="continuation"&&eventConfig.targetSemester?` → ${eventConfig.targetSemester}`:"";$("#eventScope").textContent=`Học kỳ: ${eventConfig.semester||"—"}${target}`;renderFields()}
-async function init(){if(!eventId){showClosed();return}try{eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(snap=>{if(!snap.exists){showClosed();return}applyEventConfig(snap.data())},e=>{$("#loading").textContent="Không thể tải cổng sự kiện."})}catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}}
-function showClosed(){$("#loading").style.display="none";$("#formView").style.display="none";$("#closed").style.display="block"}
+async function init(){
+  if(!eventId){showClosed();return}
+  try{
+    const snap=await db.collection("eventPortals").doc(eventId).get();
+    if(!snap.exists||snap.data()?.isOpen!==true){showClosed();return}
+    eventConfig=snap.data();
+    $("#loading").style.display="none";$("#formView").style.display="block";
+    $("#title").textContent=eventConfig.title||"Cổng sự kiện";
+    $("#description").textContent=eventConfig.description||"";
+    const hadFields=Array.isArray(eventConfig.fields)&&eventConfig.fields.length>0;
+    renderFields();
+    if(!hadFields)console.warn("Event fields missing in Firestore; public fallback fields were rendered.");
+  }catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}
+}
+function showClosed(){$("#loading").style.display="none";$("#closed").style.display="block"}
 function renderFields(){
-  $("#eventForm").innerHTML=(eventConfig.fields||[]).map(f=>{
+  const fields=publicNormalizeEventFields(eventConfig||{});
+  eventConfig.fields=fields;
+  $("#eventForm").innerHTML=fields.map(f=>{
     if(f.type==="content"){
       return `<div class="rich-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}<div>${renderRichText(f.content||"")}</div></div>`;
     }
@@ -163,7 +201,7 @@ $("#submitBtn").onclick=async()=>{
     console.error(e);$("#formError").style.display="block";$("#formError").textContent="Không gửi được: "+(e.message||e);
   }finally{$("#submitBtn").disabled=false}
 };
-window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}});init();
+init();
 </script>
 </body>
 </html>
