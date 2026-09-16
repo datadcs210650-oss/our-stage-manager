@@ -55,6 +55,7 @@ body{
   .head,.field,.image-block,.rich-block,.message{animation:v25formIn .34s cubic-bezier(.2,.75,.25,1) both}
 }
 
+.event-section-public{margin:20px 0 10px;padding:14px 0 8px;border-bottom:2px solid #ead8de}.event-section-public h2{margin:0 0 5px;font-size:21px}.event-section-public p{margin:0;color:#76696e;line-height:1.5}.schedule-state{margin:10px 0;padding:10px 12px;border-radius:10px;background:#f8f3f5;color:#715f66;font-size:12px}
 </style>
 </head>
 <body>
@@ -118,25 +119,18 @@ function publicNormalizeEventFields(config={}){
 }
 
 function safeName(n){return String(n||"file").replace(/[^a-zA-Z0-9._-]/g,"_")}
-async function init(){
-  if(!eventId){showClosed();return}
-  try{
-    const snap=await db.collection("eventPortals").doc(eventId).get();
-    if(!snap.exists||snap.data()?.isOpen!==true){showClosed();return}
-    eventConfig=snap.data();
-    $("#loading").style.display="none";$("#formView").style.display="block";
-    $("#title").textContent=eventConfig.title||"Cổng sự kiện";
-    $("#description").textContent=eventConfig.description||"";
-    const hadFields=Array.isArray(eventConfig.fields)&&eventConfig.fields.length>0;
-    renderFields();
-    if(!hadFields)console.warn("Event fields missing in Firestore; public fallback fields were rendered.");
-  }catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}
-}
-function showClosed(){$("#loading").style.display="none";$("#closed").style.display="block"}
+let eventUnsub=null,eventScheduleTimer=null;
+function eventTs(v){return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(v?new Date(v).getTime():0)||0}
+function scheduleEventRecheck(){if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(!eventConfig)return;const now=Date.now(),times=[eventTs(eventConfig.openAt),eventTs(eventConfig.closeAt)].filter(x=>x>now);if(times.length)eventScheduleTimer=setTimeout(()=>applyPublicEventState(),Math.min(...times)-now+150)}
+function applyPublicEventState(){if(!eventConfig){showClosed("Cổng sự kiện không tồn tại.");return}const now=Date.now(),start=eventTs(eventConfig.openAt),end=eventTs(eventConfig.closeAt);if(eventConfig.isOpen!==true){showClosed("Cổng sự kiện đã được đóng.");return}if(start&&now<start){showClosed(`Cổng sẽ mở lúc ${new Date(start).toLocaleString("vi-VN")}.`);scheduleEventRecheck();return}if(end&&now>=end){showClosed("Cổng sự kiện đã hết thời gian nhận phản hồi.");return}$("#closed").style.display="none";$("#loading").style.display="none";$("#formView").style.display="block";$("#title").textContent=eventConfig.title||"Cổng sự kiện";$("#description").textContent=eventConfig.description||"";renderFields();scheduleEventRecheck()}
+async function init(){if(!eventId){showClosed("Link sự kiện không hợp lệ.");return}eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(snap=>{if(!snap.exists){showClosed("Cổng sự kiện không tồn tại.");return}eventConfig=snap.data();applyPublicEventState()},e=>{console.error(e);showClosed("Cổng sự kiện đã đóng, hết hạn hoặc hiện không thể truy cập.")})}
+
+function showClosed(message="Cổng sự kiện hiện không nhận phản hồi."){$("#loading").style.display="none";$("#formView").style.display="none";$("#closed").style.display="block";const p=$("#closed p");if(p)p.textContent=message}
 function renderFields(){
   const fields=publicNormalizeEventFields(eventConfig||{});
   eventConfig.fields=fields;
   $("#eventForm").innerHTML=fields.map(f=>{
+    if(f.type==="section")return `<div class="event-section-public"><h2>${esc(f.label||"Phần")}</h2>${f.description?`<p>${esc(f.description)}</p>`:""}</div>`;
     if(f.type==="content"){
       return `<div class="rich-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}<div>${renderRichText(f.content||"")}</div></div>`;
     }
@@ -163,12 +157,13 @@ function renderFields(){
 $("#submitBtn").onclick=async()=>{
   const form=$("#eventForm");
   if(!form.reportValidity())return;
+  const now=Date.now(),start=eventTs(eventConfig?.openAt),end=eventTs(eventConfig?.closeAt);if(eventConfig?.isOpen!==true||(start&&now<start)||(end&&now>=end)){applyPublicEventState();return}
   $("#submitBtn").disabled=true;$("#formError").style.display="none";
   const submissionId="sub_"+uid(),answers={};
   try{
     const fields=eventConfig.fields||[];
     for(const f of fields){
-      if(["image","content"].includes(f.type))continue;
+      if(["image","content","section"].includes(f.type))continue;
       if(f.type==="radio"){
         answers[f.id]=document.querySelector(`input[name="f_${f.id}"]:checked`)?.value||"";
       }else if(f.type==="checkboxes"){
@@ -185,7 +180,7 @@ $("#submitBtn").onclick=async()=>{
       }
     }
     const mssvField=fields.find(f=>f.type==="mssv");
-    const nameField=fields.find(f=>!["image","content"].includes(f.type)&&String(f.label||"").toLowerCase().includes("họ")&&String(f.label||"").toLowerCase().includes("tên"));
+    const nameField=fields.find(f=>!["image","content","section"].includes(f.type)&&String(f.label||"").toLowerCase().includes("họ")&&String(f.label||"").toLowerCase().includes("tên"));
     await db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).set({
       eventId,
       semester:eventConfig.semester||"",
@@ -201,7 +196,7 @@ $("#submitBtn").onclick=async()=>{
     console.error(e);$("#formError").style.display="block";$("#formError").textContent="Không gửi được: "+(e.message||e);
   }finally{$("#submitBtn").disabled=false}
 };
-init();
+window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}if(eventScheduleTimer)clearTimeout(eventScheduleTimer)});init();
 </script>
 </body>
 </html>

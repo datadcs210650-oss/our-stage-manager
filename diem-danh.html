@@ -41,12 +41,12 @@ $("#submit").onclick=async()=>{
   $("#submit").disabled=true;
   try{
     const id=(mssv.toUpperCase().replace(/[^A-Z0-9_-]/g,"_").replace(/_+/g,"_").slice(0,100)||Date.now().toString());
-    await db.collection("attendancePortals").doc(token).collection("checkins").doc(id).set({mssv,name,status:"pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
+    await db.collection("attendancePortals").doc(token).collection("checkins").doc(id).set({mssv:id,name,mssvKey:id,status:"pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
     $("#form").classList.add("hidden");st("Đã gửi điểm danh thành công. Lượt gửi đã đồng bộ về giao diện quản trị và đang chờ BTC duyệt.");
   }catch(e){
     console.error(e);
-    if(e?.code==="permission-denied")disableQr("QR đã đóng, hết hạn, sai học kỳ hoặc học kỳ đã bị khóa.");
-    else st("Không gửi được. MSSV này có thể đã điểm danh hoặc kết nối Firestore đang gặp lỗi.",true);
+    if(e?.code==="permission-denied")st("Không gửi được. MSSV này đã gửi điểm danh cho mã QR này, hoặc QR đã đóng/hết hạn.",true);
+    else st("Không gửi được. Vui lòng kiểm tra kết nối và thử lại.",true);
   }finally{if(!disabledReason)$("#submit").disabled=false}
 };
 window.addEventListener("beforeunload",()=>{try{portalUnsub&&portalUnsub()}catch{}stopTimer()});
