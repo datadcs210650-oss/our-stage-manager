@@ -1,72 +1,93 @@
-OUR STAGE CLUB MANAGER V38 — ADVANCED SUITE + SECURITY
+OUR STAGE CLUB MANAGER V39
+COMPANION STATUS + FINANCE TABLE SCROLL + PDF LOGO + PRIVACY
 
-TÍNH NĂNG TRIỂN KHAI
-1. Trung tâm điều hành thông minh trên Dashboard.
-4. So sánh 2 học kỳ.
-10. Báo cáo cuối kỳ PDF tự tổng hợp.
-11. Hồ sơ thành viên 360°.
-12. Trạng thái thành viên: Đang hoạt động / Tạm nghỉ / Rời CLB / Cựu thành viên.
-19. Chặn trùng MSSV hoặc Email khi thêm/sửa + cảnh báo dữ liệu trùng hiện có.
-23. Đánh dấu hàng loạt thành viên Rời CLB mà không xóa lịch sử.
-29. Xuất hồ sơ thành viên PDF.
-32. Một MSSV chỉ gửi một lần trên mỗi QR điểm danh.
-38. Chọn và duyệt/từ chối hàng loạt lượt QR.
-40. Xuất Excel báo cáo riêng cho hoạt động đang chọn.
-51. Form Builder bổ sung Section; tiếp tục hỗ trợ mô tả, required, radio, checkbox, dropdown, date, time, number, email, MSSV, content, image.
-59. Hẹn giờ mở/đóng cổng sự kiện. Firestore Rules kiểm tra thời gian ở server.
-62. Tìm kiếm/lọc kết quả sự kiện theo nội dung, trạng thái xử lý, trạng thái điểm, đồng hành.
-63. Xuất Excel tùy chọn trường/cột và áp dụng bộ lọc đang dùng.
-68. Form đồng hành có báo cáo Không tiếp tục + Chưa phản hồi.
-70. Mỗi cổng sự kiện có QR riêng + tải QR PNG.
-80. Báo cáo tài chính PDF cuối kỳ.
+1. ĐỒNG HÀNH TRONG ĐIỂM DANH HOẠT ĐỘNG
+Nhóm “Đồng hành CLB” không còn hiển thị một checkbox khó hiểu.
+Mỗi hoạt động Đồng hành kỳ tiếp theo được mở thành 3 cột:
+- Trạng thái Form: Đã điền / Chưa điền.
+- Tiếp tục đồng hành.
+- Dừng đồng hành.
 
-BẢO MẬT
-- Firestore vẫn là lớp kiểm soát quyền chính; public không được đọc kết quả sự kiện hoặc danh sách thành viên.
-- Rules V38 chặn gửi sự kiện ngoài thời gian mở/đóng.
-- QR điểm danh dùng document ID cố định theo MSSV chuẩn hóa và create-only; cùng MSSV không thể gửi lại cùng QR qua giao diện public.
-- Không lưu members/finance/events vào localStorage.
-- Các trang có dữ liệu/tra cứu dùng Cache-Control: no-store.
-- Thêm HSTS, X-Frame-Options, Referrer-Policy, CSP và X-Permitted-Cross-Domain-Policies.
-- Báo cáo PDF được tạo ngay trên trình duyệt bằng PDFMake; không upload dữ liệu sang dịch vụ PDF bên ngoài.
+Phía trên bảng có bảng tóm tắt:
+- Bao nhiêu thành viên đã điền.
+- Bao nhiêu tiếp tục.
+- Bao nhiêu dừng đồng hành.
 
-CẬP NHẬT BẮT BUỘC
-1. Commit toàn bộ package V38 lên GitHub.
-2. Chờ Vercel Ready.
-3. Firebase > Firestore Database > Rules: dán firestore_rules_v38.rules và Publish.
-4. Command + Shift + R.
+“Chưa điền” là trạng thái riêng, KHÔNG bị tính thành Dừng đồng hành.
 
-LƯU Ý KIỂM THỬ
-- Bộ build đã được kiểm tra cú pháp JavaScript, duplicate HTML ID, JSON Vercel và các pattern bảo mật Rules.
-- Không hệ thống web nào có thể được cam kết tuyệt đối “không thể bị hack”; Rules, quyền tối thiểu và cập nhật dependency vẫn cần được duy trì.
+Khi Admin xử lý phản hồi Đồng hành, hệ thống lưu metadata tối thiểu vào
+members/{memberId}.continuationResponses/{eventId}:
+- responded
+- decision yes/no
+- targetSemester
+- sourceEventId
+- respondedAt
 
+Điểm danh chỉ cần đọc hồ sơ thành viên đã được phân quyền; không phải mở quyền
+đọc toàn bộ câu trả lời sự kiện cho tài khoản chỉ có quyền Điểm danh.
+Phản hồi cũ đã xử lý cũng được backfill metadata khi bộ xử lý sự kiện chạy lại,
+không chuyển thành viên hoặc cộng điểm lần hai.
 
-V38 FINAL HARDENING / QA
-- Thành viên cũ chưa có trường status được hiểu là “Đang hoạt động” ở bộ lọc, bảng và Excel.
-- Bộ lọc trạng thái luôn có đủ: Đang hoạt động / Tạm nghỉ / Rời CLB / Cựu thành viên.
-- PDF xuất hồ sơ / cuối kỳ / tài chính báo lỗi thân thiện nếu CDN PDF chưa tải, không làm vỡ trang.
-- Form sự kiện bắt buộc có ít nhất một câu hỏi nhận câu trả lời; chỉ Section/Ảnh/Ghi chú không được lưu như form hoàn chỉnh.
-- Bổ sung security headers Cross-Origin-Resource-Policy và X-DNS-Prefetch-Control.
+2. DANH SÁCH ĐÓNG QUỸ
+- Hai bảng Đã đóng / Chưa đóng có thanh cuộn ngang riêng.
+- Họ và tên căn giữa.
+- MSSV căn giữa.
+- Bảng có min-width để không bị cắt cột ở cửa sổ hẹp.
 
-18 HẠNG MỤC ĐÃ TRIỂN KHAI
-1. Trung tâm điều hành thông minh.
-4. So sánh học kỳ.
-10. Báo cáo cuối kỳ PDF một nút.
-11. Hồ sơ thành viên 360°.
-12. Trạng thái thành viên.
-19. Phát hiện MSSV/email trùng.
-23. Đánh dấu Rời CLB hàng loạt.
-29. Hồ sơ thành viên PDF.
-32. Một MSSV chỉ gửi một lần cho mỗi QR.
-38. Duyệt/Từ chối QR hàng loạt.
-40. Báo cáo Excel theo hoạt động điểm danh.
-51. Form Builder nâng cao có Section và các loại câu hỏi.
-59. Hẹn giờ mở/đóng form, có kiểm tra phía Firestore Rules.
-62. Lọc/tìm kết quả sự kiện nâng cao.
-63. Xuất kết quả sự kiện theo cột tùy chọn.
-68. Báo cáo Không tiếp tục / Chưa phản hồi cho form Đồng hành.
-70. QR riêng cho từng cổng sự kiện.
-80. Báo cáo tài chính PDF cuối kỳ.
+3. HỒ SƠ THÀNH VIÊN
+Tên hiển thị không còn “360°”.
+Dùng tên: “Hồ sơ thành viên”.
 
-BẢO MẬT
-- Không thể cam kết bất kỳ website nào “100% không thể bị hack”. V38 áp dụng defense-in-depth: Firebase Auth, Firestore Rules, giới hạn public create/read, server-side rule cho thời gian form/QR, chống submit lặp MSSV ở QR bằng document ID, không lưu PII vận hành vào localStorage, CSP/HSTS/no-store và phân quyền theo module.
-- Sau deploy cần smoke-test trên Vercel + Firebase thật vì kiểm tra trong package là kiểm tra tĩnh/cú pháp, không phải môi trường production thực tế.
+Nút Hồ sơ PDF mở hộp tùy chọn:
+- Chọn học kỳ cần xuất.
+- Thông tin cơ bản.
+- Thông tin liên hệ.
+- Điểm & đóng quỹ.
+- Hoạt động đã tham gia.
+- Lịch sử học kỳ.
+- Ghi chú nội bộ.
+
+Thông tin liên hệ và Ghi chú nội bộ mặc định TẮT để hạn chế đưa dữ liệu nhạy cảm
+vào file PDF không cần thiết.
+
+4. PDF
+Toàn bộ file PDF do hệ thống tạo:
+- Có logo OUR STAGE CLUB.
+- Dùng font Roboto thông thường.
+- Có footer “OUR STAGE CLUB • Tài liệu nội bộ”.
+- Có số trang.
+- Metadata PDF có author/creator là OUR STAGE CLUB.
+
+Áp dụng cho:
+- Hồ sơ thành viên.
+- Báo cáo cuối kỳ.
+- Báo cáo tài chính.
+
+5. BẢO MẬT
+V39 siết Firestore Rules đối với event submissions:
+- Người có quyền Sự kiện có thể xử lý đầy đủ.
+- Người chỉ có quyền Tài chính chỉ được sửa các field xử lý tài chính.
+- Người chỉ có quyền Điểm danh chỉ được sửa các field trạng thái điểm.
+- Không còn quyền editAttendance/editFinance cập nhật tùy ý toàn bộ submission.
+
+Public vẫn:
+- Không đọc danh sách phản hồi sự kiện.
+- Không đọc danh sách thành viên.
+- Không list dữ liệu tra cứu công khai.
+- Các entry page nhạy cảm giữ Cache-Control no-store.
+- CSP / HSTS / X-Frame-Options / Referrer-Policy tiếp tục được giữ.
+
+6. CẬP NHẬT
+BẮT BUỘC:
+1) Commit toàn bộ package V39 lên GitHub.
+2) Chờ Vercel Ready.
+3) Firebase -> Firestore Database -> Rules.
+4) Dán firestore_rules_v39.rules.
+5) Publish.
+6) Command + Shift + R.
+
+LƯU Ý
+Không có hệ thống web nào có thể cam kết tuyệt đối 100% không bị tấn công.
+V39 giảm bề mặt rủi ro bằng cách giữ dữ liệu nhạy cảm sau Authentication,
+không mở quyền public read, giới hạn update field ở Firestore Rules và giảm
+thông tin cá nhân mặc định trong PDF.
