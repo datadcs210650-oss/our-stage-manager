@@ -523,7 +523,8 @@ input:focus,select:focus,textarea:focus{
 /* ===== V30 QR rendering ===== */
 .qr-canvas-wrap{min-height:254px;position:relative}
 #attendanceQrCanvas{width:220px;height:220px;display:grid;place-items:center;background:#fff}
-#attendanceQrCanvas canvas,#attendanceQrCanvas img{display:block!important;width:220px!important;height:220px!important;max-width:220px!important;max-height:220px!important}
+#attendanceQrCanvas canvas{display:block!important;width:220px!important;height:220px!important;max-width:220px!important;max-height:220px!important}
+#attendanceQrCanvas img{width:220px!important;height:220px!important;max-width:220px!important;max-height:220px!important}
 .qr-render-error{width:220px;height:220px;border:1px dashed #e2c6cf;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;color:#8a5968;background:#fff8fa;font-size:11px;line-height:1.5}
 .qr-semester-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:#f5e8ed;color:#68172d;font-size:10px;font-weight:850;border:1px solid #e6cbd4}
 .qr-link-row{display:flex;gap:7px;align-items:flex-end}.qr-link-row label{flex:1}.qr-link-row button{white-space:nowrap}
@@ -3688,7 +3689,7 @@ function renderAttendancePortalPanel(){
   for(const p of rows)totalPending+=(attendanceCheckinRowsByPortal[p.token||p.id]||[]).filter(x=>x.status==="pending").length;
   if(badge)badge.textContent=`${totalPending} chờ duyệt`;
   if(!rows.length){root.innerHTML=`<div class="empty">Chưa có QR điểm danh nào trong học kỳ này.</div>`;return}
-  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button>${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}</div></div>`}).join("");
+  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button>${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");
 }
 function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
 async function createAttendancePortal(gi,ii){if(!canEditModule("attendance"))return ensureSemesterEditable();const g=sem().groups[gi],it=g?.items[ii];if(!it)return;const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");const token=crypto.randomUUID?crypto.randomUUID():uid()+uid(),data={token,semester,semesterCode:semester,semesterName:sem().name||semester,groupId:g.id,itemId:it.id,itemName:it.name,groupName:g.name,points:Number(it.points||0),mode:g.mode,startAt:firebase.firestore.Timestamp.fromDate(start),endAt:firebase.firestore.Timestamp.fromDate(end),instruction:$("#qrInstruction").value.trim(),open:true,createdBy:currentFirebaseUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};try{await fbDb.collection("attendancePortals").doc(token).set(data);qrCurrentPortal={...data,token};toast("Đã tạo QR điểm danh");await logAudit({action:"create-qr",module:"attendance",summary:`Tạo QR điểm danh • ${it.name}`});watchAttendancePortals(true);showAttendancePortal(token)}catch(e){alert("Không tạo được QR: "+(e.message||e))}}
@@ -3702,7 +3703,21 @@ function renderAttendanceQr(link){
       text:link,width:220,height:220,colorDark:"#000000",colorLight:"#ffffff",
       correctLevel:QRCode.CorrectLevel?.M ?? 0
     });
-    return true;
+
+    // QRCode.js thường sinh cả canvas và img dự phòng.
+    // Chỉ giữ đúng MỘT phần tử hiển thị để tránh 2 QR xếp chồng.
+    const canvas=box.querySelector("canvas"),img=box.querySelector("img");
+    if(canvas){
+      canvas.style.display="block";
+      if(img)img.style.display="none";
+    }else if(img){
+      img.style.display="block";
+    }
+    [...box.children].forEach((node,i)=>{
+      if(canvas && node!==canvas)node.style.display="none";
+      else if(!canvas && img && node!==img)node.style.display="none";
+    });
+    return !!(canvas||img);
   }catch(e){
     console.error("QR render failed",e);
     box.innerHTML=`<div class="qr-render-error">Không tạo được hình QR trên trình duyệt.<br><br>Bạn vẫn có thể dùng nút <b>Mở link</b> hoặc <b>Sao chép link</b>.</div>`;
@@ -3743,6 +3758,7 @@ async function showAttendancePortal(token){
           <div>
             <button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button>
             ${canEditModule("attendance")&&qrCurrentPortal.open===true?`<button id="qrModalCloseBtn" class="danger" onclick="closeAttendancePortal('${token}',true)">Đóng QR</button>`:""}
+            ${canEditModule("attendance")?`<button class="danger" onclick="deleteAttendancePortal('${token}',true)">Xóa QR</button>`:""}
           </div>
           <h3>Lượt gửi real-time</h3>
           <div id="checkinList">Đang đồng bộ…</div>
@@ -3783,6 +3799,44 @@ async function closeAttendancePortal(token,closeModalAfter=true){
     if(closeModalAfter)closeAttendancePortalModal();
     watchAttendancePortals(true);
   }catch(e){console.error(e);alert("Không đóng được QR: "+(e.message||e))}
+}
+async function deleteAttendancePortal(token,closeModalAfter=true){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+  const portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token) || (qrCurrentPortal?.token===token?qrCurrentPortal:null);
+  const label=portal?.itemName||"QR điểm danh";
+  if(!confirm(`Xóa "${label}"?\n\nMã QR, link và toàn bộ lượt gửi của QR này sẽ bị xóa vĩnh viễn. Thao tác không thể hoàn tác.`))return;
+
+  try{
+    // Delete all check-ins first because Firestore does not cascade-delete subcollections.
+    const checkins=await fbDb.collection("attendancePortals").doc(token).collection("checkins").get();
+    if(!checkins.empty){
+      await commitInChunks(checkins.docs.map(d=>batch=>batch.delete(d.ref)));
+    }
+    await fbDb.collection("attendancePortals").doc(token).delete();
+
+    attendancePortalRows=(attendancePortalRows||[]).filter(p=>(p.token||p.id)!==token);
+    delete attendanceCheckinRowsByPortal[token];
+    const unsub=attendanceCheckinUnsubs.get(token);
+    if(unsub){try{unsub()}catch{}attendanceCheckinUnsubs.delete(token)}
+
+    if(qrCurrentPortal?.token===token){
+      qrCurrentPortal=null;
+      if(closeModalAfter)closeAttendancePortalModal();
+    }
+
+    await logAudit({
+      action:"delete-qr",
+      module:"attendance",
+      summary:`Xóa QR điểm danh • ${label}`,
+      entityId:token
+    });
+    toast("Đã xóa QR điểm danh");
+    renderAttendancePortalPanel();
+    watchAttendancePortals(true);
+  }catch(e){
+    console.error("deleteAttendancePortal",e);
+    alert("Không xóa được QR: "+(e.message||e));
+  }
 }
 $("#qrAttendanceBtn").onclick=openQRAttendance;
 /* settings */
