@@ -1,55 +1,13 @@
-OUR STAGE CLUB MANAGER V43 — CONTINUATION LATEST RESULT + EVENT QR FIX
+OUR STAGE CLUB MANAGER V44 — CONTINUATION INLINE EDIT
 
-1. FORM ĐỒNG HÀNH: KẾT QUẢ SAU CÙNG LUÔN THẮNG
-- Hệ thống nhóm phản hồi theo MSSV.
-- So sánh createdAt và chỉ lấy phản hồi gửi sau cùng làm trạng thái chính thức.
-- Ví dụ: lần 1 chọn “Tiếp tục”, lần 2 chọn “Dừng” -> Điểm danh hiển thị Dừng.
-- Nếu xóa lần 2, hệ thống tự quay về kết quả lần 1.
-- Nếu xóa hết phản hồi của MSSV, trạng thái Form Đồng hành và điểm liên quan bị xóa khỏi Điểm danh.
-- Phản hồi cũ hiển thị “Đã bị thay thế”; phản hồi mới nhất hiển thị “Kết quả mới nhất”.
+- Admin/BCN có editEvents có thể sửa trực tiếp Form Đồng hành trong bảng Điểm danh.
+- Dropdown: Chưa điền / Tiếp tục / Dừng đồng hành.
+- Có thể bấm trực tiếp cột Tiếp tục hoặc Dừng.
+- Nếu đã có phản hồi: sửa phản hồi mới nhất.
+- Nếu chưa có phản hồi: tạo phản hồi nội bộ adminManual.
+- Chọn Chưa điền: chuyển toàn bộ phản hồi của MSSV đó vào Thùng rác rồi đồng bộ lại Điểm danh.
+- Nếu thành viên gửi form mới sau đó, cơ chế kết quả gửi sau cùng của V43 tiếp tục được áp dụng.
 
-2. ADMIN CÓ THỂ CHỈNH SỬA KẾT QUẢ FORM ĐỒNG HÀNH
-- Trong Kết quả sự kiện -> mỗi phản hồi Đồng hành có nút “Chỉnh sửa kết quả”.
-- Có thể sửa các câu trả lời, MSSV, lựa chọn Có/Không và ghi chú.
-- Sau khi lưu, hệ thống đồng bộ lại Điểm danh ngay.
-- Nếu sửa MSSV, hệ thống đồng bộ cả MSSV cũ và MSSV mới để không để lại trạng thái sai.
-- Chỉnh phản hồi cũ không làm nó thành phản hồi mới; thứ tự vẫn dựa trên thời gian gửi ban đầu.
+V44 CÓ thay đổi Firestore Rules vì cần cho tài khoản có editEvents tạo phản hồi nội bộ ngay cả khi cổng đã đóng. Public create vẫn giữ điều kiện mở cổng/thời gian và không thể tạo adminManual.
 
-3. XÓA / KHÔI PHỤC PHẢN HỒI ĐỒNG HÀNH
-- Xóa một phản hồi -> đồng bộ lại trạng thái theo phản hồi còn lại mới nhất.
-- Xóa hàng loạt -> đồng bộ lại tất cả MSSV bị ảnh hưởng.
-- Khôi phục phản hồi từ Thùng rác -> tự tính lại kết quả mới nhất.
-- Dữ liệu Điểm danh không còn bị “kẹt” sau khi phản hồi bị xóa.
-
-4. QR CỔNG SỰ KIỆN
-- Không render QRCode.js trực tiếp vào vùng hiển thị nữa.
-- Hệ thống tạo QR ở vùng tách biệt, lấy PNG từ canvas rồi đưa đúng một ảnh vào modal.
-- Tránh lỗi QR trắng / không hiện / canvas-img fallback.
-- Có trạng thái loading và thông báo fallback.
-- Tải QR PNG dùng cùng bộ tạo QR đã ổn định của QR điểm danh.
-
-5. GIAO DIỆN
-- Card phản hồi cũ được làm mờ nhẹ.
-- Badge rõ “Kết quả mới nhất” / “Đã bị thay thế”.
-- Modal chỉnh sửa Đồng hành responsive.
-- Modal QR sự kiện responsive và không tràn màn hình.
-
-6. FIRESTORE RULES
-V43 KHÔNG THAY ĐỔI mô hình quyền Firestore.
-Admin đã có quyền editEvents để chỉnh/xóa submission từ Rules hiện tại.
-Theo yêu cầu, ZIP V43 KHÔNG chứa file Firestore Rules.
-
-CẬP NHẬT
-1. Commit toàn bộ package V43 lên GitHub.
-2. Không cần thay Firebase Rules.
-3. Chờ Vercel Ready.
-4. Command + Shift + R.
-
-RÀ SOÁT
-- JavaScript syntax.
-- Duplicate HTML ID.
-- Latest-wins reconciliation.
-- Delete/bulk-delete/restore synchronization.
-- Edit result workflow.
-- Event QR single-image rendering.
-- Không có Firestore Rules trong package.
+Cập nhật: upload toàn bộ V44, Publish firestore_rules_v44.rules, sau đó hard refresh.

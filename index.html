@@ -1037,6 +1037,19 @@ body.modal-open .workspace-dock{pointer-events:none!important}
   .event-qr-visual img{width:220px;height:220px}
 }
 
+
+/* ===== V44 Companion inline editor ===== */
+.continuation-admin-select{width:118px!important;min-width:118px!important;height:36px!important;padding:0 28px 0 10px!important;border:1px solid #d9e2dd!important;border-radius:999px!important;background:#fff!important;color:#52605a!important;font-size:9px!important;font-weight:850!important;cursor:pointer!important;box-shadow:0 4px 12px rgba(31,43,53,.04)!important}
+.continuation-admin-select.state-yes{border-color:#bfe0cc!important;background:#edf8f1!important;color:#187249!important}
+.continuation-admin-select.state-no{border-color:#e5c4cd!important;background:#fff2f5!important;color:#94374f!important}
+.continuation-admin-select.state-none{border-color:#ead3a7!important;background:#fff8e9!important;color:#835d0e!important}
+.continuation-decision-btn{appearance:none;border:0!important;padding:0!important;margin:0!important;cursor:pointer!important;transition:transform .14s ease,box-shadow .14s ease!important}
+.continuation-decision-btn:hover{transform:scale(1.07)!important}
+.continuation-decision-btn:focus-visible{outline:3px solid rgba(200,88,114,.18)!important;outline-offset:3px!important}
+.continuation-decision-btn[disabled]{cursor:default!important;transform:none!important}
+.continuation-inline-help{display:block;margin-top:4px;color:#8c9690;font-size:7px;font-weight:650;white-space:nowrap}
+.continuation-syncing{opacity:.55!important;pointer-events:none!important}
+
 </style>
 </head>
 <body class="auth-login">
@@ -2319,6 +2332,75 @@ function companionResponseForMember(member,item){
   if(member?.scores?.[item.id]===true)return {event:ev,responded:true,decision:"yes"};
   return {event:ev,responded:false,decision:""};
 }
+
+function continuationDecisionField(ev){
+  return (ev?.fields||[]).find(f=>f.systemKey==="continueNextSemester")
+    ||(ev?.fields||[]).find(f=>f.type==="radio"&&normalizeText(f.label).includes("tiep tuc dong hanh"))
+    ||null;
+}
+function continuationOptionForDecision(ev,decision){
+  const f=continuationDecisionField(ev),opts=(f?.options||[]).map(x=>String(x));
+  if(decision==="yes"){
+    return opts.find(x=>{const n=normalizeText(x);return n==="co"||n.startsWith("co,")||n.includes("tiep tuc dong hanh")})||opts[0]||"Có, tôi tiếp tục đồng hành cùng CLB";
+  }
+  return opts.find(x=>{const n=normalizeText(x);return n==="khong"||n.startsWith("khong,")||n.includes("khong tiep tuc")||n.includes("dung dong hanh")})||opts[1]||"Không, tôi không tiếp tục";
+}
+function buildContinuationAdminAnswers(ev,member,decision){
+  const answers={};
+  for(const f of ev?.fields||[]){
+    if(["image","content","section"].includes(f.type))continue;
+    if(f.systemKey==="memberName"||normalizeText(f.label).includes("ho va ten"))answers[f.id]=member.name||"";
+    else if(f.systemKey==="mssv"||f.type==="mssv")answers[f.id]=member.mssv||"";
+    else if(f.systemKey==="continueNextSemester"||f===continuationDecisionField(ev))answers[f.id]=continuationOptionForDecision(ev,decision);
+    else if(f.type==="checkboxes")answers[f.id]=[];
+    else answers[f.id]="";
+  }
+  return answers;
+}
+function findContinuationItem(itemId){
+  for(const g of sem()?.groups||[]){const item=(g.items||[]).find(x=>x.id===itemId&&x.specialType==="continuation");if(item)return item}
+  return null;
+}
+async function setContinuationFromAttendance(memberId,itemId,nextState,control=null){
+  if(!canEditModule("events"))return alert("Tài khoản này chưa có quyền chỉnh sửa kết quả sự kiện.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa, không thể chỉnh sửa kết quả đồng hành.");
+  const member=findMember(memberId),item=findContinuationItem(itemId);
+  if(!member||!item)return alert("Không tìm thấy thành viên hoặc hoạt động đồng hành.");
+  const ev=companionEventForActivity(item);
+  if(!ev||ev.specialType!=="continuation")return alert("Không tìm thấy Form Đồng hành liên kết với hoạt động này.");
+  const mssv=normalizeMssvKey(member.mssv);if(!mssv)return alert("Thành viên chưa có MSSV hợp lệ.");
+  if(!["none","yes","no"].includes(nextState))return;
+  const oldValue=companionResponseForMember(member,item).decision||"none";
+  if(control)control.classList.add("continuation-syncing");
+  try{
+    const col=fbDb.collection("eventPortals").doc(ev.id).collection("submissions"),snap=await col.get();
+    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const mine=rows.filter(s=>continuationSubmissionMssv(ev,s)===mssv);
+    const latest=latestContinuationSubmissionMap(ev,mine).get(mssv)||null;
+    if(nextState==="none"){
+      if(mine.length){
+        if(!confirm(`Đưa toàn bộ ${mine.length} phản hồi Đồng hành của ${member.name} vào Thùng rác?\n\nSau thao tác này Điểm danh sẽ trở về “Chưa điền”.`)){renderQLTV();return}
+        for(const s of mine)await moveToTrash("eventSubmission",s.id,s,{eventId:ev.id,label:s.submitterLabel||member.name||mssv,semester:ev.semester});
+        await commitInChunks(mine.map(s=>batch=>batch.delete(col.doc(s.id))));
+      }
+      await reconcileContinuationMember(ev,mssv,{rows:[],silent:true});
+      await logAudit({action:"continuation-inline-clear",module:"attendance",entityType:"member",entityId:member.id,summary:`Đặt ${member.name} về Chưa điền Form Đồng hành`,semesterKey:ev.semester});
+      toast("Đã cập nhật: Chưa điền");renderQLTV();return;
+    }
+    if(latest){
+      const f=continuationDecisionField(ev);if(!f)return alert("Form Đồng hành không còn trường xác nhận Có/Không.");
+      const answers={...(latest.answers||{})};answers[f.id]=continuationOptionForDecision(ev,nextState);
+      await col.doc(latest.id).update({answers,editedAt:firebase.firestore.FieldValue.serverTimestamp(),editedBy:currentFirebaseUser?.uid||"",editedByName:currentUserLabel(),adminEditedFromAttendance:true,continuationSyncedAt:firebase.firestore.FieldValue.delete()});
+    }else{
+      const answers=buildContinuationAdminAnswers(ev,member,nextState),ref=col.doc("admin_"+uid());
+      await ref.set({eventId:ev.id,semester:ev.semester,answers,submitterLabel:member.name||member.mssv||"Thành viên",actionApplied:false,createdAt:firebase.firestore.FieldValue.serverTimestamp(),adminManual:true,adminCreatedBy:currentFirebaseUser?.uid||"",adminCreatedByName:currentUserLabel()},{merge:false});
+    }
+    await reconcileContinuationMember(ev,mssv,{silent:true});
+    await logAudit({action:"continuation-inline-edit",module:"attendance",entityType:"member",entityId:member.id,summary:`Sửa Form Đồng hành từ Điểm danh: ${member.name} → ${nextState==="yes"?"Tiếp tục":"Dừng đồng hành"}`,before:{decision:oldValue},after:{decision:nextState},semesterKey:ev.semester});
+    toast(nextState==="yes"?"Đã cập nhật: Tiếp tục đồng hành":"Đã cập nhật: Dừng đồng hành");renderQLTV();
+  }catch(e){console.error("setContinuationFromAttendance",e);alert("Không cập nhật được Form Đồng hành: "+(e.message||e));renderQLTV()}finally{if(control)control.classList.remove("continuation-syncing")}
+}
+
 function companionItemColumns(item){return item?.specialType==="continuation"?3:1}
 function groupDisplayColumnCount(group){return (group.items||[]).reduce((n,it)=>n+companionItemColumns(it),0)}
 function renderContinuationAttendanceSummary(groups){
@@ -2330,7 +2412,7 @@ function renderContinuationAttendanceSummary(groups){
   const responded=states.filter(x=>x.responded).length;
   const yes=states.filter(x=>x.decision==="yes").length;
   const no=states.filter(x=>x.decision==="no").length;
-  root.innerHTML=`<div class="summary-title"><b>Đồng hành kỳ tiếp theo${ev?.targetSemester?` → ${esc(state.semesters?.[ev.targetSemester]?.name||ev.targetSemester)}`:""}</b><span>Cập nhật theo trạng thái form của thành viên. “Chưa điền” không được tính là dừng đồng hành.</span></div>
+  root.innerHTML=`<div class="summary-title"><b>Đồng hành kỳ tiếp theo${ev?.targetSemester?` → ${esc(state.semesters?.[ev.targetSemester]?.name||ev.targetSemester)}`:""}</b><span>Điểm danh lấy kết quả Form Đồng hành mới nhất. Admin có thể sửa trực tiếp tại bảng; “Chưa điền” không được tính là dừng đồng hành.</span></div>
     <div class="continuation-mini"><span>Đã điền form</span><strong>${responded}/${list.length}</strong></div>
     <div class="continuation-mini"><span>Tiếp tục</span><strong>${yes}</strong></div>
     <div class="continuation-mini"><span>Dừng đồng hành</span><strong>${no}</strong></div>`;
@@ -2356,10 +2438,12 @@ function renderQLTV(){
     ensureMemberScores(m);const s=scoreMember(m);
     const activityCells=groups.flatMap(g=>g.items.map(it=>{
       if(it.specialType==="continuation"){
-        const r=companionResponseForMember(m,it);
-        return `<td><span class="continuation-form-status ${r.responded?"done":""}">${r.responded?"Đã điền":"Chưa điền"}</span></td>
-          <td><span class="continuation-decision ${r.decision==="yes"?"yes":""}">${r.decision==="yes"?"✓":"–"}</span></td>
-          <td><span class="continuation-decision ${r.decision==="no"?"no":""}">${r.decision==="no"?"✓":"–"}</span></td>`;
+        const r=companionResponseForMember(m,it),editable=canEditModule("events")&&!semesterLocked();
+        const state=r.decision==="yes"?"yes":r.decision==="no"?"no":"none";
+        const statusCell=editable?`<select class="continuation-admin-select state-${state}" title="Admin có thể sửa kết quả Đồng hành trực tiếp" onchange="setContinuationFromAttendance('${m.id}','${it.id}',this.value,this)"><option value="none" ${state==="none"?"selected":""}>Chưa điền</option><option value="yes" ${state==="yes"?"selected":""}>Tiếp tục</option><option value="no" ${state==="no"?"selected":""}>Dừng đồng hành</option></select><span class="continuation-inline-help">Admin chỉnh trực tiếp</span>`:`<span class="continuation-form-status ${r.responded?"done":""}">${r.responded?"Đã điền":"Chưa điền"}</span>`;
+        const yesCell=editable?`<button class="continuation-decision continuation-decision-btn ${state==="yes"?"yes":""}" title="Đặt thành Tiếp tục đồng hành" onclick="setContinuationFromAttendance('${m.id}','${it.id}','yes',this)">${state==="yes"?"✓":"–"}</button>`:`<span class="continuation-decision ${state==="yes"?"yes":""}">${state==="yes"?"✓":"–"}</span>`;
+        const noCell=editable?`<button class="continuation-decision continuation-decision-btn ${state==="no"?"no":""}" title="Đặt thành Dừng đồng hành" onclick="setContinuationFromAttendance('${m.id}','${it.id}','no',this)">${state==="no"?"✓":"–"}</button>`:`<span class="continuation-decision ${state==="no"?"no":""}">${state==="no"?"✓":"–"}</span>`;
+        return `<td>${statusCell}</td><td>${yesCell}</td><td>${noCell}</td>`;
       }
       return g.mode==="checkbox"
         ? `<td><input class="check" type="checkbox" ${m.scores[it.id]?"checked":""} onchange="setScore('${m.id}','${it.id}',this.checked)"></td>`
