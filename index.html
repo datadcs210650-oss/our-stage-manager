@@ -738,6 +738,258 @@ body.auth-login .login-screen{display:grid!important;visibility:visible!importan
 body.auth-login .sidebar,body.auth-login .sidebar-backdrop,body.auth-login .main{visibility:hidden!important;pointer-events:none!important}
 body.auth-admin{overflow-x:hidden}
 
+
+/* ==========================================================
+   V42 MODAL LAYOUT FIX
+   Final layer: fixes overlay stacking, clipping and mobile layout.
+   ========================================================== */
+:root{
+  --v42-modal-z:10000;
+  --v42-toast-z:12000;
+}
+html,body{max-width:100%;overflow-x:hidden}
+body.modal-open{overflow:hidden!important}
+
+/* modal host must itself be above the whole admin shell */
+#modalWrap:not(.hidden){
+  position:fixed!important;
+  inset:0!important;
+  z-index:var(--v42-modal-z)!important;
+  width:100vw!important;
+  height:100dvh!important;
+  pointer-events:none;
+}
+#modalWrap.hidden{
+  display:none!important;
+}
+
+/* overlay covers sidebar, topbar, workspace dock and all page content */
+#modalWrap .overlay,
+.overlay{
+  position:fixed!important;
+  inset:0!important;
+  z-index:var(--v42-modal-z)!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:clamp(12px,2vw,28px)!important;
+  overflow:auto!important;
+  background:rgba(14,20,27,.56)!important;
+  backdrop-filter:blur(9px) saturate(.88)!important;
+  -webkit-backdrop-filter:blur(9px) saturate(.88)!important;
+  pointer-events:auto!important;
+  overscroll-behavior:contain;
+}
+
+/* modal itself owns the scrolling, never the page below */
+#modalWrap .modal,
+.overlay .modal{
+  position:relative!important;
+  width:min(760px,calc(100vw - 48px))!important;
+  max-width:calc(100vw - 48px)!important;
+  max-height:calc(100dvh - 48px)!important;
+  margin:auto!important;
+  padding:0 22px 22px!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  border:1px solid rgba(29,39,48,.10)!important;
+  border-radius:20px!important;
+  background:#fff!important;
+  box-shadow:0 38px 110px rgba(14,20,27,.32)!important;
+  isolation:isolate;
+}
+
+/* large builders get a wider but still viewport-safe window */
+#modalWrap .event-builder-modal{
+  width:min(1080px,calc(100vw - 56px))!important;
+  max-width:1080px!important;
+}
+
+/* sticky title bar keeps close button visible at all times */
+#modalWrap .modal-head,
+.overlay .modal-head{
+  position:sticky!important;
+  top:0!important;
+  z-index:20!important;
+  min-height:68px!important;
+  margin:0 -22px 18px!important;
+  padding:15px 20px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid #e5e9ec!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+}
+#modalWrap .modal-head h2,
+.overlay .modal-head h2{
+  margin:0!important;
+  color:#263039!important;
+  font-size:19px!important;
+  line-height:1.2!important;
+  letter-spacing:-.35px!important;
+}
+.modal-kicker{
+  margin-top:4px;
+  color:#8a959d;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.modal-close-btn,
+#modalWrap .modal-head>button,
+.overlay .modal-head>button{
+  flex:0 0 auto!important;
+  width:36px!important;
+  height:36px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:1px solid #dfe5e8!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#59656d!important;
+  font-size:22px!important;
+  line-height:1!important;
+  cursor:pointer!important;
+  box-shadow:0 5px 14px rgba(31,43,53,.05)!important;
+}
+.modal-close-btn:hover,
+#modalWrap .modal-head>button:hover{
+  background:#fff5f7!important;
+  border-color:#dfbdc7!important;
+  color:#8b304a!important;
+}
+
+/* sticky footer means Save / Cancel never disappear below the fold */
+#modalWrap .modal-actions,
+.overlay .modal-actions{
+  position:sticky!important;
+  bottom:-22px!important;
+  z-index:18!important;
+  min-height:66px!important;
+  margin:20px -22px -22px!important;
+  padding:12px 20px!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:9px!important;
+  background:rgba(255,255,255,.96)!important;
+  border-top:1px solid #e6eaed!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+}
+
+/* event builder content */
+.event-builder-modal .form-grid{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:13px 14px!important;
+}
+.event-builder-modal .form-grid label,
+.event-builder-modal .form-grid input,
+.event-builder-modal .form-grid select,
+.event-builder-modal .form-grid textarea{
+  min-width:0!important;
+  width:100%!important;
+}
+.event-builder-modal .event-builder-tools,
+.event-builder-modal .section-title{
+  max-width:100%;
+}
+.event-builder-modal #eventFieldEditor{
+  min-width:0;
+}
+.event-builder-modal .event-field-row,
+.event-builder-modal .event-section-editor{
+  max-width:100%;
+}
+
+/* nested preview/export overlays must sit on top of the editor modal */
+#eventPreviewOverlay,
+#customExportOverlay{
+  z-index:calc(var(--v42-modal-z) + 500)!important;
+}
+
+/* toast always above modals */
+.toast{
+  z-index:var(--v42-toast-z)!important;
+}
+
+/* account/notification/search layers stay below a modal */
+.notification-popover{z-index:1800!important}
+.command-overlay{z-index:2000!important}
+
+/* wide table and cards should never push the app outside viewport */
+.main,
+.workspace-window,
+main>section[id],
+.table-card,
+.finance-table{
+  min-width:0!important;
+  max-width:100%!important;
+}
+
+/* Mobile/tablet modal layout */
+@media(max-width:760px){
+  #modalWrap .overlay,
+  .overlay{
+    align-items:flex-start!important;
+    padding:8px!important;
+  }
+  #modalWrap .modal,
+  .overlay .modal,
+  #modalWrap .event-builder-modal{
+    width:calc(100vw - 16px)!important;
+    max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 16px)!important;
+    border-radius:15px!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+    padding-bottom:14px!important;
+  }
+  #modalWrap .modal-head,
+  .overlay .modal-head{
+    min-height:60px!important;
+    margin-left:-14px!important;
+    margin-right:-14px!important;
+    padding:12px 14px!important;
+  }
+  #modalWrap .modal-actions,
+  .overlay .modal-actions{
+    bottom:-14px!important;
+    margin-left:-14px!important;
+    margin-right:-14px!important;
+    margin-bottom:-14px!important;
+    padding:10px 12px!important;
+  }
+  .event-builder-modal .form-grid,
+  #modalWrap .form-grid{
+    grid-template-columns:1fr!important;
+  }
+  #modalWrap .form-grid .full{grid-column:auto!important}
+  #modalWrap .modal-actions .primary,
+  #modalWrap .modal-actions .ghost,
+  #modalWrap .modal-actions .secondary{
+    flex:1 1 0;
+  }
+}
+@media(max-width:430px){
+  #modalWrap .modal-actions{
+    flex-wrap:wrap!important;
+  }
+  #modalWrap .modal-actions button{
+    min-height:42px!important;
+  }
+}
+
+/* prevent old legacy mobile sidebar CSS from changing layout when a modal is open */
+body.modal-open .sidebar{pointer-events:none!important}
+body.modal-open .topbar,
+body.modal-open .workspace-dock{pointer-events:none!important}
+
 </style>
 </head>
 <body class="auth-login">
@@ -2153,7 +2405,33 @@ async function saveMemberModal(id){
     await logAudit({action:id?"update":"create",module:"members",entityType:"member",entityId:m.id,summary:`${id?"Cập nhật":"Thêm"} thành viên ${m.name}`,after:{name:m.name,mssv:m.mssv,tags:m.tags||[]}});closeModal();toast("Đã lưu thành viên");
   }catch(e){alert("Không lưu được thành viên: "+(e.message||e))}
 }
-function editMember(id){openMemberModal(findMember(id))}function closeModal(){$("#modalWrap").classList.add("hidden");$("#modalWrap").innerHTML=""}
+function editMember(id){openMemberModal(findMember(id))}function syncModalBodyState(){
+  const wrap=$("#modalWrap");
+  const open=!!(wrap&&!wrap.classList.contains("hidden")&&wrap.innerHTML.trim());
+  document.body.classList.toggle("modal-open",open);
+}
+function closeTopModalLayer(){
+  const nested=document.querySelector("#eventPreviewOverlay,#customExportOverlay");
+  if(nested){nested.remove();syncModalBodyState();return}
+  closeModal();
+}
+function closeModal(){
+  const wrap=$("#modalWrap");
+  wrap.classList.add("hidden");
+  wrap.innerHTML="";
+  syncModalBodyState();
+}
+const modalWrapObserver=new MutationObserver(syncModalBodyState);
+document.addEventListener("DOMContentLoaded",()=>{
+  const wrap=$("#modalWrap");
+  if(wrap)modalWrapObserver.observe(wrap,{attributes:true,attributeFilter:["class"],childList:true});
+  syncModalBodyState();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape")return;
+  const wrap=$("#modalWrap");
+  if(wrap&&!wrap.classList.contains("hidden"))closeTopModalLayer();
+});
 
 /* member list */
 function renderMemberBulkBar(){
@@ -3637,8 +3915,8 @@ async function openEventBuilder(eventId=""){
   eventBuilderFields=normalizeEventFields(rawBuilderFields,ev||tpl||{});
   const eventSemesterKey=ev?.semester||semester;
   const eventSemesterName=state.semesters[eventSemesterKey]?.name||eventSemesterKey;
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(980px,100%)">
-    <div class="modal-head"><h2>${ev?"Chỉnh sửa":"Tạo"} cổng sự kiện</h2><button onclick="closeModal()">×</button></div>
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal event-builder-modal">
+    <div class="modal-head"><div><h2>${ev?"Chỉnh sửa":"Tạo"} cổng sự kiện</h2><div class="modal-kicker">${esc(eventSemesterName)} • Cổng sự kiện</div></div><button class="modal-close-btn" onclick="closeModal()" aria-label="Đóng">×</button></div>
     <div class="form-grid">
       <label>Tiêu đề<input id="eventTitle" value="${esc(ev?.title||tpl?.name||"")}"></label>
       <label>Học kỳ<input id="eventSemesterDisplay" value="${esc(eventSemesterName)}" readonly><div class="permission-note">Sự kiện được cố định vào học kỳ này. Muốn tạo cho kỳ khác, hãy đổi học kỳ ở menu bên trái rồi tạo sự kiện mới.</div></label>
@@ -3660,7 +3938,7 @@ async function openEventBuilder(eventId=""){
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
     </div>
     ${eventBuilderSpecialType==="continuation"?`<div class="companion-note"><b>Form đồng hành kỳ tiếp theo</b><br>Kỳ hiện tại: ${esc(eventSemesterName)} → Kỳ đích: <b>${esc(state.semesters?.[eventBuilderTargetSemester]?.name||nextMainSemesterName(eventSemesterKey))}</b>.<br>Nếu thành viên chọn “Có”, hệ thống sẽ tạo/cập nhật hồ sơ ở kỳ đích và đánh dấu hoạt động Đồng hành kỳ tiếp theo trong bảng Điểm danh.</div>`:""}
-    <div class="section-title"><h4>Các trường trong form</h4><button class="secondary" onclick="addEventField()">+ Thêm trường</button></div>
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h4 style="margin:0">Các trường trong form</h4><button class="secondary" onclick="addEventField()">+ Thêm trường</button></div>
     <div class="event-builder-tools">
       <div class="small-help">Các trường bên dưới sẽ được lưu trực tiếp vào Firestore và hiển thị ở cổng public. Tối thiểu cần 1 trường trả lời.</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
