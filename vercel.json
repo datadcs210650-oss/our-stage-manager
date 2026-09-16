@@ -11,6 +11,10 @@
     {
       "source": "/tra-cuu-tu-do",
       "destination": "/tra-cuu-tu-do.html"
+    },
+    {
+      "source": "/diem-danh",
+      "destination": "/diem-danh.html"
     }
   ],
   "headers": [

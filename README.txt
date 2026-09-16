@@ -1,71 +1,62 @@
-OUR STAGE CLUB MANAGER V26 — FREE LOOKUP BUILDER
+OUR STAGE CLUB MANAGER V28 — SIDEBAR SCROLL
 
-CỔNG TRA CỨU TỰ DO ĐƯỢC XÂY DỰNG LẠI
+ĐÃ SỬA SIDEBAR
+- Logo/thương hiệu luôn ở trên.
+- Toàn bộ danh sách menu nằm trong vùng cuộn riêng.
+- Có thanh scrollbar ở cạnh phải của menu.
+- Hỗ trợ con lăn chuột, trackpad Mac và kéo thanh cuộn.
+- Học kỳ + Đăng xuất luôn nằm cố định phía dưới và không còn che các mục menu.
+- Khi mở một mục, menu tự cuộn để giữ mục đang chọn trong vùng nhìn thấy.
+- Các mục như Chờ duyệt, Nhật ký & Import, Thùng rác, Tài khoản BCN, Thiết lập giờ bấm được dễ dàng.
 
-1. THIẾT LẬP CỔNG
-- Tên cổng.
-- Gắn / không gắn học kỳ.
-- Mô tả.
-- Hướng dẫn trước khi tra cứu.
-- Nhãn ô tra cứu.
-- Placeholder.
-- Nội dung nút Tra cứu.
-- Tiêu đề kết quả.
-- Thông báo tùy chỉnh khi không tìm thấy dữ liệu.
-- Ghi chú sau kết quả.
+MÀN HÌNH NHỎ
+- Với chiều rộng <= 1000px, sidebar trở lại cuộn theo trang để tránh hai vùng cuộn chồng nhau.
 
-2. TỰ TẠO CÁC TRƯỜNG THÔNG TIN
-Ngay lúc tạo cổng, Admin tự khai báo:
-- Tên cột Excel.
-- Tên hiển thị.
-- Kiểu dữ liệu.
-- Công khai / ẩn.
-- Chọn trường làm Khóa tra cứu.
-
-Kiểu dữ liệu:
-- Văn bản ngắn.
-- Văn bản nhiều dòng.
-- Số.
-- Tiền tệ.
-- Ngày.
-- Email.
-- Số điện thoại.
-- Liên kết.
-
-Có thể thêm tối đa 30 trường.
-
-3. TẢI EXCEL MẪU
-- Có nút Tải Excel mẫu ngay trong trình tạo cổng.
-- Mỗi cổng đã tạo cũng có nút Tải Excel mẫu riêng.
-- File tự sinh chính xác theo cấu trúc trường Admin đã thiết lập.
-- Sheet DU LIEU chỉ có hàng tiêu đề, không có dòng giả.
-- Sheet HUONG DAN ghi tên cổng, khóa tra cứu và danh sách trường.
-- Khi upload file, hệ thống kiểm tra các cột đã cấu hình. Nếu thiếu cột sẽ yêu cầu dùng lại Excel mẫu.
-
-4. AN TOÀN KHI CỔNG ĐÃ CÓ DỮ LIỆU
-- Không cho đổi khóa tra cứu trực tiếp trong Thiết lập nếu đã có dữ liệu.
-- Muốn đổi khóa, dùng Upload Excel + Thay toàn bộ dữ liệu cũ.
-- Chế độ Merge không cho đổi khóa để tránh tạo bản ghi trùng / mất liên kết.
-- Đổi tên hiển thị, kiểu dữ liệu hoặc Công khai/Ẩn sẽ tự đồng bộ lại dữ liệu công khai.
-
-5. CỔNG PUBLIC
-- Hiển thị hướng dẫn riêng.
-- Nút tra cứu đổi được nội dung.
-- Tiêu đề kết quả đổi được.
-- Thông báo không tìm thấy đổi được.
-- Email / điện thoại / liên kết có thể bấm trực tiếp khi Admin đặt đúng kiểu dữ liệu.
-
-VẪN GIỮ
-- Logo.
-- Giao diện V25 Modern.
-- Tra cứu thành viên.
-- Cổng sự kiện + xuất/xóa kết quả.
-- Quản lý tài khoản BCN.
-- Real-time.
-- Không có Kế hoạch công việc.
+FIREBASE
+- V28 chỉ sửa giao diện/UX.
+- Không thay đổi cấu trúc dữ liệu.
+- Không cần cập nhật Firestore Rules nếu Rules V27 của bạn đang hoạt động.
+- Không thay đổi logo.
 
 CẬP NHẬT
-1. Commit toàn bộ package V26 lên GitHub.
+1. Commit toàn bộ package V28 lên GitHub.
 2. Chờ Vercel deploy Ready.
-3. Firestore Rules V26 không mở thêm quyền so với V25, nhưng có thể Publish firestore_rules_v26.rules để đồng bộ phiên bản.
-4. Command + Shift + R sau khi deploy.
+3. Không cần thay Firestore Rules.
+4. Bấm Command + Shift + R sau khi deploy.
+
+---
+
+OUR STAGE CLUB MANAGER V27 — COMPLETE SUITE
+
+ĐÃ TRIỂN KHAI NHÓM TIỆN ÍCH TOÀN DIỆN
+- Dashboard tổng quan + thao tác nhanh + biểu đồ tỷ lệ tham gia/thu chi + checklist.
+- Cần chú ý cá nhân: cảnh báo dữ liệu, quỹ, phản hồi sự kiện, thông báo.
+- Audit Log + lịch sử Import + hoàn tác cho điểm/quỹ/giao dịch.
+- Thùng rác 30 ngày + khôi phục thành viên/giao dịch/sự kiện/phản hồi.
+- Tìm kiếm toàn hệ thống + Command Palette ⌘K.
+- Trung tâm thông báo.
+- Nhân bản học kỳ + khóa dữ liệu học kỳ; chỉ Super Admin mở khóa.
+- Mẫu sự kiện: Casting, Đóng quỹ, Workshop, Đăng ký sự kiện, Bình chọn.
+- QR điểm danh có thời gian hiệu lực + Admin/BCN duyệt trước khi tính điểm.
+- Import thành viên thông minh: tự map cột, cho map thủ công, lưu mapping, lịch sử import.
+- Bộ lọc nâng cao + lưu bộ lọc.
+- Tag thành viên + hồ sơ Timeline + ghi chú nội bộ.
+- Cảnh báo dữ liệu trùng/thiếu và checklist sức khỏe dữ liệu.
+- Chế độ chờ duyệt cho xóa thành viên/xóa giao dịch/import điểm danh hàng loạt của BCN.
+- Preset phân quyền BCN.
+- Menu yêu thích cá nhân.
+
+KHÔNG CÓ KẾ HOẠCH CÔNG VIỆC / TASK.
+
+DEPLOY
+1. Commit toàn bộ package lên GitHub.
+2. Chờ Vercel Ready.
+3. Firebase > Firestore Database > Rules: Publish firestore_rules_v27.rules.
+4. Command + Shift + R.
+
+ROUTE MỚI
+/diem-danh?token=...
+
+LƯU Ý
+- Tính năng QR dùng Firestore, không cần Firebase Storage/Blaze.
+- Các thao tác xóa nhạy cảm đã chuyển sang Thùng rác/Approval thay vì mất ngay.
