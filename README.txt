@@ -1,38 +1,45 @@
-OUR STAGE CLUB MANAGER V32 — QR SINGLE HARD FIX + DOWNLOAD
+OUR STAGE CLUB MANAGER V33 — SEMESTER ISOLATION + COMPANION EVENT
 
-SỬA TRIỆT ĐỂ LỖI 2 MÃ QR
-- Nguyên nhân thực tế: QRCode.js tạo canvas và sau đó có thể tạo thêm img fallback bất đồng bộ.
-- V31 chỉ ẩn/xóa tại thời điểm render nên img fallback vẫn có thể xuất hiện sau.
-- V32 xử lý 3 lớp:
-  1. CSS ép mọi img bên trong QR container display:none!important.
-  2. JavaScript xóa mọi img fallback và canvas dư.
-  3. MutationObserver theo dõi trong 3 giây đầu để xóa img xuất hiện trễ.
-- Kết quả: trong modal chỉ có đúng MỘT canvas QR.
+1. DỮ LIỆU TÁCH RIÊNG THEO HỌC KỲ
+- Nhật ký, Import, Thùng rác, Chờ duyệt, Thông báo dùng query semester == kỳ đang chọn.
+- Thành viên, điểm, thu chi, sự kiện, QR, tra cứu và dashboard tiếp tục chỉ dùng kỳ đang chọn.
+- Global Search chỉ tìm dữ liệu vận hành của kỳ đang xem.
+- Chuyển từ kỳ mới về kỳ cũ sẽ không thấy thay đổi của kỳ mới.
+- Hồ sơ cá nhân có thể xem lịch sử các kỳ trước, nhưng kỳ cũ không hiển thị kỳ tương lai.
+- Tài khoản BCN và thiết lập tài khoản là dữ liệu toàn hệ thống nên không thuộc kỳ.
 
-TẢI MÃ QR
-- Trong modal QR có nút “Tải QR PNG”.
-- Danh sách QR cũng có nút “Tải QR”.
-- File tải xuống là PNG 900x900.
-- Tên file gồm hoạt động + học kỳ, ví dụ:
-  QR_Dau_Ky_FALL_2026.png
-- QR tải về dùng đúng URL:
-  /diem-danh?token=...&semester=FA26
+2. MÔ HÌNH HỌC KỲ CỐ ĐỊNH
+Mỗi năm chỉ có 3 kỳ:
+- Spring (SP)
+- Summer (SU)
+- Fall (FA)
+Thứ tự: SP26 → SU26 → FA26 → SP27 → SU27 → FA27...
+Tên kỳ và mã kỳ được hệ thống chuẩn hóa. Không tạo Winter hoặc mã tùy ý.
 
-VẪN GIỮ
-- Đóng QR = link hết hiệu lực ngay nhưng giữ lượt gửi.
-- Xóa QR = xóa vĩnh viễn QR và toàn bộ check-in.
-- QR đúng học kỳ.
-- Real-time lượt gửi.
-- Học kỳ khóa thì QR không nhận check-in mới.
-- Logo giữ nguyên.
+3. SỰ KIỆN “ĐỒNG HÀNH KỲ TIẾP THEO”
+- Có nút riêng trong Cổng sự kiện.
+- Kỳ tiếp theo phải được tạo trước và không bị khóa.
+- Form mặc định hỏi Họ tên, MSSV, xác nhận tiếp tục đồng hành và ghi chú.
+Nếu chọn CÓ:
+- Tạo/cập nhật hồ sơ ở kỳ tiếp theo.
+- Giữ thông tin cơ bản/tags/ghi chú; điểm và quỹ của kỳ mới bắt đầu riêng.
+- Tự thêm hoạt động “Đồng hành kỳ tiếp theo → [kỳ]” vào Điểm danh hoạt động của kỳ nguồn.
+- Tick hoạt động này cho thành viên.
+- Ghi Audit Log ở cả kỳ nguồn và kỳ đích.
+Nếu chọn KHÔNG: chỉ lưu phản hồi, không chuyển hồ sơ.
 
-FIRESTORE
-- Không thay đổi quyền so với V31.
-- Không bắt buộc Publish Rules V32 nếu Rules V31/V30 đang chạy đúng.
+4. XÓA HỌC KỲ
+Dọn thêm sự kiện/submissions, QR/check-ins, tra cứu tự do, Audit, Trash, Import, Approval và Notification đúng kỳ.
+
+5. FIRESTORE RULES V33
+BẮT BUỘC Publish firestore_rules_v33.rules.
+Dữ liệu vận hành mới phải có semester; tra cứu tự do mới phải gắn học kỳ.
 
 CẬP NHẬT
-1. Commit toàn bộ package V32 lên GitHub.
+1. Commit toàn bộ package V33 lên GitHub.
 2. Chờ Vercel Ready.
-3. Không cần đổi Firestore Rules nếu đang dùng V31/V30.
-4. Bấm Command + Shift + R.
-5. Nếu vẫn thấy 2 QR, mở DevTools/Application và Clear site data một lần vì bản CSS cũ có thể đang bị browser cache.
+3. Firebase > Firestore Database > Rules > Publish firestore_rules_v33.rules.
+4. Command + Shift + R.
+
+DỮ LIỆU CŨ KHÔNG CÓ semester
+Sẽ không còn hiển thị trong các màn hình theo kỳ để tránh trộn dữ liệu. Dữ liệu đó không tự bị xóa.

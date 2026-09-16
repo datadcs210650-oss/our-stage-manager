@@ -540,6 +540,12 @@ input:focus,select:focus,textarea:focus{
 .qr-semester-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:#f5e8ed;color:#68172d;font-size:10px;font-weight:850;border:1px solid #e6cbd4}
 .qr-link-row{display:flex;gap:7px;align-items:flex-end}.qr-link-row label{flex:1}.qr-link-row button{white-space:nowrap}
 
+
+/* ===== V33 Semester isolation + companion event ===== */
+.semester-model-note{border:1px solid #eadfe2;background:#fff9fb;border-radius:12px;padding:11px 12px;color:#6e5f64;font-size:11px;line-height:1.55;margin-top:10px}
+.companion-badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#eef8f2;color:#176f49;border:1px solid #cde9d8;font-size:9px;font-weight:900}
+.companion-note{margin:10px 0;padding:11px 12px;border:1px solid #cfe7d8;background:#f2fbf5;border-radius:11px;color:#246343;font-size:11px;line-height:1.55}
+
 </style>
 </head>
 <body>
@@ -832,6 +838,7 @@ input:focus,select:focus,textarea:focus{
       <div class="toolbar">
         <input id="eventSearch" placeholder="Tìm cổng sự kiện trong học kỳ này…">
         <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
+        <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
         <button class="primary edit-only" id="createEventBtn">+ Tạo cổng sự kiện</button>
       </div>
       <div class="section-note">Mỗi cổng sự kiện thuộc đúng <b>một học kỳ</b>. Khi bạn đổi học kỳ ở menu bên trái, danh sách cổng sự kiện và kết quả hiển thị ở đây cũng tự chuyển sang học kỳ đó.</div>
@@ -898,8 +905,8 @@ input:focus,select:focus,textarea:focus{
           <h3>Thiết lập học kỳ</h3>
           <div id="settingsSemesterHint" class="settings-caption"></div>
           <div class="form-grid">
-            <label>Mã học kỳ<input id="setSemesterCode" placeholder="FA26"></label>
-            <label>Tên học kỳ<input id="setSemesterName" placeholder="Fall 2026"></label>
+            <label>Mã học kỳ<input id="setSemesterCode" placeholder="FA26" readonly><div class="permission-note">Mã kỳ chuẩn: SP → SU → FA.</div></label>
+            <label>Tên học kỳ<input id="setSemesterName" placeholder="Fall 2026" readonly><div class="permission-note">Mỗi năm chỉ có Spring, Summer và Fall.</div></label>
             <label>Ngày bắt đầu<input id="setSemesterStart" type="date"></label>
             <label>Ngày kết thúc<input id="setSemesterEnd" type="date"></label>
             <label>Phí đóng quỹ<input id="setSemesterFee" class="currency-input" inputmode="numeric" placeholder="Ví dụ 300.000"></label>
@@ -960,13 +967,19 @@ try{fbDb.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false}
 const STORAGE_KEY="osc_dynamic_manager_v1";
 const DEFAULT_STATE={
   semesters:{
-    SU26:{code:"SU26",name:"Summer 2026",fee:60000,openingBalance:4627000,
+    SP26:{code:"SP26",name:"Spring 2026",term:"SP",year:2026,fee:0,openingBalance:0,
+      groups:[
+        {id:"meetings",name:"Họp CLB",mode:"checkbox",items:[{id:"sp26_m1",name:"Họp CLB",date:"",points:5}]},
+        {id:"club",name:"Hoạt động CLB",mode:"checkbox",items:[{id:"sp26_c1",name:"Hoạt động 1",date:"",points:5}]},
+        {id:"support",name:"Hỗ trợ hoạt động Trường + CLB",mode:"number",items:[{id:"sp26_s1",name:"Hoạt động hỗ trợ 1",date:"",points:5}]}
+      ]},
+    SU26:{code:"SU26",name:"Summer 2026",term:"SU",year:2026,fee:60000,openingBalance:4627000,
       groups:[
         {id:"meetings",name:"Họp CLB",mode:"checkbox",items:[{id:"m1",name:"Đầu kỳ",date:"29/09/2026",points:5},{id:"m2",name:"Họp 2",date:"",points:5}]},
         {id:"club",name:"Tham gia hoạt động cấp CLB",mode:"checkbox",items:[{id:"c1",name:"TN Đại Từ",date:"06/10/2026",points:5},{id:"c2",name:"TN Hình Thể",date:"14/10/2026",points:5}]},
         {id:"support",name:"Tham gia hỗ trợ hoạt động Trường + CLB",mode:"number",items:[{id:"s1",name:"SK VHTR",date:"19/09/2026",points:5},{id:"s2",name:"Casting TT&SX",date:"23/09/2026",points:5},{id:"s3",name:"Casting DV&BK",date:"24/09/2026",points:6}]}
       ]},
-    FA26:{code:"FA26",name:"Fall 2026",fee:70000,openingBalance:4627000,groups:[
+    FA26:{code:"FA26",name:"Fall 2026",term:"FA",year:2026,fee:70000,openingBalance:4627000,groups:[
       {id:"meetings",name:"Họp CLB",mode:"checkbox",items:[{id:"m1",name:"Họp CLB",date:"",points:5}]},
       {id:"club",name:"Hoạt động CLB",mode:"checkbox",items:[{id:"c1",name:"Hoạt động 1",date:"",points:5}]},
       {id:"support",name:"Hỗ trợ hoạt động Trường + CLB",mode:"number",items:[{id:"s1",name:"Hoạt động hỗ trợ 1",date:"",points:5}]}
@@ -999,13 +1012,30 @@ function lookupConfig(){
   return cfg;
 }
 
-let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
+
+const SEMESTER_TERMS=[{prefix:"SP",name:"Spring",order:0},{prefix:"SU",name:"Summer",order:1},{prefix:"FA",name:"Fall",order:2}];
+function parseSemesterCode(code){const m=String(code||"").toUpperCase().match(/^(SP|SU|FA)(\d{2})$/);if(!m)return null;const term=SEMESTER_TERMS.find(x=>x.prefix===m[1]),year=2000+Number(m[2]);return{code:m[1]+m[2],prefix:m[1],year,order:term.order,name:`${term.name} ${year}`}}
+function canonicalSemesterCode(prefix,year){return `${prefix}${String(Number(year)%100).padStart(2,"0")}`}
+function canonicalSemesterName(code){return parseSemesterCode(code)?.name||String(code||"")}
+function semesterSortValue(code){const p=parseSemesterCode(code);return p?p.year*10+p.order:999999}
+function sortedSemesterKeys(){return Object.keys(state.semesters||{}).sort((a,b)=>semesterSortValue(a)-semesterSortValue(b)||a.localeCompare(b))}
+function nextSemesterCode(code){const p=parseSemesterCode(code);if(!p)return"";if(p.prefix==="SP")return canonicalSemesterCode("SU",p.year);if(p.prefix==="SU")return canonicalSemesterCode("FA",p.year);return canonicalSemesterCode("SP",p.year+1)}
+function previousSemesterCode(code){const p=parseSemesterCode(code);if(!p)return"";if(p.prefix==="FA")return canonicalSemesterCode("SU",p.year);if(p.prefix==="SU")return canonicalSemesterCode("SP",p.year);return canonicalSemesterCode("FA",p.year-1)}
+function currentCanonicalSemesterCode(d=new Date()){const m=d.getMonth()+1,prefix=m<=4?"SP":m<=8?"SU":"FA";return canonicalSemesterCode(prefix,d.getFullYear())}
+function latestSemesterKey(){const k=sortedSemesterKeys();return k[k.length-1]||""}
+function normalizeCanonicalSemesterMeta(){for(const [code,s] of Object.entries(state.semesters||{})){const p=parseSemesterCode(code);if(!p)continue;s.code=code;s.term=p.prefix;s.year=p.year;s.name=p.name}}
+function semesterIsAtOrBefore(a,b){return semesterSortValue(a)<=semesterSortValue(b)}
+function createCanonicalSemesterObject(code,source=null){const p=parseSemesterCode(code);if(!p)throw new Error("Mã học kỳ không hợp lệ.");const src=source?structuredClone(source):structuredClone(DEFAULT_STATE.semesters.FA26);return{...src,code,name:p.name,term:p.prefix,year:p.year,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:`${g.id}_${code}`,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))}}
+
+let semester=(state.semesters[currentCanonicalSemesterCode()]?currentCanonicalSemesterCode():latestSemesterKey()||Object.keys(state.semesters)[0]||"SU26"),selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:""};
 let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[];
 let notificationUnsub=null,approvalUnsub=null,auditUnsub=null,trashUnsub=null;
 let attendancePortalsUnsub=null,attendancePortalRows=[],attendanceCheckinRowsByPortal={},attendanceCheckinUnsubs=new Map();
+let continuationEventUnsubs=new Map();
 let qrCurrentPortal=null,checkinUnsub=null;
+let eventBuilderSpecialType="",eventBuilderTargetSemester="";
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -1090,7 +1120,8 @@ function normalizeState(){
   state.semesters=state.semesters||structuredClone(DEFAULT_STATE.semesters);
   state.approvalConfig=state.approvalConfig||{deleteMember:false,deleteFinance:false,bulkAttendance:false};
   Object.values(state.semesters).forEach(s=>{if(s.locked===undefined)s.locked=false});
-  if(!state.semesters[semester])semester=Object.keys(state.semesters)[0]||"";
+  normalizeCanonicalSemesterMeta();
+  if(!state.semesters[semester])semester=state.semesters[currentCanonicalSemesterCode()]?currentCanonicalSemesterCode():(latestSemesterKey()||sortedSemesterKeys()[0]||"");
 }
 async function loadCloudState(){
   try{
@@ -1256,8 +1287,8 @@ async function logAudit({action,module="system",entityType="",entityId="",summar
   if(!currentFirebaseUser)return;
   try{await fbDb.collection("auditLogs").add({action,module,entityType,entityId,summary,before:firestorePlain(before),after:firestorePlain(after),undo:firestorePlain(undo),semester:semesterKey||"",actorUid:currentFirebaseUser.uid,actorName:currentUserLabel(),actorEmail:currentFirebaseUser.email||"",createdAt:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){console.warn("audit",e)}
 }
-async function pushNotification({title,message,type="info",targetRoles=["admin","superadmin"],targetUid="",linkTab=""}){
-  try{await fbDb.collection("systemNotifications").add({title,message,type,targetRoles,targetUid,linkTab,readBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||""})}catch(e){console.warn("notification",e)}
+async function pushNotification({title,message,type="info",targetRoles=["admin","superadmin"],targetUid="",linkTab="",semesterKey=semester}){
+  try{await fbDb.collection("systemNotifications").add({title,message,type,targetRoles,targetUid,linkTab,semester:semesterKey||"",readBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||""})}catch(e){console.warn("notification",e)}
 }
 async function logImportHistory({type,fileName,total=0,added=0,updated=0,skipped=0,details=""}){
   try{await fbDb.collection("importHistory").add({type,fileName,total,added,updated,skipped,details,semester,actorUid:currentFirebaseUser?.uid||"",actorName:currentUserLabel(),createdAt:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){console.warn("import history",e)}
@@ -1269,7 +1300,7 @@ async function moveToTrash(type,id,data,meta={}){
 }
 async function createApprovalRequest(kind,payload,summary){
   const ref=await fbDb.collection("approvalRequests").add({kind,payload:firestorePlain(payload),summary,status:"pending",semester,requesterUid:currentFirebaseUser?.uid||"",requesterName:currentUserLabel(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  await pushNotification({title:"Có yêu cầu chờ duyệt",message:summary,type:"approval",linkTab:"approvals"});
+  await pushNotification({title:"Có yêu cầu chờ duyệt",message:summary,type:"approval",linkTab:"approvals",semesterKey:semester});
   toast("Đã gửi yêu cầu cho Admin duyệt");return ref.id;
 }
 function shouldRequestApproval(kind){return isBCN()&&!!state.approvalConfig?.[kind]}
@@ -1336,12 +1367,7 @@ function sameMemberAcrossSemesters(m){
   const mssv=normalizeText(m?.mssv||""),name=normalizeText(m?.name||"");
   return (state.members||[]).filter(x=>mssv?normalizeText(x.mssv||"")===mssv:normalizeText(x.name||"")===name);
 }
-function memberSemesterHistory(m){
-  return sameMemberAcrossSemesters(m).map(x=>{
-    const stats=scoreMemberForSemester(x,x.semester),rank=semesterMemberRanking(x.semester).find(r=>r.member.id===x.id)?.rank||null;
-    return {member:x,semesterKey:x.semester,semesterName:state.semesters?.[x.semester]?.name||x.semester,stats,rank,rating:memberActivityRating(stats)};
-  }).sort((a,b)=>String(b.semesterKey).localeCompare(String(a.semesterKey)));
-}
+function memberSemesterHistory(m){const ceiling=m?.semester||semester;return sameMemberAcrossSemesters(m).filter(x=>semesterIsAtOrBefore(x.semester,ceiling)).map(x=>{const stats=scoreMemberForSemester(x,x.semester),rank=semesterMemberRanking(x.semester).find(r=>r.member.id===x.id)?.rank||null;return{member:x,semesterKey:x.semester,semesterName:state.semesters?.[x.semester]?.name||x.semester,stats,rank,rating:memberActivityRating(stats)}}).sort((a,b)=>semesterSortValue(b.semesterKey)-semesterSortValue(a.semesterKey))}
 function ensureMemberScores(m){m.scores=m.scores||{};for(const g of sem().groups)for(const it of g.items)if(!(it.id in m.scores))m.scores[it.id]=g.mode==="checkbox"?false:0}
 
 /* auth */
@@ -1476,18 +1502,17 @@ $("#adminChip").onclick=()=>{
   if(btn)btn.click();
 };
 
+function sortTimestampDesc(rows,field){return rows.sort((a,b)=>{const av=a?.[field]?.toMillis?.()||a?.[field]?.seconds*1000||0,bv=b?.[field]?.toMillis?.()||b?.[field]?.seconds*1000||0;return bv-av})}
 function watchSuiteCollections(){
-  [notificationUnsub,approvalUnsub,auditUnsub,trashUnsub].forEach(fn=>{try{fn&&fn()}catch{}});
-  if(!currentFirebaseUser)return;
-  notificationUnsub=fbDb.collection("systemNotifications").orderBy("createdAt","desc").limit(40).onSnapshot(s=>{
-    notificationRows=s.docs.map(d=>({id:d.id,...d.data()})).filter(n=>!n.targetUid||n.targetUid===currentFirebaseUser.uid||(n.targetRoles||[]).includes(role()));renderNotificationBadge();
-  },e=>console.warn("notifications",e));
+  [notificationUnsub,approvalUnsub,auditUnsub,trashUnsub].forEach(fn=>{try{fn&&fn()}catch{}});notificationUnsub=approvalUnsub=auditUnsub=trashUnsub=null;
+  if(!currentFirebaseUser||!semester)return;
+  notificationUnsub=fbDb.collection("systemNotifications").where("semester","==",semester).limit(120).onSnapshot(s=>{notificationRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})).filter(n=>!n.targetUid||n.targetUid===currentFirebaseUser.uid||(n.targetRoles||[]).includes(role())),"createdAt");renderNotificationBadge();if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention()},e=>console.warn("notifications",e));
   if(canEditClub()){
-    approvalUnsub=fbDb.collection("approvalRequests").orderBy("createdAt","desc").limit(100).onSnapshot(s=>{approvalRows=s.docs.map(d=>({id:d.id,...d.data()}));if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests()},e=>console.warn("approvals",e));
-    auditUnsub=fbDb.collection("auditLogs").orderBy("createdAt","desc").limit(120).onSnapshot(s=>{auditRows=s.docs.map(d=>({id:d.id,...d.data()}));renderDashboardRecentAudit();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs()},e=>console.warn("audit",e));
-    trashUnsub=fbDb.collection("trashBin").orderBy("deletedAt","desc").limit(120).onSnapshot(s=>{trashRows=s.docs.map(d=>({id:d.id,...d.data()}));if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin()},e=>console.warn("trash",e));
+    approvalUnsub=fbDb.collection("approvalRequests").where("semester","==",semester).limit(200).onSnapshot(s=>{approvalRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests()},e=>console.warn("approvals",e));
+    auditUnsub=fbDb.collection("auditLogs").where("semester","==",semester).limit(250).onSnapshot(s=>{auditRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderDashboardRecentAudit();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs()},e=>console.warn("audit",e));
+    trashUnsub=fbDb.collection("trashBin").where("semester","==",semester).limit(250).onSnapshot(s=>{trashRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin()},e=>console.warn("trash",e));
   }
-  watchAttendancePortals(true);
+  watchAttendancePortals(true);watchContinuationEvents(true);
 }
 function applyRoleAccess(){
   document.body.classList.remove("readonly-mode");
@@ -1496,7 +1521,7 @@ function applyRoleAccess(){
   const toggle=(s,show)=>{const el=$(s);if(el)el.classList.toggle("hidden",!show)};
   const ea=canEditModule("attendance"),em=canEditModule("members"),ef=canEditModule("finance"),ee=canEditModule("events"),el=canEditModule("lookup");
   $$("#qltvBody input.num-score,#qltvBody input.check:not(.fund-check)").forEach(x=>x.disabled=!ea);$$("#qltvBody input.fund-check").forEach(x=>x.disabled=!ef);
-  ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn"].forEach(s=>toggle(s,em));toggle("#uploadFundBtn",ef);$$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);
+  ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn"].forEach(s=>toggle(s,em));toggle("#uploadFundBtn",ef);$$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);toggle("#continuationEventBtn",ee);
   ["#createPortalBtn","#syncPortalNowBtn","#closePortalBtn","#reopenPortalBtn","#saveLookupSettingsBtn"].forEach(s=>toggle(s,el));
   $$("#lookupCoreFields input,#lookupCustomFields input").forEach(x=>x.disabled=!el);
   if($("#readonlyBannerEvents")){$("#readonlyBannerEvents").classList.toggle("hidden",!isBCN()&&!semesterLocked());$("#readonlyBannerEvents").textContent=semesterLocked()?"Học kỳ đã khóa — Cổng sự kiện đang ở chế độ chỉ xem.":(ee?"BCN — Bạn được cấp quyền chỉnh sửa cổng sự kiện.":"BCN — Bạn chỉ được xem cổng sự kiện và kết quả.")}
@@ -1516,7 +1541,7 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="dashboard")renderDashboard();if(b.dataset.tab==="attention")renderAttention();if(b.dataset.tab==="settings")renderSettings();if(b.dataset.tab==="lookupPortal")renderLookupPortal();if(b.dataset.tab==="freeLookup")renderFreeLookup();if(b.dataset.tab==="events")renderEvents();if(b.dataset.tab==="myAccount")renderMyAccount();if(b.dataset.tab==="approvals")loadApprovalRequests();if(b.dataset.tab==="audit")loadAuditLogs();if(b.dataset.tab==="trash")loadTrashBin();if(b.dataset.tab==="accounts")renderAccounts();
   applyRoleAccess();
 });
-$("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selectedMemberIds.clear();renderAll();watchAttendancePortals(true)};
+$("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selectedMemberIds.clear();pendingEventResponseCount=0;$("#notificationPopover")?.remove();renderAll();watchSuiteCollections();watchContinuationEvents(true)};
 
 
 /* sidebar scrolling */
@@ -1537,8 +1562,8 @@ $("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selected
 /* semester selector */
 function renderSemesterSelect(){
   const sel=$("#semester");
-  sel.innerHTML=Object.entries(state.semesters).map(([k,v])=>`<option value="${esc(k)}" ${k===semester?"selected":""}>${esc(v.name)}</option>`).join("");
-  $("#semCode").textContent=sem().code;
+  sel.innerHTML=sortedSemesterKeys().map(k=>`<option value="${esc(k)}" ${k===semester?"selected":""}>${esc(state.semesters[k]?.name||canonicalSemesterName(k))}</option>`).join("");
+  $("#semCode").textContent=sem()?.code||semester;
   renderAttendanceSelector();
 }
 function renderAttendanceSelector(){
@@ -1943,7 +1968,7 @@ function renderDashboard(){
 function semesterChecklist(){const s=sem(),ms=members();return [{ok:!!s.startDate&&!!s.endDate,label:"Đã thiết lập thời gian học kỳ"},{ok:ms.length>0,label:`Đã có danh sách thành viên (${ms.length})`},{ok:getAllActivities().length>0,label:`Đã thiết lập hoạt động (${getAllActivities().length})`},{ok:Number(s.fee||0)>0,label:`Đã thiết lập mức quỹ (${money(s.fee||0)})`},{ok:ms.length>0&&ms.every(m=>String(m.mssv||"").trim()),label:"Tất cả thành viên có MSSV"},{ok:semesterLocked(),label:"Đã khóa dữ liệu sau khi chốt"}]}
 function renderDashboardChecklist(){const el=$("#dashboardChecklist");if(!el)return;el.innerHTML=semesterChecklist().map(x=>`<div class="check-item"><span>${esc(x.label)}</span><b class="${x.ok?"ok":"warn"}">${x.ok?"✓":"!"}</b></div>`).join("")}
 function renderDashboardRecentAudit(){const el=$("#dashboardRecentAudit");if(!el)return;el.innerHTML=(auditRows||[]).slice(0,5).map(a=>`<div class="check-item"><div><b>${esc(a.summary||a.action||"Thay đổi")}</b><div class="small-help">${esc(a.actorName||"")} • ${dateTime(a.createdAt)}</div></div><span>›</span></div>`).join("")||`<div class="empty">Chưa có nhật ký.</div>`}
-async function refreshEventResponseSummary(){if(!$("#dashboardStats"))return;try{const evs=(state.events||[]).filter(e=>e.semester===semester);let total=0,pending=0;for(const ev of evs.slice(0,12)){const s=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();total+=s.size;pending+=s.docs.filter(d=>!d.data().actionApplied).length}const stat=[...$$("#dashboardStats .dash-stat")].find(x=>x.querySelector("span")?.textContent==="Sự kiện mở");if(stat&&total)stat.querySelector("small").textContent+=` • ${total} phản hồi`;if(pending>0)updateAttentionEventResponses(pending)}catch(e){console.warn("event summary",e)}}
+async function refreshEventResponseSummary(){if(!$("#dashboardStats"))return;pendingEventResponseCount=0;try{const evs=(state.events||[]).filter(e=>e.semester===semester);let total=0,pending=0;for(const ev of evs.slice(0,12)){const s=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();total+=s.size;pending+=s.docs.filter(d=>!d.data().actionApplied).length}const stat=[...$$("#dashboardStats .dash-stat")].find(x=>x.querySelector("span")?.textContent==="Sự kiện mở");if(stat&&total)stat.querySelector("small").textContent+=` • ${total} phản hồi`;updateAttentionEventResponses(pending)}catch(e){console.warn("event summary",e)}}
 let pendingEventResponseCount=0;function updateAttentionEventResponses(n){pendingEventResponseCount=n;if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention()}
 function renderAttention(){
   const issues=healthIssues();const recent=(notificationRows||[]).slice(0,6);const list=[...issues.map(x=>({...x,desc:"Kiểm tra và xử lý dữ liệu trong học kỳ hiện tại."})),...(pendingEventResponseCount?[{level:"warn",title:`${pendingEventResponseCount} phản hồi sự kiện chưa xử lý`,desc:"Mở Cổng sự kiện để xem kết quả.",tab:"events",icon:"📨"}]:[]),...recent.map(n=>({level:"good",title:n.title||"Thông báo",desc:n.message||"",tab:n.linkTab||"dashboard",icon:"🔔"}))];
@@ -1953,10 +1978,10 @@ function renderAttention(){
 function globalSearchItems(q){q=normalizeText(q);const out=[];const add=(title,subtitle,tab,action="")=>{if(!q||normalizeText(title+" "+subtitle).includes(q))out.push({title,subtitle,tab,action})};
   document.querySelectorAll('.nav button[data-tab]:not(.hidden)').forEach(b=>add(b.textContent.trim(),"Menu",b.dataset.tab));
   Object.entries(state.semesters||{}).forEach(([k,s])=>add(`${s.name||k} (${k})`,"Học kỳ","settings",`semester:${k}`));
-  for(const m of state.members||[])add(m.name||"Thành viên",`${m.mssv||""} • ${m.data?.email||""} • ${m.data?.phone||""}`,"info",`member:${m.id}`);
-  for(const t of state.transactions||[])add(t.description||"Giao dịch",`${t.type==="income"?"Thu":"Chi"} • ${money(t.amount)} • ${t.date||""}`,"finance");
-  for(const e of state.events||[])add(e.title||"Sự kiện",`${e.semester||""} • Cổng sự kiện`,"events");
-  for(const p of freeLookupPortals||[])add(p.title||"Tra cứu",`Cổng tra cứu tự do • ${freeLookupScopeLabel(p)}`,"freeLookup");
+  for(const m of members())add(m.name||"Thành viên",`${m.mssv||""} • ${m.data?.email||""} • ${m.data?.phone||""}`,"info",`member:${m.id}`);
+  for(const t of txs())add(t.description||"Giao dịch",`${t.type==="income"?"Thu":"Chi"} • ${money(t.amount)} • ${t.date||""}`,"finance");
+  for(const e of (state.events||[]).filter(e=>e.semester===semester))add(e.title||"Sự kiện",`${e.semester||""} • Cổng sự kiện`,"events");
+  for(const p of (freeLookupPortals||[]).filter(p=>p.scopeSemester===semester))add(p.title||"Tra cứu",`Cổng tra cứu tự do • ${freeLookupScopeLabel(p)}`,"freeLookup");
   for(const u of accountRows||[])add(u.displayName||u.email||"Tài khoản",`${u.email||""} • ${u.role||""}`,"accounts");return out.slice(0,35)}
 function openCommandPalette(){if($("#commandOverlay"))return;const wrap=document.createElement("div");wrap.id="commandOverlay";wrap.className="command-overlay";wrap.innerHTML=`<div class="command-box"><div class="command-search"><input id="commandInput" placeholder="Tìm menu, thành viên, giao dịch, sự kiện…"><span class="small-help">ESC</span></div><div id="commandResults" class="command-results"></div></div>`;document.body.appendChild(wrap);wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const input=$("#commandInput");input.oninput=renderCommandResults;input.onkeydown=e=>{if(e.key==="Escape")wrap.remove()};input.focus();renderCommandResults()}
 function renderCommandResults(){const q=$("#commandInput")?.value||"",items=globalSearchItems(q);$("#commandResults").innerHTML=items.map((x,i)=>`<div class="command-result" onclick="activateSearchResult(${i})"><div><b>${esc(x.title)}</b><span style="display:block">${esc(x.subtitle)}</span></div><span>${esc(navLabel(x.tab))}</span></div>`).join("")||`<div class="empty">Không tìm thấy.</div>`;window.__searchItems=items}
@@ -2103,7 +2128,7 @@ async function renderFreeLookup(){
   root.innerHTML='<div class="empty">Đang tải cổng tra cứu…</div>';
   try{
     const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).get();
-    freeLookupPortals=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.updatedAt?.toMillis?.()||0).localeCompare(String(a.updatedAt?.toMillis?.()||0))||String(a.title||"").localeCompare(String(b.title||""),"vi"));
+    freeLookupPortals=snap.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.scopeSemester===semester).sort((a,b)=>(b.updatedAt?.toMillis?.()||0)-(a.updatedAt?.toMillis?.()||0)||String(a.title||"").localeCompare(String(b.title||""),"vi"));
     const q=($("#freeLookupSearch")?.value||"").trim().toLowerCase();
     const list=freeLookupPortals.filter(p=>!q||(`${p.title||""} ${p.description||""}`).toLowerCase().includes(q));
     $("#freeLookupPortalCount").textContent=freeLookupPortals.length;
@@ -2207,7 +2232,6 @@ function openFreeLookupBuilder(id=""){
   const p=id?freeLookupPortalById(id):null;
   freeLookupBuilderFields=structuredClone((p?.fields||[]).length?p.fields:defaultFreeLookupBuilderFields());
   freeLookupBuilderSearchFieldId=p?.searchFieldId||freeLookupBuilderFields[0]?.id||"";
-  const semOptions=`<option value="">Không gắn học kỳ</option>`+Object.entries(state.semesters).map(([k,v])=>`<option value="${esc(k)}" ${(p?.scopeSemester||"")===k?"selected":""}>${esc(v.name)}</option>`).join("");
   const recordCount=Number(p?.recordCount||0);
 
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1180px,100%)">
@@ -2226,7 +2250,7 @@ function openFreeLookupBuilder(id=""){
       <p>Nội dung này sẽ xuất hiện trên trang tra cứu công khai.</p>
       <div class="form-grid">
         <label>Tên cổng<input id="flTitle" maxlength="120" value="${esc(p?.title||"")}" placeholder="VD: Tra cứu kết quả Casting FA26"></label>
-        <label>Gắn với học kỳ<select id="flScope">${semOptions}</select></label>
+        <label>Học kỳ<input id="flScope" value="${esc(semester)}" readonly><div class="permission-note">${esc(sem()?.name||semester)} • Cổng chỉ thuộc đúng học kỳ này.</div></label>
         <label class="full">Mô tả<textarea id="flDescription" maxlength="1000" placeholder="VD: Cổng tra cứu kết quả vòng Casting thành viên Our Stage FA26.">${esc(p?.description||"")}</textarea></label>
         <label class="full">Hướng dẫn trước khi tra cứu<textarea id="flInstructionText" maxlength="1000" placeholder="VD: Nhập chính xác số báo danh được BTC cung cấp.">${esc(p?.instructionText||"")}</textarea></label>
       </div>
@@ -2609,7 +2633,7 @@ function renderEvents(){
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
           </div>
         </div>
-        <span class="account-role">${esc(ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form")}</span>
+        ${ev.specialType==="continuation"?`<span class="companion-badge">Đồng hành → ${esc(state.semesters[ev.targetSemester]?.name||canonicalSemesterName(ev.targetSemester))}</span>`:`<span class="account-role">${esc(ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form")}</span>`}
       </div>
       <div class="event-actions">
         <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
@@ -2631,9 +2655,11 @@ async function copyText(text){
 }
 
 const EVENT_TEMPLATES={casting:{name:"Casting thành viên",description:"Thu thập thông tin đăng ký và kết quả casting.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Ban đăng ký",type:"radio",required:true,options:["Diễn viên & Biên kịch","Truyền thông & Sản xuất"]},{label:"Ghi chú",type:"textarea",required:false}]},fund:{name:"Xác nhận đóng quỹ",description:"Form xác nhận thông tin đóng quỹ CLB.",resultAction:"fundPaidApprove",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Tôi xác nhận đã chuyển khoản",type:"radio",required:true,options:["Đã chuyển khoản"]}]},workshop:{name:"Đăng ký Workshop",description:"Thu thập đăng ký tham gia workshop.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Bạn mong đợi điều gì?",type:"textarea",required:false}]},event:{name:"Đăng ký sự kiện",description:"Form đăng ký sự kiện chung.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Số điện thoại",type:"phone",required:false}]},poll:{name:"Bình chọn / Khảo sát",description:"Khảo sát nhanh hoặc bình chọn.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:false},{label:"Lựa chọn",type:"radio",required:true,options:["Phương án 1","Phương án 2"]},{label:"Ý kiến khác",type:"textarea",required:false}]}};
+function buildContinuationTemplate(){const target=nextSemesterCode(semester),targetName=state.semesters[target]?.name||canonicalSemesterName(target);return{name:`Đồng hành kỳ tiếp theo – ${targetName}`,description:`Xác nhận thành viên có tiếp tục đồng hành cùng Our Stage từ ${sem()?.name||semester} sang ${targetName}.`,resultAction:"continuationAuto",specialType:"continuation",targetSemester:target,fields:[{label:"Họ và tên",type:"text",required:true,systemKey:"memberName"},{label:"MSSV",type:"mssv",required:true,systemKey:"mssv"},{label:`Bạn có tiếp tục đồng hành cùng CLB trong ${targetName} không?`,type:"radio",required:true,systemKey:"continueNextSemester",options:["Có, tôi tiếp tục đồng hành cùng CLB","Không, tôi không tiếp tục"]},{label:"Ghi chú gửi Ban Chủ Nhiệm",type:"textarea",required:false,systemKey:"continuationNote"}]}}
 function openEventTemplatePicker(){if(!canEditModule("events"))return;$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Mẫu cổng sự kiện</h2><div class="small-help">Chọn mẫu để tạo nhanh, sau đó vẫn sửa được mọi câu hỏi.</div></div><button onclick="closeModal()">×</button></div><div class="event-template-grid">${Object.entries(EVENT_TEMPLATES).map(([k,t])=>`<div class="event-template-card" onclick="useEventTemplate('${k}')"><h4>${esc(t.name)}</h4><p>${esc(t.description)}</p></div>`).join("")}</div></div></div>`;$("#modalWrap").classList.remove("hidden")}
 function useEventTemplate(k){const t=EVENT_TEMPLATES[k];if(!t)return;closeModal();window.__eventTemplate=t;openEventBuilder("")}
 $("#eventTemplateBtn").onclick=openEventTemplatePicker;
+$("#continuationEventBtn").onclick=()=>{if(!canEditModule("events"))return;const target=nextSemesterCode(semester);if(!target||!state.semesters[target])return alert(`Hãy tạo học kỳ tiếp theo (${canonicalSemesterName(target)}) trước khi mở sự kiện đồng hành.`);if(semesterLocked(target))return alert(`${state.semesters[target].name} đang bị khóa.`);window.__eventTemplate=buildContinuationTemplate();openEventBuilder("")};
 async function openEventBuilder(eventId=""){
   if(!canEditModule("events"))return;
   eventBuilderId=eventId;
@@ -2649,9 +2675,10 @@ async function openEventBuilder(eventId=""){
     }catch(e){console.warn("Không tải được cấu hình sự kiện đầy đủ",e)}
   }
   const tpl=!eventId?window.__eventTemplate:null;window.__eventTemplate=null;
+  eventBuilderSpecialType=ev?.specialType||tpl?.specialType||"";eventBuilderTargetSemester=ev?.targetSemester||tpl?.targetSemester||(eventBuilderSpecialType==="continuation"?nextSemesterCode(ev?.semester||semester):"");
   eventBuilderFields=structuredClone(ev?.fields||(tpl?.fields||[
     {label:"MSSV",type:"mssv",required:true,options:[]},{label:"Họ và tên",type:"text",required:true,options:[]}
-  ]).map(f=>({id:"field_"+uid(),label:f.label||"",type:f.type||"text",required:!!f.required,options:f.options||[],caption:"",imageData:"",content:""})));
+  ]).map(f=>({id:"field_"+uid(),label:f.label||"",type:f.type||"text",required:!!f.required,options:f.options||[],caption:"",imageData:"",content:"",systemKey:f.systemKey||""})));
   const eventSemesterKey=ev?.semester||semester;
   const eventSemesterName=state.semesters[eventSemesterKey]?.name||eventSemesterKey;
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(980px,100%)">
@@ -2665,10 +2692,12 @@ async function openEventBuilder(eventId=""){
         <option value="none" ${(ev?.resultAction||tpl?.resultAction||"none")==="none"?"selected":""}>Chỉ lưu phản hồi</option>
         <option value="fundPaidApprove" ${(ev?.resultAction||tpl?.resultAction)==="fundPaidApprove"?"selected":""}>Admin duyệt → Đã đóng quỹ</option>
         <option value="fundPaidAuto" ${(ev?.resultAction||tpl?.resultAction)==="fundPaidAuto"?"selected":""}>Tự động → Đã đóng quỹ khi hệ thống Admin đang online</option>
+        <option value="continuationAuto" ${(ev?.resultAction||tpl?.resultAction)==="continuationAuto"?"selected":""}>Tự động → Đồng hành kỳ tiếp theo</option>
       </select></label>
       <label>Tiêu đề sau khi gửi<input id="eventSuccessTitle" value="${esc(ev?.successTitle||"Gửi thông tin thành công")}"></label>
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
     </div>
+    ${eventBuilderSpecialType==="continuation"?`<div class="companion-note"><b>Sự kiện đồng hành mặc định</b><br>Kỳ nguồn: ${esc(state.semesters[eventSemesterKey]?.name||eventSemesterKey)} → Kỳ tiếp theo: <b>${esc(state.semesters[eventBuilderTargetSemester]?.name||canonicalSemesterName(eventBuilderTargetSemester))}</b>.<br>Thành viên chọn Có sẽ được chuyển hồ sơ sang kỳ tiếp theo và ghi nhận hoạt động Đồng hành kỳ tiếp theo.</div>`:""}
     <div class="section-title"><h4>Các trường trong form</h4><button class="secondary" onclick="addEventField()">+ Thêm trường</button></div>
     <div id="eventFieldEditor"></div>
     <div class="free-mode-note"><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Cổng sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file. Với sự kiện đóng quỹ, nên có trường loại MSSV và dùng chế độ Admin duyệt.</div>
@@ -2802,6 +2831,16 @@ function addEventField(){
   eventBuilderFields.push({id:"field_"+uid(),label:"Câu hỏi mới",type:"text",required:false,options:[],caption:"",imageData:"",content:""});
   renderEventFieldEditor();
 }
+
+function continuationActivityId(sourceSem,targetSem){return `continuation_${sourceSem}_${targetSem}`}
+async function ensureContinuationActivity(sourceSem,targetSem){const src=state.semesters[sourceSem],target=state.semesters[targetSem];if(!src||!target)throw new Error("Chưa có học kỳ tiếp theo.");let group=(src.groups||[]).find(g=>g.specialType==="continuation"||g.id===`continuation_${sourceSem}`);if(!group){group={id:`continuation_${sourceSem}`,name:"Đồng hành CLB",mode:"checkbox",specialType:"continuation",items:[]};src.groups=src.groups||[];src.groups.push(group)}const itemId=continuationActivityId(sourceSem,targetSem);let item=(group.items||[]).find(x=>x.id===itemId);if(!item){item={id:itemId,name:`Đồng hành kỳ tiếp theo → ${target.name||targetSem}`,date:"",points:5,specialType:"continuation",targetSemester:targetSem};group.items=group.items||[];group.items.push(item);persistStateOnly();await saveCloudStateNow();if(sourceSem===semester){renderAttendanceSelector();renderQLTV()}await logAudit({action:"create-continuation-activity",module:"attendance",summary:`Tạo hoạt động Đồng hành kỳ tiếp theo → ${target.name||targetSem}`,semesterKey:sourceSem})}return item}
+function continuationDecision(ev,sub){const f=(ev.fields||[]).find(x=>x.systemKey==="continueNextSemester"),v=f?sub.answers?.[f.id]:"";return normalizeText(v).startsWith("co, toi tiep tuc")||normalizeText(v)==="co"}
+function continuationMssv(ev,sub){const f=(ev.fields||[]).find(x=>x.systemKey==="mssv")||(ev.fields||[]).find(x=>x.type==="mssv");return String(f?sub.answers?.[f.id]:"").trim()}
+function continuationTargetMemberId(targetSem,mssv){return `cont_${targetSem}_${normalizeMssvKey(mssv)||uid()}`.slice(0,180)}
+async function processContinuationSubmission(ev,doc){if(!canEditClub()||ev.specialType!=="continuation")return;const sub=doc.data?doc.data():doc,subId=doc.id||sub.id;if(sub.continuationApplied===true)return;const sourceSem=ev.semester,targetSem=ev.targetSemester||nextSemesterCode(sourceSem);if(!state.semesters[targetSem]){await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationStatus:`Chờ tạo ${canonicalSemesterName(targetSem)}`},{merge:true});return}if(semesterLocked(sourceSem)||semesterLocked(targetSem)){await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationStatus:"Đang chờ vì học kỳ bị khóa"},{merge:true});return}const yes=continuationDecision(ev,sub),mssv=continuationMssv(ev,sub);if(!mssv){await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationStatus:"Thiếu MSSV"},{merge:true});return}const sourceMember=(state.members||[]).find(m=>m.semester===sourceSem&&normalizeText(m.mssv)===normalizeText(mssv));if(!sourceMember){await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationStatus:"Không tìm thấy MSSV trong kỳ nguồn"},{merge:true});return}if(!yes){await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationApplied:true,continuationDecision:"no",continuationStatus:"Không tiếp tục đồng hành",actionApplied:true,actionStatus:"Không tiếp tục đồng hành",actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});return}const activity=await ensureContinuationActivity(sourceSem,targetSem);await fbDb.collection("members").doc(sourceMember.id).set({[`scores.${activity.id}`]:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid},{merge:true});let targetMember=(state.members||[]).find(m=>m.semester===targetSem&&normalizeText(m.mssv)===normalizeText(mssv));const targetId=targetMember?.id||continuationTargetMemberId(targetSem,mssv);if(targetMember){await fbDb.collection("members").doc(targetId).set({name:sourceMember.name||targetMember.name||"",mssv:sourceMember.mssv||targetMember.mssv||"",data:firestorePlain(sourceMember.data||targetMember.data||{}),tags:Array.isArray(sourceMember.tags)?sourceMember.tags:[],internalNote:sourceMember.internalNote||targetMember.internalNote||"",continuedFromSemester:sourceSem,continuedEventId:ev.id,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid},{merge:true})}else{const newMember={id:targetId,semester:targetSem,name:sourceMember.name||"",mssv:sourceMember.mssv||mssv,data:firestorePlain(sourceMember.data||{}),scores:{},fundPaid:false,tags:Array.isArray(sourceMember.tags)?sourceMember.tags:[],internalNote:sourceMember.internalNote||""};await fbDb.collection("members").doc(targetId).set({...memberDocPayload(newMember),continuedFromSemester:sourceSem,continuedEventId:ev.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})}await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(subId).set({continuationApplied:true,continuationDecision:"yes",continuationTargetSemester:targetSem,continuationStatus:`Đã chuyển sang ${state.semesters[targetSem].name||targetSem}`,actionApplied:true,actionStatus:`Đã đồng hành sang ${state.semesters[targetSem].name||targetSem}`,actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),actionAppliedBy:currentFirebaseUser.uid},{merge:true});await logAudit({action:"continuation",module:"events",entityType:"member",entityId:sourceMember.id,summary:`${sourceMember.name} xác nhận đồng hành → ${state.semesters[targetSem].name}`,semesterKey:sourceSem});await logAudit({action:"continuation-in",module:"members",entityType:"member",entityId:targetId,summary:`Nhận ${sourceMember.name} từ ${state.semesters[sourceSem].name}`,semesterKey:targetSem});await pushNotification({title:"Thành viên đồng hành kỳ tiếp theo",message:`${sourceMember.name} đã được chuyển sang ${state.semesters[targetSem].name}.`,type:"success",linkTab:"memberList",semesterKey:targetSem})}
+function stopContinuationWatchers(){for(const [,fn] of continuationEventUnsubs){try{fn&&fn()}catch{}}continuationEventUnsubs.clear()}
+function watchContinuationEvents(force=false){if(force)stopContinuationWatchers();if(!canEditClub())return;for(const ev of (state.events||[]).filter(e=>e.semester===semester&&e.specialType==="continuation"&&e.isOpen===true)){if(continuationEventUnsubs.has(ev.id))continue;const unsub=fbDb.collection("eventPortals").doc(ev.id).collection("submissions").onSnapshot(s=>{s.docs.forEach(d=>{if(d.data()?.continuationApplied!==true)processContinuationSubmission(ev,d).catch(e=>console.warn("continuation",e))})},e=>console.warn("continuation watcher",e));continuationEventUnsubs.set(ev.id,unsub)}}
+
 async function saveEventBuilder(){
   if(!canEditModule("events"))return;
   const title=$("#eventTitle").value.trim();
@@ -2815,9 +2854,8 @@ async function saveEventBuilder(){
   if(approximateSize>850000)return alert("Form có quá nhiều/ảnh quá lớn. Hãy giảm số ảnh hoặc dùng ảnh nhỏ hơn.");
 
   const action=$("#eventResultAction").value;
-  if(action.startsWith("fundPaid")&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
-  }
+  if(action.startsWith("fundPaid")&&!eventBuilderFields.some(f=>f.type==="mssv"))return alert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
+  if(eventBuilderSpecialType==="continuation"){if(!eventBuilderTargetSemester||!state.semesters[eventBuilderTargetSemester])return alert(`Hãy tạo học kỳ tiếp theo (${canonicalSemesterName(eventBuilderTargetSemester||nextSemesterCode(semester))}) trước.`);if(semesterLocked(eventBuilderTargetSemester))return alert("Học kỳ tiếp theo đang bị khóa.");if(!eventBuilderFields.some(f=>f.type==="mssv"))return alert("Sự kiện đồng hành bắt buộc có MSSV.");if(!eventBuilderFields.some(f=>f.systemKey==="continueNextSemester"))return alert("Sự kiện đồng hành thiếu câu xác nhận tiếp tục.")}
 
   const eventId=eventBuilderId||( "event_"+uid() );
   const lockedSemester=eventBuilderId?(eventFor(eventBuilderId)?.semester||semester):semester;
@@ -2833,7 +2871,9 @@ async function saveEventBuilder(){
     description:$("#eventDescription").value.trim(),
     semester:lockedSemester,
     isOpen:$("#eventIsOpen").value==="1",
-    resultAction:action,
+    resultAction:eventBuilderSpecialType==="continuation"?"continuationAuto":action,
+    specialType:eventBuilderSpecialType||"",
+    targetSemester:eventBuilderSpecialType==="continuation"?eventBuilderTargetSemester:"",
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
     fields:fullFields
@@ -2845,21 +2885,13 @@ async function saveEventBuilder(){
     fields:lightFields,
     updatedAt:new Date().toISOString()
   });
-  await fbDb.collection("eventPortals").doc(eventId).set({
-    ...fullEvent,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  },{merge:false});
-  closeModal();save();toast("Đã lưu cổng sự kiện");renderEvents();
+  if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent.semester,fullEvent.targetSemester);
+  await fbDb.collection("eventPortals").doc(eventId).set({...fullEvent,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
+  closeModal();save();watchContinuationEvents(true);toast("Đã lưu cổng sự kiện");renderEvents();
 }
-async function toggleEventOpen(id){
-  if(!canEditModule("events"))return;
-  const ev=eventFor(id);if(!ev)return;
-  ev.isOpen=!ev.isOpen;
-  await fbDb.collection("eventPortals").doc(id).set({isOpen:ev.isOpen,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-  save();renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện":"Đã đóng cổng sự kiện");
-}
+async function toggleEventOpen(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;const opening=!ev.isOpen;if(opening&&ev.specialType==="continuation"){const target=ev.targetSemester||nextSemesterCode(ev.semester);if(!state.semesters[target])return alert(`Hãy tạo học kỳ tiếp theo (${canonicalSemesterName(target)}) trước khi mở sự kiện đồng hành.`);if(semesterLocked(target))return alert(`${state.semesters[target].name} đang bị khóa.`);await ensureContinuationActivity(ev.semester,target);ev.targetSemester=target}ev.isOpen=opening;await fbDb.collection("eventPortals").doc(id).set({isOpen:ev.isOpen,targetSemester:ev.targetSemester||"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});save();watchContinuationEvents(true);renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện":"Đã đóng cổng sự kiện")}
 
-async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});await commitInChunks(snap.docs.map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
+async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});await commitInChunks(snap.docs.map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();watchContinuationEvents(true);renderEvents();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
 
 async function openEventSubmissions(eventId){
   const ev=eventFor(eventId);if(!ev)return;
@@ -3058,18 +3090,7 @@ async function approveEventFundPaid(eventId,submissionId,{silent=false}={}){
   if(!silent)toast("Đã cập nhật trạng thái đóng quỹ");
   return true;
 }
-async function processAutomaticEventActions(){
-  if(!canEditClub())return;
-  for(const ev of (state.events||[]).filter(e=>e.resultAction==="fundPaidAuto"&&state.semesters[e.semester])){
-    try{
-      const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
-      for(const d of snap.docs){
-        const sub=d.data()||{};
-        if(!sub.actionApplied)await approveEventFundPaid(ev.id,d.id,{silent:true});
-      }
-    }catch(e){console.warn("auto event action",ev.id,e)}
-  }
-}
+async function processAutomaticEventActions(){if(!canEditClub())return;for(const ev of (state.events||[]).filter(e=>state.semesters[e.semester])){try{if(ev.resultAction==="fundPaidAuto"){const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();for(const d of snap.docs)if(!d.data()?.actionApplied)await approveEventFundPaid(ev.id,d.id,{silent:true})}if(ev.specialType==="continuation"||ev.resultAction==="continuationAuto"){if(ev.isOpen===true&&state.semesters[ev.targetSemester||nextSemesterCode(ev.semester)])await ensureContinuationActivity(ev.semester,ev.targetSemester||nextSemesterCode(ev.semester));const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();for(const d of snap.docs)if(d.data()?.continuationApplied!==true)await processContinuationSubmission(ev,d)}}catch(e){console.warn("auto event action",ev.id,e)}}}
 
 /* cổng tra cứu theo từng học kỳ + tự động đồng bộ */
 const PUBLIC_LOOKUP_ROOT="publicLookupSemesters";
@@ -3654,20 +3675,20 @@ async function deleteAccountProfile(uid){
 
 
 /* ===== Audit / Trash / Approval ===== */
-async function loadAuditLogs(){if(!canEditClub())return;try{const s=await fbDb.collection("auditLogs").orderBy("createdAt","desc").limit(150).get();auditRows=s.docs.map(d=>({id:d.id,...d.data()}));renderAuditLogs();await loadImportHistory()}catch(e){console.warn(e)}}
+async function loadAuditLogs(){if(!canEditClub())return;try{const s=await fbDb.collection("auditLogs").where("semester","==",semester).limit(250).get();auditRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderAuditLogs();await loadImportHistory()}catch(e){console.warn(e)}}
 function renderAuditLogs(){const root=$("#auditList");if(!root)return;root.innerHTML=(auditRows||[]).map(a=>`<div class="audit-item"><div class="audit-item-main"><h4>${esc(a.summary||a.action||"Thay đổi")}</h4><p>${esc(a.actorName||a.actorEmail||"")} • ${dateTime(a.createdAt)} • ${esc(a.module||"")} ${a.semester?`• ${esc(a.semester)}`:""}</p>${a.before!==null&&a.before!==undefined?`<p><span class="diff-old">${esc(shortValue(a.before))}</span> → <span class="diff-new">${esc(shortValue(a.after))}</span></p>`:""}</div><div class="audit-actions">${a.undo?`<button class="secondary" onclick="undoAudit('${a.id}')">Hoàn tác</button>`:""}</div></div>`).join("")||`<div class="empty">Chưa có nhật ký.</div>`}
-async function loadImportHistory(){try{const s=await fbDb.collection("importHistory").orderBy("createdAt","desc").limit(100).get();importHistoryRows=s.docs.map(d=>({id:d.id,...d.data()}));renderImportHistory()}catch(e){console.warn(e)}}
+async function loadImportHistory(){try{const s=await fbDb.collection("importHistory").where("semester","==",semester).limit(200).get();importHistoryRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderImportHistory()}catch(e){console.warn(e)}}
 function renderImportHistory(){const root=$("#importHistoryList");if(!root)return;root.innerHTML=(importHistoryRows||[]).map(x=>`<div class="audit-item"><div><h4>${esc(x.type||"Import")} — ${esc(x.fileName||"Không rõ file")}</h4><p>${dateTime(x.createdAt)} • ${esc(x.actorName||"")} • Tổng ${x.total||0} • Thêm ${x.added||0} • Cập nhật ${x.updated||0} • Bỏ qua ${x.skipped||0}</p><p>${esc(x.details||"")}</p></div></div>`).join("")||`<div class="empty">Chưa có lịch sử import.</div>`}
 function showAuditTab(tab){$("#auditPanel").classList.toggle("hidden",tab!=="audit");$("#importHistoryPanel").classList.toggle("hidden",tab!=="imports");$("#auditTabBtn").classList.toggle("active",tab==="audit");$("#importTabBtn").classList.toggle("active",tab==="imports")}
-async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(!confirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore")await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return alert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){alert("Không hoàn tác được: "+(e.message||e))}}
-async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").orderBy("deletedAt","desc").limit(150).get();trashRows=s.docs.map(d=>({id:d.id,...d.data()}));renderTrashBin()}catch(e){console.warn(e)}}
+async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(a.semester!==semester)return alert("Nhật ký này không thuộc học kỳ đang chọn.");if(semesterLocked())return alert("Học kỳ đang khóa, không thể hoàn tác.");if(!confirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore")await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return alert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){alert("Không hoàn tác được: "+(e.message||e))}}
+async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").where("semester","==",semester).limit(250).get();trashRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");renderTrashBin()}catch(e){console.warn(e)}}
 function renderTrashBin(){const root=$("#trashList");if(!root)return;root.innerHTML=(trashRows||[]).map(t=>`<div class="trash-item"><div class="trash-item-main"><h4>${esc(trashTypeLabel(t.type))}: ${esc(t.meta?.label||t.data?.name||t.data?.description||t.sourceId||"")}</h4><p>Xóa bởi ${esc(t.deletedByName||"")} • ${dateTime(t.deletedAt)} • Hết hạn ${dateTime(t.expiresAt)}</p></div><div class="trash-actions"><button class="secondary" onclick="restoreTrash('${t.id}')">Khôi phục</button><button class="danger" onclick="purgeTrash('${t.id}')">Xóa vĩnh viễn</button></div></div>`).join("")||`<div class="empty">Thùng rác trống.</div>`}
 function trashTypeLabel(t){return ({member:"Thành viên",finance:"Giao dịch",event:"Sự kiện",eventSubmission:"Phản hồi sự kiện"})[t]||t}
-async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission")await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
-async function purgeTrash(id){if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;try{await fbDb.collection("trashBin").doc(id).delete();toast("Đã xóa vĩnh viễn")}catch(e){alert(e.message||e)}}
-async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").orderBy("createdAt","desc").limit(120).get();approvalRows=s.docs.map(d=>({id:d.id,...d.data()}));renderApprovalRequests()}catch(e){console.warn(e)}}
+async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(semesterLocked())return alert("Học kỳ đang khóa, không thể khôi phục.");if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission")await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
+async function purgeTrash(id){const t=trashRows.find(x=>x.id===id);if(!t||t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;try{await fbDb.collection("trashBin").doc(id).delete();toast("Đã xóa vĩnh viễn")}catch(e){alert(e.message||e)}}
+async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(200).get();approvalRows=sortTimestampDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
-async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
+async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return alert("Yêu cầu này không thuộc học kỳ đang chọn.");if(semesterLocked())return alert("Học kỳ đang khóa, không thể duyệt thay đổi.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention",semesterKey:r.semester||semester});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
 async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="deleteMember"){const m=(await fbDb.collection("members").doc(p.id).get()).data();if(m)await moveToTrash("member",p.id,m,{label:m.name,semester:m.semester});await fbDb.collection("members").doc(p.id).delete()}else if(r.kind==="deleteFinance"){const s=await fbDb.collection("financeTransactions").doc(p.id).get();if(s.exists)await moveToTrash("finance",p.id,s.data(),{label:s.data().description,semester:s.data().semester});await fbDb.collection("financeTransactions").doc(p.id).delete()}else if(r.kind==="bulkAttendance"){await commitInChunks((p.updates||[]).map(u=>b=>b.update(fbDb.collection("members").doc(u.id),{[`scores.${p.itemId}`]:u.val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid})))}else throw new Error("Loại yêu cầu không được hỗ trợ")}
 
 /* ===== QR Attendance ===== */
@@ -3953,29 +3974,14 @@ function renderSettings(){
   bindCurrencyInputs($("#settings"));
 }
 $("#saveSemesterBtn").onclick=async()=>{
-  const newCode=$("#setSemesterCode").value.trim()||semester,old=semester;
-  sem().code=newCode;
-  sem().name=$("#setSemesterName").value.trim()||newCode;
-  sem().startDate=$("#setSemesterStart").value||"";
-  sem().endDate=$("#setSemesterEnd").value||"";
+  if(!canEditClub())return;const p=parseSemesterCode(semester);if(!p)return alert("Học kỳ hiện tại dùng mã cũ không đúng chuẩn SP/SU/FA. Hãy tạo học kỳ chuẩn mới.");
+  sem().code=semester;sem().term=p.prefix;sem().year=p.year;sem().name=p.name;sem().startDate=$("#setSemesterStart").value||"";sem().endDate=$("#setSemesterEnd").value||"";
   if(sem().startDate&&sem().endDate&&sem().endDate<sem().startDate)return alert("Ngày kết thúc không thể trước ngày bắt đầu.");
-  sem().fee=parseCurrency($("#setSemesterFee").value);
-  sem().openingBalance=parseCurrency($("#setOpeningBalance").value);
-  if(newCode!==old){
-    state.semesters[newCode]=sem();
-    delete state.semesters[old];
-    if(state.lookupConfig?.[old]){
-      state.lookupConfig[newCode]=state.lookupConfig[old];
-      delete state.lookupConfig[old];
-    }
-    const changedMembers=state.members.filter(m=>m.semester===old),changedTx=state.transactions.filter(t=>t.semester===old);
-    state.members.forEach(m=>{if(m.semester===old)m.semester=newCode});state.transactions.forEach(t=>{if(t.semester===old)t.semester=newCode});
-    try{await commitInChunks([...changedMembers.map(m=>b=>b.set(fbDb.collection("members").doc(m.id),{semester:newCode,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})),...changedTx.map(t=>b=>b.set(fbDb.collection("financeTransactions").doc(t.id),{semester:newCode,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}))])}catch(e){console.warn("semester rename realtime",e)}
-    semester=newCode;
-  }
-  save();toast("Đã lưu học kỳ");
+  sem().fee=parseCurrency($("#setSemesterFee").value);sem().openingBalance=parseCurrency($("#setOpeningBalance").value);save();await logAudit({action:"update-semester",module:"settings",summary:`Cập nhật ${p.name}`});toast("Đã lưu học kỳ");
 };
-$("#newSemesterBtn").onclick=()=>{const code=prompt("Nhập mã học kỳ mới, ví dụ SP27");if(!code||state.semesters[code])return;state.semesters[code]={code,name:code,startDate:"",endDate:"",fee:0,openingBalance:0,groups:structuredClone(DEFAULT_STATE.semesters.FA26.groups)};semester=code;save();renderSettings()};
+function openCanonicalSemesterCreator(){if(!canEditClub())return;const suggested=nextSemesterCode(latestSemesterKey()||semester)||currentCanonicalSemesterCode(),sp=parseSemesterCode(suggested);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(620px,100%)"><div class="modal-head"><div><h2>Tạo học kỳ chính</h2><div class="small-help">Mỗi năm chỉ có Spring → Summer → Fall.</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Kỳ<select id="canonicalTerm"><option value="SP" ${sp?.prefix==="SP"?"selected":""}>Spring (SP)</option><option value="SU" ${sp?.prefix==="SU"?"selected":""}>Summer (SU)</option><option value="FA" ${sp?.prefix==="FA"?"selected":""}>Fall (FA)</option></select></label><label>Năm<input id="canonicalYear" type="number" min="2020" max="2099" value="${sp?.year||new Date().getFullYear()}"></label><label class="full">Mã được tạo<input id="canonicalPreview" readonly value="${esc(suggested)}"></label></div><div class="semester-model-note">Thứ tự chuẩn: <b>SP → SU → FA → SP năm kế tiếp</b>.</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createCanonicalSemester()">Tạo học kỳ</button></div></div></div>`;$("#modalWrap").classList.remove("hidden");const update=()=>{$("#canonicalPreview").value=canonicalSemesterCode($("#canonicalTerm").value,Number($("#canonicalYear").value||new Date().getFullYear()))};$("#canonicalTerm").onchange=update;$("#canonicalYear").oninput=update}
+async function createCanonicalSemester(){const code=canonicalSemesterCode($("#canonicalTerm").value,Number($("#canonicalYear").value));if(state.semesters[code])return alert("Học kỳ này đã tồn tại.");const prev=previousSemesterCode(code),source=state.semesters[prev]||sem()||DEFAULT_STATE.semesters.FA26;state.semesters[code]=createCanonicalSemesterObject(code,source);state.lookupConfig[code]=defaultLookupConfig();semester=code;closeModal();save();await logAudit({action:"create-semester",module:"settings",summary:`Tạo học kỳ ${canonicalSemesterName(code)}`,semesterKey:code});watchSuiteCollections();toast("Đã tạo "+canonicalSemesterName(code))}
+$("#newSemesterBtn").onclick=openCanonicalSemesterCreator;
 async function deleteLookupSemesterRemote(semCode){
   try{
     const membersSnap=await fbDb.collection(PUBLIC_LOOKUP_ROOT).doc(semCode).collection("members").get();
@@ -3987,12 +3993,15 @@ async function deleteLookupSemesterRemote(semCode){
     return false;
   }
 }
+async function deleteCollectionBySemester(collectionName,semCode){const snap=await fbDb.collection(collectionName).where("semester","==",semCode).get();if(snap.empty)return 0;await commitInChunks(snap.docs.map(d=>b=>b.delete(d.ref)));return snap.size}
+async function deleteSemesterDeepData(semCode){let eventsDeleted=0,qrDeleted=0,customLookupDeleted=0;const es=await fbDb.collection("eventPortals").where("semester","==",semCode).get();for(const ev of es.docs){const subs=await ev.ref.collection("submissions").get();if(!subs.empty)await commitInChunks(subs.docs.map(d=>b=>b.delete(d.ref)));await ev.ref.delete();eventsDeleted++}const qs=await fbDb.collection("attendancePortals").where("semester","==",semCode).get();for(const q of qs.docs){const c=await q.ref.collection("checkins").get();if(!c.empty)await commitInChunks(c.docs.map(d=>b=>b.delete(d.ref)));await q.ref.delete();qrDeleted++}const ls=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).where("scopeSemester","==",semCode).get();for(const p of ls.docs){const ar=await p.ref.collection("records").get();if(!ar.empty)await commitInChunks(ar.docs.map(d=>b=>b.delete(d.ref)));const pub=fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id),pr=await pub.collection("records").get();if(!pr.empty)await commitInChunks(pr.docs.map(d=>b=>b.delete(d.ref)));await p.ref.delete();await pub.delete();customLookupDeleted++}await Promise.all([deleteCollectionBySemester("auditLogs",semCode),deleteCollectionBySemester("trashBin",semCode),deleteCollectionBySemester("importHistory",semCode),deleteCollectionBySemester("approvalRequests",semCode),deleteCollectionBySemester("systemNotifications",semCode)]);return{eventsDeleted,qrDeleted,customLookupDeleted}}
+
 $("#deleteSemesterBtn").onclick=async()=>{
   const keys=Object.keys(state.semesters);
   if(keys.length<=1)return alert("Không thể xóa học kỳ cuối cùng. Hãy tạo học kỳ khác trước.");
   const confirmCode=prompt(`Nhập chính xác mã học kỳ "${semester}" để xác nhận xóa dữ liệu học kỳ này.`);
   if(confirmCode!==semester)return alert("Xác nhận không đúng, hệ thống chưa xóa dữ liệu.");
-  const semToDelete=semester;
+  const semToDelete=semester;let deepSummary={};try{deepSummary=await deleteSemesterDeepData(semToDelete)}catch(e){console.warn("deep semester cleanup",e)}
   const removedMembers=state.members.filter(m=>m.semester===semToDelete).length;
   const removedTx=state.transactions.filter(t=>t.semester===semToDelete).length;
   delete state.semesters[semToDelete];
@@ -4000,12 +4009,12 @@ $("#deleteSemesterBtn").onclick=async()=>{
   const memberIdsToDelete=state.members.filter(m=>m.semester===semToDelete).map(m=>m.id),txIdsToDelete=state.transactions.filter(t=>t.semester===semToDelete).map(t=>t.id);
   state.members=state.members.filter(m=>m.semester!==semToDelete);state.transactions=state.transactions.filter(t=>t.semester!==semToDelete);
   try{await commitInChunks([...memberIdsToDelete.map(id=>b=>b.delete(fbDb.collection("members").doc(id))),...txIdsToDelete.map(id=>b=>b.delete(fbDb.collection("financeTransactions").doc(id)))])}catch(e){console.warn("delete semester realtime",e)}
-  semester=Object.keys(state.semesters)[0];
+  semester=latestSemesterKey()||sortedSemesterKeys()[0]||"";
   selectedInfoId=null;
   save();
   const remoteDeleted=await deleteLookupSemesterRemote(semToDelete);
   toast("Đã xóa dữ liệu học kỳ");
-  alert(`Đã xóa học kỳ ${semToDelete}.\n- Thành viên đã xóa: ${removedMembers}\n- Giao dịch đã xóa: ${removedTx}\n- Cổng tra cứu Firebase: ${remoteDeleted?"Đã xóa":"Không xóa được, nếu cần hãy xóa lại trên Firebase"}`);
+  alert(`Đã xóa học kỳ ${semToDelete}.\n- Thành viên: ${removedMembers}\n- Giao dịch: ${removedTx}\n- Sự kiện: ${deepSummary.eventsDeleted||0}\n- QR điểm danh: ${deepSummary.qrDeleted||0}\n- Tra cứu tự do: ${deepSummary.customLookupDeleted||0}\n- Nhật ký/Thùng rác/Import/Chờ duyệt/Thông báo: đã dọn theo kỳ\n- Cổng tra cứu thành viên: ${remoteDeleted?"Đã xóa":"Không xóa được"}`);
 };
 $("#addFieldBtn").onclick=()=>{const label=$("#newFieldLabel").value.trim();if(!label)return;const key="custom_"+uid();state.memberFields.push({key,label,type:$("#newFieldType").value,required:false});$("#newFieldLabel").value="";save();renderSettings()};
 function removeMemberField(i){if(confirm("Xóa trường này? Dữ liệu cũ của trường sẽ không còn hiển thị.")){state.memberFields.splice(i,1);save();renderSettings()}}
@@ -4036,7 +4045,7 @@ function applySettingsSemesterLock(){
   ["newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].forEach(id=>{const el=$("#"+id);if(el)el.disabled=false});
 }
 renderSettings=function(){__renderSettingsBase();if($("#semesterLockSetting"))$("#semesterLockSetting").value=sem().locked?"1":"0";if($("#approvalDeleteMember")){$("#approvalDeleteMember").checked=!!state.approvalConfig.deleteMember;$("#approvalDeleteFinance").checked=!!state.approvalConfig.deleteFinance;$("#approvalBulkAttendance").checked=!!state.approvalConfig.bulkAttendance}const el=$("#semesterChecklistSettings");if(el)el.innerHTML=semesterChecklist().map(x=>`<div class="check-item"><span>${esc(x.label)}</span><b class="${x.ok?"ok":"warn"}">${x.ok?"✓":"!"}</b></div>`).join("");applySettingsSemesterLock()};
-$("#duplicateSemesterBtn").onclick=async()=>{if(!canEditClub())return;const code=prompt("Mã học kỳ mới, ví dụ SP27");if(!code)return;if(state.semesters[code])return alert("Mã học kỳ đã tồn tại.");const name=prompt("Tên học kỳ mới",code)||code;const src=structuredClone(sem());state.semesters[code]={...src,code,name,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))};state.lookupConfig[code]=defaultLookupConfig();save();await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});toast("Đã nhân bản học kỳ")};
+$("#duplicateSemesterBtn").onclick=async()=>{if(!canEditClub())return;const code=nextSemesterCode(semester);if(!code)return alert("Mã kỳ hiện tại không đúng chuẩn.");if(state.semesters[code])return alert(`${canonicalSemesterName(code)} đã tồn tại.`);if(!confirm(`Nhân bản cấu trúc ${sem().name} sang ${canonicalSemesterName(code)}?\n\nKhông sao chép thành viên, điểm hoặc thu chi.`))return;state.semesters[code]=createCanonicalSemesterObject(code,sem());state.lookupConfig[code]=defaultLookupConfig();save();await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});toast("Đã nhân bản sang "+canonicalSemesterName(code))};
 $("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1",previous=!!sem().locked;if(want&&!confirm("Khóa toàn bộ dữ liệu học kỳ này? Sau khi khóa, Admin và BCN đều chỉ có thể xem. Muốn chỉnh sửa lại phải mở khóa tại Thiết lập.")){e.target.value="0";return}sem().locked=want;persistStateOnly();const ok=await saveCloudStateNow();if(!ok){sem().locked=previous;persistStateOnly();e.target.value=previous?"1":"0";renderAll();return alert("Không đồng bộ được trạng thái khóa lên Firestore. Hệ thống đã giữ trạng thái cũ để tránh xung đột.")}await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa toàn bộ dữ liệu học kỳ":"Đã mở khóa học kỳ")};
 for(const id of ["approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"]){const el=$("#"+id);if(el)el.onchange=()=>{state.approvalConfig={deleteMember:$("#approvalDeleteMember").checked,deleteFinance:$("#approvalDeleteFinance").checked,bulkAttendance:$("#approvalBulkAttendance").checked};save();toast("Đã lưu chế độ duyệt")}}
 function renderAll(){renderSemesterSelect();renderQLTV();renderMemberList();renderInfo();renderFinance();renderDashboard();if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();if($("#settings")&&!$("#settings").classList.contains("hidden"))renderSettings();if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();if($("#freeLookup")&&!$("#freeLookup").classList.contains("hidden"))renderFreeLookup();if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs();if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin();applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess()}

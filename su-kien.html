@@ -93,19 +93,10 @@ function renderRichText(md){
   return s.replace(/\n/g,"<br>");
 }
 function safeName(n){return String(n||"file").replace(/[^a-zA-Z0-9._-]/g,"_")}
-async function init(){
-  if(!eventId){showClosed();return}
-  try{
-    const snap=await db.collection("eventPortals").doc(eventId).get();
-    if(!snap.exists||snap.data()?.isOpen!==true){showClosed();return}
-    eventConfig=snap.data();
-    $("#loading").style.display="none";$("#formView").style.display="block";
-    $("#title").textContent=eventConfig.title||"Cổng sự kiện";
-    $("#description").textContent=eventConfig.description||"";
-    renderFields();
-  }catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}
-}
-function showClosed(){$("#loading").style.display="none";$("#closed").style.display="block"}
+let eventUnsub=null;
+function applyEventConfig(data){eventConfig=data;if(!eventConfig||eventConfig.isOpen!==true){showClosed();return}$("#closed").style.display="none";$("#loading").style.display="none";$("#formView").style.display="block";$("#title").textContent=eventConfig.title||"Cổng sự kiện";$("#description").textContent=eventConfig.description||"";const target=eventConfig.specialType==="continuation"&&eventConfig.targetSemester?` → ${eventConfig.targetSemester}`:"";$("#eventScope").textContent=`Học kỳ: ${eventConfig.semester||"—"}${target}`;renderFields()}
+async function init(){if(!eventId){showClosed();return}try{eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(snap=>{if(!snap.exists){showClosed();return}applyEventConfig(snap.data())},e=>{$("#loading").textContent="Không thể tải cổng sự kiện."})}catch(e){$("#loading").textContent="Không thể tải cổng sự kiện."}}
+function showClosed(){$("#loading").style.display="none";$("#formView").style.display="none";$("#closed").style.display="block"}
 function renderFields(){
   $("#eventForm").innerHTML=(eventConfig.fields||[]).map(f=>{
     if(f.type==="content"){
@@ -172,7 +163,7 @@ $("#submitBtn").onclick=async()=>{
     console.error(e);$("#formError").style.display="block";$("#formError").textContent="Không gửi được: "+(e.message||e);
   }finally{$("#submitBtn").disabled=false}
 };
-init();
+window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}});init();
 </script>
 </body>
 </html>
