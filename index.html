@@ -507,6 +507,22 @@ input:focus,select:focus,textarea:focus{
   .sidebar-scroll{scrollbar-width:auto}
 }
 
+
+/* ===== V29 Sync / Lock / Member Stats ===== */
+.semester-lock-notice{margin:0 0 14px;padding:12px 14px;border:1px solid #e6c98b;border-radius:13px;background:linear-gradient(135deg,#fff9e9,#fff4d6);color:#6f5411;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 10px 28px rgba(116,83,12,.07)}
+.semester-lock-notice>div{min-width:0}.semester-lock-notice b{display:block;font-size:12px;margin-bottom:3px}.semester-lock-notice span{display:block;font-size:11px;line-height:1.5}.semester-lock-notice button{white-space:nowrap}
+.qr-live-panel{background:rgba(255,255,255,.95);border:1px solid #eadfe2;border-radius:15px;padding:15px;margin:0 0 14px;box-shadow:0 12px 34px rgba(74,24,40,.055)}
+.qr-live-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:11px}.qr-live-head h3{margin:3px 0;color:#541025}.qr-live-head p{margin:0;color:#7e7075;font-size:11px;line-height:1.45}.qr-live-head-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.qr-portal-list{display:grid;gap:8px}.qr-portal-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(150px,.8fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #eadfe2;border-radius:11px;background:#fff}.qr-portal-row:hover{border-color:#d8bcc5;background:#fffafb}
+.qr-portal-main b{display:block;font-size:12px;color:#3d2029}.qr-portal-main small{display:block;margin-top:3px;color:#85767b;line-height:1.4}.qr-portal-counts{display:flex;gap:6px;flex-wrap:wrap}.qr-portal-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.qr-mini-badge{font-size:9px;font-weight:850;padding:5px 7px;border-radius:999px;background:#f6edf0;color:#6e1a31;border:1px solid #ead8de}.qr-mini-badge.pending{background:#fff6de;color:#875c00;border-color:#ead69a}.qr-mini-badge.approved{background:#edf9f2;color:#18724b;border-color:#cdebd9}.qr-mini-badge.rejected{background:#fff0f2;color:#992c44;border-color:#f0cbd3}
+.member-ranking-list{display:grid;gap:7px}.member-rank-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 10px;border:1px solid #eee1e5;border-radius:10px;background:#fff;cursor:pointer}.member-rank-row:hover{background:#fff8fa;border-color:#dcc5cc}
+.member-rank-no{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#f6e9ee;color:#6d1930;font-weight:900;font-size:11px}.member-rank-row:first-child .member-rank-no{background:#6f1730;color:#fff}.member-rank-main b{display:block;font-size:11px}.member-rank-main small{display:block;color:#89797e;font-size:9px;margin-top:2px}.member-rank-score{text-align:right}.member-rank-score b{display:block;color:#61152b;font-size:12px}.member-rank-score small{color:#8a7a7f;font-size:9px}
+.member-semester-stats{margin-top:18px}.member-semester-stats h3{margin:0 0 9px}.member-stat-table-wrap{overflow:auto;border:1px solid #eadfe2;border-radius:12px}.member-stat-table{width:100%;min-width:720px;border-collapse:collapse}.member-stat-table th,.member-stat-table td{padding:9px 10px;border-bottom:1px solid #eee4e7;text-align:left}.member-stat-table th{font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:#7b6d72;background:#fff9fb}.member-stat-table td{font-size:11px}
+.activity-rating{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:850}.activity-rating.high{background:#eaf8f0;color:#18704a}.activity-rating.mid{background:#fff5dc;color:#856000}.activity-rating.low{background:#f6eef0;color:#745562}.activity-rating.none{background:#f2f2f2;color:#7c7c7c}
+.current-rank-box{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:13px 0 0;padding:11px 13px;border:1px solid #eadfe2;border-radius:11px;background:linear-gradient(135deg,#fff,#fff8fa)}.current-rank-box b{font-size:13px;color:#5d152b}.current-rank-box span{font-size:11px;color:#7e7075}
+@media(max-width:800px){.qr-live-head,.semester-lock-notice{display:block}.qr-live-head-actions{margin-top:9px;justify-content:flex-start}.qr-portal-row{grid-template-columns:1fr}.qr-portal-actions{justify-content:flex-start}}
+
 </style>
 </head>
 <body>
@@ -568,7 +584,10 @@ input:focus,select:focus,textarea:focus{
         <button class="admin-chip" id="adminChip">ADMIN ▾</button>
       </div>
     </header>
-
+    <div id="semesterLockNotice" class="semester-lock-notice hidden">
+      <div><b>🔒 Học kỳ đang bị khóa</b><span>Toàn bộ dữ liệu của học kỳ này đang ở chế độ chỉ xem. Muốn chỉnh sửa, vào Thiết lập và chuyển trạng thái sang “Đang mở chỉnh sửa”.</span></div>
+      <button class="secondary" onclick="openTab('settings')">Mở Thiết lập</button>
+    </div>
 
     <section id="dashboard">
       <div class="dashboard-hero">
@@ -583,6 +602,7 @@ input:focus,select:focus,textarea:focus{
       <div id="dashboardStats" class="dashboard-stats"></div>
       <div class="dashboard-grid">
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">HOẠT ĐỘNG</span><h3>Tỷ lệ tham gia</h3></div></div><div id="dashboardActivityChart" class="mini-chart"></div></div>
+        <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">THÀNH VIÊN</span><h3>Hoạt động nổi bật trong kỳ</h3></div><button class="ghost" onclick="openTab('info')">Xem hồ sơ</button></div><div id="dashboardMemberRanking" class="member-ranking-list"></div></div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">TÀI CHÍNH</span><h3>Thu / chi theo tháng</h3></div></div><div id="dashboardFinanceChart" class="mini-chart"></div></div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">HỌC KỲ</span><h3>Checklist vận hành</h3></div></div><div id="dashboardChecklist"></div></div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">GẦN ĐÂY</span><h3>Thay đổi mới nhất</h3></div><button class="ghost" onclick="openTab('audit')">Xem tất cả</button></div><div id="dashboardRecentAudit"></div></div>
@@ -603,6 +623,20 @@ input:focus,select:focus,textarea:focus{
         <button class="primary" id="uploadAttendanceBtn">Upload DS tham gia</button>
         <button class="secondary" id="qrAttendanceBtn">QR điểm danh</button>
         <input class="file-input" id="attendanceExcelInput" type="file" accept=".xlsx,.xls">
+      </div>
+      <div class="qr-live-panel">
+        <div class="qr-live-head">
+          <div>
+            <div class="eyebrow">ĐỒNG BỘ REAL-TIME</div>
+            <h3>QR điểm danh & lượt gửi</h3>
+            <p>Những lượt gửi từ link QR sẽ xuất hiện tự động tại đây, kể cả khi Admin đã đóng cửa sổ QR.</p>
+          </div>
+          <div class="qr-live-head-actions">
+            <span id="attendancePendingBadge" class="status-badge">0 chờ duyệt</span>
+            <button class="secondary" onclick="watchAttendancePortals(true)">Làm mới</button>
+          </div>
+        </div>
+        <div id="attendancePortalLiveList" class="qr-portal-list"><div class="empty">Đang đồng bộ QR điểm danh…</div></div>
       </div>
       <div class="toolbar">
         <input id="searchManage" placeholder="Tìm thành viên để điểm danh…">
@@ -953,7 +987,8 @@ let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:""};
 let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[];
 let notificationUnsub=null,approvalUnsub=null,auditUnsub=null,trashUnsub=null;
-let qrCurrentPortal=null;
+let attendancePortalsUnsub=null,attendancePortalRows=[],attendanceCheckinRowsByPortal={},attendanceCheckinUnsubs=new Map();
+let qrCurrentPortal=null,checkinUnsub=null;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -1029,14 +1064,6 @@ const MODULE_PERMISSION_KEYS={
   events:["viewEvents","editEvents"],
   lookup:["viewLookup","editLookup"]
 };
-function canEditModule(module){
-  if(canEditClub())return true;
-  if(!isBCN())return false;
-  if(module==="lookup")return false;
-  const pair=MODULE_PERMISSION_KEYS[module];if(!pair)return false;
-  const [viewKey,editKey]=pair,p=currentProfile?.permissions||{};
-  return p[viewKey]===true && p[editKey]===true;
-}
 function normalizeState(){
   state.lookupConfig=state.lookupConfig||{};
   state.events=state.events||[];
@@ -1174,9 +1201,13 @@ async function deleteMemberRealtime(id){await fbDb.collection("members").doc(id)
 
 
 /* ===== V27 Complete Suite helpers ===== */
-function semesterLocked(){return !!sem()?.locked}
-function canOverrideSemesterLock(){return role()==="superadmin"}
+function semesterLocked(semKey=semester){return !!state.semesters?.[semKey]?.locked}
+function semesterEditable(semKey=semester){return !semesterLocked(semKey)}
 function currentUserLabel(){return currentProfile?.displayName||currentFirebaseUser?.email||"Người dùng"}
+function ensureSemesterEditable(semKey=semester,message="Dữ liệu học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi chỉnh sửa."){
+  if(semesterLocked(semKey)){alert(message);return false}
+  return true;
+}
 function firestorePlain(v){
   if(v===undefined)return null;
   try{return structuredClone(v)}catch{return JSON.parse(JSON.stringify(v,(k,x)=>x?.toDate?x.toDate().toISOString():x))}
@@ -1229,7 +1260,7 @@ function dateTime(ts){try{const d=ts?.toDate?ts.toDate():new Date(ts);return Num
 function shortValue(v){if(v===null||v===undefined)return "—";if(typeof v==="object")return JSON.stringify(v).slice(0,130);return String(v).slice(0,130)}
 
 function canEditModule(module){
-  if(["attendance","members","finance","events"].includes(module)&&semesterLocked()&&!canOverrideSemesterLock())return false;
+  if(["attendance","members","finance","events","lookup"].includes(module)&&semesterLocked())return false;
   if(canEditClub())return true;
   if(!isBCN())return false;
   if(module==="lookup")return false;
@@ -1258,10 +1289,41 @@ window.addEventListener("unhandledrejection",e=>{
   if($("#app")&&!$("#app").classList.contains("hidden"))toast("Có lỗi đồng bộ dữ liệu. Vui lòng thử lại.");
 });
 function sem(){return state.semesters[semester]}function members(){return state.members.filter(m=>m.semester===semester)}function txs(){return state.transactions.filter(t=>t.semester===semester)}
-function scoreMember(m){
-  let raw=0;
-  for(const g of sem().groups){for(const item of g.items){const v=m.scores?.[item.id];if(g.mode==="checkbox"){if(v===true)raw+=Number(item.points||0)}else raw+=Number(v||0)}}
-  if(m.fundPaid)raw+=10;const bonus=raw>=30?10:raw>=15?5:0;const total=raw+bonus;const conversion=total?Math.ceil(total/10):0;return{raw,bonus,total,conversion}
+function scoreMemberForSemester(m,semKey=semester){
+  const cfg=state.semesters?.[semKey]||{groups:[]};
+  let activityPoints=0,participated=0,totalActivities=0;
+  for(const g of (cfg.groups||[]))for(const item of (g.items||[])){
+    totalActivities++;
+    const v=m?.scores?.[item.id],joined=g.mode==="checkbox"?v===true:Number(v||0)>0;
+    if(joined)participated++;
+    if(g.mode==="checkbox"){if(v===true)activityPoints+=Number(item.points||0)}else activityPoints+=Number(v||0);
+  }
+  const fundPoints=m?.fundPaid?10:0,raw=activityPoints+fundPoints,bonus=raw>=30?10:raw>=15?5:0,total=raw+bonus,conversion=total?Math.ceil(total/10):0;
+  const participationRate=totalActivities?Math.round(participated/totalActivities*100):0;
+  return {activityPoints,fundPoints,participated,totalActivities,participationRate,raw,bonus,total,conversion};
+}
+function scoreMember(m){return scoreMemberForSemester(m,m?.semester||semester)}
+function memberActivityRating(stats){
+  if(!stats.totalActivities||!stats.participated)return {label:"Chưa tham gia",className:"none"};
+  if(stats.participationRate>=75)return {label:"Rất tích cực",className:"high"};
+  if(stats.participationRate>=50)return {label:"Tích cực",className:"high"};
+  if(stats.participationRate>=25)return {label:"Tham gia vừa",className:"mid"};
+  return {label:"Ít tham gia",className:"low"};
+}
+function semesterMemberRanking(semKey=semester){
+  const rows=(state.members||[]).filter(m=>m.semester===semKey).map(m=>({member:m,stats:scoreMemberForSemester(m,semKey)}));
+  rows.sort((a,b)=>b.stats.participated-a.stats.participated||b.stats.activityPoints-a.stats.activityPoints||b.stats.total-a.stats.total||String(a.member.name||"").localeCompare(String(b.member.name||""),"vi"));
+  return rows.map((x,i)=>({...x,rank:i+1}));
+}
+function sameMemberAcrossSemesters(m){
+  const mssv=normalizeText(m?.mssv||""),name=normalizeText(m?.name||"");
+  return (state.members||[]).filter(x=>mssv?normalizeText(x.mssv||"")===mssv:normalizeText(x.name||"")===name);
+}
+function memberSemesterHistory(m){
+  return sameMemberAcrossSemesters(m).map(x=>{
+    const stats=scoreMemberForSemester(x,x.semester),rank=semesterMemberRanking(x.semester).find(r=>r.member.id===x.id)?.rank||null;
+    return {member:x,semesterKey:x.semester,semesterName:state.semesters?.[x.semester]?.name||x.semester,stats,rank,rating:memberActivityRating(stats)};
+  }).sort((a,b)=>String(b.semesterKey).localeCompare(String(a.semesterKey)));
 }
 function ensureMemberScores(m){m.scores=m.scores||{};for(const g of sem().groups)for(const it of g.items)if(!(it.id in m.scores))m.scores[it.id]=g.mode==="checkbox"?false:0}
 
@@ -1342,6 +1404,7 @@ async function validateAccess(user){
 }
 fbAuth.onAuthStateChanged(async user=>{
   if(!user){
+    stopAttendancePortalWatchers();if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
     currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
     $("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden");
     return;
@@ -1407,18 +1470,21 @@ function watchSuiteCollections(){
     auditUnsub=fbDb.collection("auditLogs").orderBy("createdAt","desc").limit(120).onSnapshot(s=>{auditRows=s.docs.map(d=>({id:d.id,...d.data()}));renderDashboardRecentAudit();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs()},e=>console.warn("audit",e));
     trashUnsub=fbDb.collection("trashBin").orderBy("deletedAt","desc").limit(120).onSnapshot(s=>{trashRows=s.docs.map(d=>({id:d.id,...d.data()}));if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin()},e=>console.warn("trash",e));
   }
+  watchAttendancePortals(true);
 }
 function applyRoleAccess(){
   document.body.classList.remove("readonly-mode");
   const navRules={dashboard:true,attention:true,manage:hasViewPermission("viewAttendance"),memberList:hasViewPermission("viewMembers"),info:hasViewPermission("viewMembers"),finance:hasViewPermission("viewFinance"),events:hasViewPermission("viewEvents"),lookupPortal:canEditClub()||hasViewPermission("viewLookup"),freeLookup:canEditClub(),myAccount:true,approvals:canEditClub(),audit:canEditClub(),trash:canEditClub(),accounts:canEditClub(),settings:canEditClub()};
   $$(".nav button[data-tab]").forEach(btn=>btn.classList.toggle("hidden",navRules[btn.dataset.tab]===false));
   const toggle=(s,show)=>{const el=$(s);if(el)el.classList.toggle("hidden",!show)};
-  const ea=canEditModule("attendance"),em=canEditModule("members"),ef=canEditModule("finance"),ee=canEditModule("events");
+  const ea=canEditModule("attendance"),em=canEditModule("members"),ef=canEditModule("finance"),ee=canEditModule("events"),el=canEditModule("lookup");
   $$("#qltvBody input.num-score,#qltvBody input.check:not(.fund-check)").forEach(x=>x.disabled=!ea);$$("#qltvBody input.fund-check").forEach(x=>x.disabled=!ef);
   ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn"].forEach(s=>toggle(s,em));toggle("#uploadFundBtn",ef);$$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);
-  if(isBCN()){["#createPortalBtn","#syncPortalNowBtn","#closePortalBtn","#reopenPortalBtn","#saveLookupSettingsBtn"].forEach(s=>toggle(s,false));$$("#lookupCoreFields input,#lookupCustomFields input").forEach(x=>x.disabled=true)}
-  if($("#readonlyBannerEvents")){ $("#readonlyBannerEvents").classList.toggle("hidden",!isBCN());$("#readonlyBannerEvents").textContent=ee?"BCN — Bạn được cấp quyền chỉnh sửa cổng sự kiện.":"BCN — Bạn chỉ được xem cổng sự kiện và kết quả."}
+  ["#createPortalBtn","#syncPortalNowBtn","#closePortalBtn","#reopenPortalBtn","#saveLookupSettingsBtn"].forEach(s=>toggle(s,el));
+  $$("#lookupCoreFields input,#lookupCustomFields input").forEach(x=>x.disabled=!el);
+  if($("#readonlyBannerEvents")){$("#readonlyBannerEvents").classList.toggle("hidden",!isBCN()&&!semesterLocked());$("#readonlyBannerEvents").textContent=semesterLocked()?"Học kỳ đã khóa — Cổng sự kiện đang ở chế độ chỉ xem.":(ee?"BCN — Bạn được cấp quyền chỉnh sửa cổng sự kiện.":"BCN — Bạn chỉ được xem cổng sự kiện và kết quả.")}
   const chip=$("#semesterLockChip");if(chip)chip.classList.toggle("hidden",!semesterLocked());
+  const notice=$("#semesterLockNotice");if(notice)notice.classList.toggle("hidden",!semesterLocked());
   renderFavoriteNav();
   const active=$(".nav button.active");if(active?.classList.contains("hidden")){const first=$(".nav button[data-tab]:not(.hidden)");if(first)first.click()}
 }
@@ -1431,8 +1497,9 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   b.scrollIntoView({block:"nearest",behavior:"smooth"});
   $("#pageTitle").textContent=b.textContent.trim();
   if(b.dataset.tab==="dashboard")renderDashboard();if(b.dataset.tab==="attention")renderAttention();if(b.dataset.tab==="settings")renderSettings();if(b.dataset.tab==="lookupPortal")renderLookupPortal();if(b.dataset.tab==="freeLookup")renderFreeLookup();if(b.dataset.tab==="events")renderEvents();if(b.dataset.tab==="myAccount")renderMyAccount();if(b.dataset.tab==="approvals")loadApprovalRequests();if(b.dataset.tab==="audit")loadAuditLogs();if(b.dataset.tab==="trash")loadTrashBin();if(b.dataset.tab==="accounts")renderAccounts();
+  applyRoleAccess();
 });
-$("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selectedMemberIds.clear();renderAll()};
+$("#semester").onchange=e=>{semester=e.target.value;selectedInfoId=null;selectedMemberIds.clear();renderAll();watchAttendancePortals(true)};
 
 
 /* sidebar scrolling */
@@ -1597,15 +1664,6 @@ async function saveMemberModal(id){
 function editMember(id){openMemberModal(findMember(id))}function closeModal(){$("#modalWrap").classList.add("hidden");$("#modalWrap").innerHTML=""}
 
 /* member list */
-function renderMemberList(){
-  const fields=state.memberFields,q=$("#searchList").value.trim().toLowerCase(),list=members().filter(m=>!q||(m.name+" "+m.mssv).toLowerCase().includes(q));
-  const visibleIds=list.map(m=>m.id);
-  const allVisibleSelected=visibleIds.length>0&&visibleIds.every(id=>selectedMemberIds.has(id));
-  $("#memberListHead").innerHTML=`<tr><th><input class="member-check edit-only" id="selectAllMembers" type="checkbox" ${allVisibleSelected?"checked":""} ${canEditModule("members")?"":"disabled"} onchange="toggleSelectAllMembers(this.checked)"></th><th>STT</th>${fields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th></th></tr>`;
-  $("#memberListBody").innerHTML=list.map((m,i)=>`<tr><td><input class="member-check edit-only" type="checkbox" ${selectedMemberIds.has(m.id)?"checked":""} ${canEditModule("members")?"":"disabled"} onchange="toggleMemberSelection('${m.id}',this.checked)"></td><td>${i+1}</td>${fields.map(f=>`<td>${esc(f.system?m[f.key]:m.data?.[f.key]||"")}</td>`).join("")}<td>${canEditModule("members")?`<button class="secondary" onclick="editMember('${m.id}')">Sửa</button>`:""}</td></tr>`).join("");
-  $("#memberListEmpty").classList.toggle("hidden",list.length>0);
-  renderMemberBulkBar();
-}
 function renderMemberBulkBar(){
   const count=[...selectedMemberIds].filter(id=>findMember(id)?.semester===semester).length;
   $("#memberSelectedCount").textContent=count;
@@ -1779,23 +1837,25 @@ async function saveCurrentMemberFilter(){applyMemberFilterModal();const name=pro
 function renderSavedFilterSelect(){const el=$("#savedFilterSelect");if(!el)return;el.innerHTML=`<option value="">Bộ lọc đã lưu</option>`+(userPreferences.savedFilters||[]).map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("")}
 $("#memberFilterBtn").onclick=openMemberFilter;$("#savedFilterSelect").onchange=e=>{const f=(userPreferences.savedFilters||[]).find(x=>x.id===e.target.value);if(f){activeMemberFilter=structuredClone(f.filter);renderMemberList()}};
 
-function memberTimeline(m){const items=[];items.push({date:"",title:"Có trong danh sách học kỳ",detail:sem().name||semester});if(m.fundPaid)items.push({date:"",title:"Đã đóng quỹ",detail:money(sem().fee||0)});for(const a of getAllActivities()){const v=m.scores?.[a.item.id],joined=a.group.mode==="checkbox"?v===true:Number(v||0)>0;if(joined)items.push({date:a.item.date||"",title:a.item.name,detail:`${a.group.name} • ${a.group.mode==="checkbox"?Number(a.item.points||0):Number(v||0)} điểm`})}return items.sort((a,b)=>String(b.date).localeCompare(String(a.date)))}
-function renderInfo(){const q=$("#searchInfo").value.trim().toLowerCase(),list=members().filter(m=>!q||(m.name+" "+m.mssv+" "+(m.tags||[]).join(" ")).toLowerCase().includes(q));$("#memberInfoList").innerHTML=list.map(m=>`<div class="member-item ${selectedInfoId===m.id?"active":""}" onclick="selectedInfoId='${m.id}';renderInfo()"><div><b>${esc(m.name)}</b><small>${esc(m.mssv||"")}</small></div><span>›</span></div>`).join("")||`<div class="empty">Không tìm thấy.</div>`;if(selectedInfoId&&findMember(selectedInfoId)){const m=findMember(selectedInfoId),s=scoreMember(m),timeline=memberTimeline(m);$("#memberInfoCard").innerHTML=`<div class="profile-head"><div><span class="status">${esc(m.data?.status||"Thành viên")}</span><h2>${esc(m.name)}</h2><p>${esc(m.mssv||"")}</p><div>${(m.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join("")}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="exportMemberScore('${m.id}')">Xuất điểm Excel</button>${canEditModule("members")?`<button class="secondary" onclick="editMember('${m.id}')">Chỉnh sửa</button>`:""}</div></div><div class="score-summary"><div class="mini"><span>Điểm tổng</span><strong>${s.total}</strong></div><div class="mini"><span>Điểm cộng</span><strong>${s.bonus}</strong></div><div class="mini"><span>Quy đổi</span><strong>${s.conversion}</strong></div><div class="mini"><span>Đóng quỹ</span><strong>${m.fundPaid?"Đã đóng":"Chưa đóng"}</strong></div></div><div class="info-grid">${state.memberFields.filter(f=>!["name","mssv"].includes(f.key)).map(f=>`<label class="${f.key==="note"?"full":""}">${esc(f.label)}<input value="${esc(f.system?m[f.key]:m.data?.[f.key]||"")}" readonly></label>`).join("")}<label class="full">Ghi chú nội bộ<textarea rows="3" readonly>${esc(m.internalNote||"")}</textarea></label></div><h3 style="margin-top:18px">Timeline hoạt động</h3><div class="timeline">${timeline.map(x=>`<div class="timeline-item"><b>${esc(x.title)}</b><small>${esc(x.date?formatDateVN(x.date):"")} ${esc(x.detail||"")}</small></div>`).join("")||`<div class="empty">Chưa có hoạt động.</div>`}</div>`}else $("#memberInfoCard").innerHTML=`<div class="empty">Chọn một thành viên để xem thông tin.</div>`}
 /* info */
 $("#searchInfo").oninput=renderInfo;
+function memberTimeline(m,semKey=semester){
+  const cfg=state.semesters?.[semKey]||{groups:[]},items=[];items.push({date:"",title:"Có trong danh sách học kỳ",detail:cfg.name||semKey});if(m.fundPaid)items.push({date:"",title:"Đã đóng quỹ",detail:money(cfg.fee||0)});
+  for(const g of (cfg.groups||[]))for(const it of (g.items||[])){const v=m.scores?.[it.id],joined=g.mode==="checkbox"?v===true:Number(v||0)>0;if(joined)items.push({date:it.date||"",title:it.name,detail:`${g.name} • ${g.mode==="checkbox"?Number(it.points||0):Number(v||0)} điểm`})}
+  return items.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function openMemberProfileFromRanking(id){selectedInfoId=id;openTab("info");setTimeout(renderInfo,40)}
 function renderInfo(){
-  const q=$("#searchInfo").value.trim().toLowerCase();
-  const list=members().filter(m=>!q||(m.name+" "+m.mssv).toLowerCase().includes(q));
+  const q=$("#searchInfo").value.trim().toLowerCase(),list=members().filter(m=>!q||(m.name+" "+m.mssv+" "+(m.tags||[]).join(" ")).toLowerCase().includes(q));
   $("#memberInfoList").innerHTML=list.map(m=>`<div class="member-item ${selectedInfoId===m.id?"active":""}" onclick="selectedInfoId='${m.id}';renderInfo()"><div><b>${esc(m.name)}</b><small>${esc(m.mssv||"")}</small></div><span>›</span></div>`).join("")||`<div class="empty">Không tìm thấy.</div>`;
-
-  if(selectedInfoId&&findMember(selectedInfoId)){
-    const m=findMember(selectedInfoId),s=scoreMember(m);
-    $("#memberInfoCard").innerHTML=`<div class="profile-head"><div><span class="status">${esc(m.data?.status||"Thành viên")}</span><h2>${esc(m.name)}</h2><p>${esc(m.mssv||"")}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="exportMemberScore('${m.id}')">Xuất điểm Excel</button><button class="secondary" onclick="editMember('${m.id}')">Chỉnh sửa</button></div></div>
-      <div class="score-summary"><div class="mini"><span>Điểm tổng</span><strong>${s.total}</strong></div><div class="mini"><span>Điểm cộng</span><strong>${s.bonus}</strong></div><div class="mini"><span>Quy đổi</span><strong>${s.conversion}</strong></div><div class="mini"><span>Đóng quỹ</span><strong>${m.fundPaid?"Đã đóng":"Chưa đóng"}</strong></div></div>
-      <div class="info-grid">${state.memberFields.filter(f=>!["name","mssv"].includes(f.key)).map(f=>`<label class="${f.key==="note"?"full":""}">${esc(f.label)}<input value="${esc(f.system?m[f.key]:m.data?.[f.key]||"")}" readonly></label>`).join("")}</div>`;
-  }else{
-    $("#memberInfoCard").innerHTML=`<div class="empty">Chọn một thành viên để xem thông tin.</div>`;
-  }
+  if(!(selectedInfoId&&findMember(selectedInfoId))){$("#memberInfoCard").innerHTML=`<div class="empty">Chọn một thành viên để xem thông tin.</div>`;return}
+  const m=findMember(selectedInfoId),s=scoreMemberForSemester(m,m.semester),timeline=memberTimeline(m,m.semester),history=memberSemesterHistory(m),currentRank=semesterMemberRanking(m.semester).find(r=>r.member.id===m.id),rating=memberActivityRating(s);
+  $("#memberInfoCard").innerHTML=`<div class="profile-head"><div><span class="status">${esc(m.data?.status||"Thành viên")}</span><h2>${esc(m.name)}</h2><p>${esc(m.mssv||"")}</p><div>${(m.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join("")}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="exportMemberScore('${m.id}')">Xuất điểm Excel</button>${canEditModule("members")?`<button class="secondary" onclick="editMember('${m.id}')">Chỉnh sửa</button>`:""}</div></div>
+    <div class="score-summary"><div class="mini"><span>Điểm tổng</span><strong>${s.total}</strong></div><div class="mini"><span>Hoạt động tham gia</span><strong>${s.participated}/${s.totalActivities}</strong></div><div class="mini"><span>Tỷ lệ tham gia</span><strong>${s.participationRate}%</strong></div><div class="mini"><span>Đóng quỹ</span><strong>${m.fundPaid?"Đã đóng":"Chưa đóng"}</strong></div></div>
+    <div class="current-rank-box"><div><b>${currentRank?`Hạng #${currentRank.rank} trong ${state.semesters?.[m.semester]?.name||m.semester}`:"Chưa có xếp hạng"}</b><span> • ${s.participated} hoạt động • ${s.activityPoints} điểm hoạt động</span></div><span class="activity-rating ${rating.className}">${esc(rating.label)}</span></div>
+    <div class="info-grid">${state.memberFields.filter(f=>!["name","mssv"].includes(f.key)).map(f=>`<label class="${f.key==="note"?"full":""}">${esc(f.label)}<input value="${esc(f.system?m[f.key]:m.data?.[f.key]||"")}" readonly></label>`).join("")}<label class="full">Ghi chú nội bộ<textarea rows="3" readonly>${esc(m.internalNote||"")}</textarea></label></div>
+    <div class="member-semester-stats"><h3>Thống kê cá nhân qua các học kỳ</h3><div class="member-stat-table-wrap"><table class="member-stat-table"><thead><tr><th>Học kỳ</th><th>Tham gia</th><th>Tỷ lệ</th><th>Điểm hoạt động</th><th>Điểm tổng</th><th>Xếp hạng</th><th>Đánh giá</th></tr></thead><tbody>${history.map(h=>`<tr><td><b>${esc(h.semesterName)}</b><div class="small-help">${esc(h.semesterKey)}</div></td><td>${h.stats.participated}/${h.stats.totalActivities}</td><td>${h.stats.participationRate}%</td><td>${h.stats.activityPoints}</td><td><b>${h.stats.total}</b></td><td>${h.rank?`#${h.rank}`:"—"}</td><td><span class="activity-rating ${h.rating.className}">${esc(h.rating.label)}</span></td></tr>`).join("")}</tbody></table></div></div>
+    <h3 style="margin-top:18px">Timeline hoạt động trong ${esc(state.semesters?.[m.semester]?.name||m.semester)}</h3><div class="timeline">${timeline.map(x=>`<div class="timeline-item"><b>${esc(x.title)}</b><small>${esc(x.date?formatDateVN(x.date):"")} ${esc(x.detail||"")}</small></div>`).join("")||`<div class="empty">Chưa có hoạt động.</div>`}</div>`;
 }
 function exportMemberScore(memberId){
   const m=findMember(memberId);if(!m)return;
@@ -1838,7 +1898,7 @@ function exportMemberScore(memberId){
 
 
 /* ===== Dashboard / Attention / Search / Notifications ===== */
-function memberParticipationCount(m){let c=0;for(const g of sem().groups||[])for(const it of g.items||[]){const v=m.scores?.[it.id];if(g.mode==="checkbox"?v===true:Number(v||0)>0)c++}return c}
+function memberParticipationCount(m){return scoreMemberForSemester(m,m?.semester||semester).participated}
 function healthIssues(){
   const list=members(),issues=[];const mssv=new Map(),email=new Map(),phone=new Map();
   for(const m of list){if(!String(m.mssv||"").trim())issues.push({level:"bad",title:`${m.name||"Thành viên"} thiếu MSSV`,tab:"memberList",icon:"⚠"});
@@ -1859,6 +1919,7 @@ function renderDashboard(){
   if(!$("#dashboardStats"))return;$("#dashboardGreeting").textContent=`${sem().name||semester} — ${currentProfile?.displayName||"Our Stage"}`;$("#dashboardSubtitle").textContent=`${semesterPeriodText()} • ${semesterLocked()?"Dữ liệu đã khóa":"Dữ liệu đang mở chỉnh sửa"}`;
   $("#dashboardStats").innerHTML=dashboardStatsData().map(s=>`<div class="dash-stat" onclick="openTab('${s.tab}')"><span>${esc(s.label)}</span><strong>${esc(s.value)}</strong><small>${esc(s.small)}</small></div>`).join("");
   const acts=getAllActivities();$("#dashboardActivityChart").innerHTML=acts.slice(0,8).map(a=>{const joined=members().filter(m=>a.group.mode==="checkbox"?m.scores?.[a.item.id]===true:Number(m.scores?.[a.item.id]||0)>0).length,p=members().length?Math.round(joined/members().length*100):0;return `<div class="bar-row"><span>${esc(a.item.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${p}%"></div></div><b>${p}%</b></div>`}).join("")||`<div class="empty">Chưa có hoạt động.</div>`;
+  const ranking=semesterMemberRanking(semester).slice(0,6),rankRoot=$("#dashboardMemberRanking");if(rankRoot)rankRoot.innerHTML=ranking.map(r=>{const rate=memberActivityRating(r.stats);return `<div class="member-rank-row" onclick="openMemberProfileFromRanking('${r.member.id}')"><span class="member-rank-no">${r.rank}</span><div class="member-rank-main"><b>${esc(r.member.name||"Thành viên")}</b><small>${esc(r.member.mssv||"")} • ${esc(rate.label)}</small></div><div class="member-rank-score"><b>${r.stats.participated}/${r.stats.totalActivities}</b><small>${r.stats.activityPoints}đ hoạt động</small></div></div>`}).join("")||`<div class="empty">Chưa có dữ liệu hoạt động.</div>`;
   const months={};for(const t of txs()){const k=(t.date||"").slice(0,7)||"Không ngày";months[k]=months[k]||{i:0,e:0};months[k][t.type==="income"?"i":"e"]+=Number(t.amount||0)}const vals=Object.entries(months).sort().slice(-6),mx=Math.max(1,...vals.flatMap(([,v])=>[v.i,v.e]));$("#dashboardFinanceChart").innerHTML=vals.map(([m,v])=>`<div class="bar-row"><span>${esc(m)}</span><div><div class="bar-track" title="Thu"><div class="bar-fill" style="width:${v.i/mx*100}%"></div></div><div class="bar-track" style="margin-top:3px" title="Chi"><div class="bar-fill" style="width:${v.e/mx*100}%;opacity:.45"></div></div></div><b>${money(v.i-v.e)}</b></div>`).join("")||`<div class="empty">Chưa có giao dịch.</div>`;
   renderDashboardChecklist();renderDashboardRecentAudit();refreshEventResponseSummary();
 }
@@ -1967,6 +2028,7 @@ function freeLookupLink(id){
   try{const u=new URL("/tra-cuu-tu-do",location.origin);u.searchParams.set("portal",id);return u.href}
   catch{return `tra-cuu-tu-do.html?portal=${encodeURIComponent(id)}`}
 }
+function freeLookupPortalLocked(p){return !!(p?.scopeSemester&&state.semesters?.[p.scopeSemester]?.locked)}
 function freeLookupScopeLabel(p){
   if(!p.scopeSemester)return "Độc lập học kỳ";
   return state.semesters[p.scopeSemester]?.name||p.scopeSemester;
@@ -2041,12 +2103,12 @@ async function renderFreeLookup(){
         <button class="secondary" onclick="copyText('${esc(freeLookupLink(p.id))}')">Sao chép link</button>
         <button class="secondary" onclick="window.open('${esc(freeLookupLink(p.id))}','_blank')">Mở cổng</button>
         <button class="secondary" onclick="downloadFreeLookupTemplate('${p.id}')" ${(p.fields||[]).length?"":"disabled"}>Tải Excel mẫu</button>
-        <button class="primary" onclick="startFreeLookupImport('${p.id}')">Upload Excel/CSV</button>
+        <button class="primary" ${freeLookupPortalLocked(p)?"disabled":""} onclick="startFreeLookupImport('${p.id}')">Upload Excel/CSV</button>
         <button class="secondary" onclick="openFreeLookupData('${p.id}')">Dữ liệu</button>
         <button class="secondary" onclick="exportFreeLookupData('${p.id}')" ${(p.fields||[]).length?"":"disabled"}>Xuất dữ liệu</button>
-        <button class="secondary" onclick="openFreeLookupBuilder('${p.id}')">Thiết lập cổng & trường</button>
-        <button class="${p.open===true?"danger":"primary"}" onclick="toggleFreeLookup('${p.id}')">${p.open===true?"Đóng cổng":"Mở cổng"}</button>
-        <button class="danger" onclick="deleteFreeLookupPortal('${p.id}')">Xóa cổng</button>
+        <button class="secondary" ${freeLookupPortalLocked(p)?"disabled":""} onclick="openFreeLookupBuilder('${p.id}')">Thiết lập cổng & trường</button>
+        <button class="${p.open===true?"danger":"primary"}" ${freeLookupPortalLocked(p)?"disabled":""} onclick="toggleFreeLookup('${p.id}')">${p.open===true?"Đóng cổng":"Mở cổng"}</button>
+        <button class="danger" ${freeLookupPortalLocked(p)?"disabled":""} onclick="deleteFreeLookupPortal('${p.id}')">Xóa cổng</button>
       </div>
     </div>`).join("");
     $("#freeLookupEmpty").classList.toggle("hidden",list.length>0);
@@ -3088,7 +3150,7 @@ function renderLookupPortal(){
   }).join("");
   $("#lookupCodeEmpty").classList.toggle("hidden",list.length>0);
 }
-$("#saveLookupSettingsBtn").onclick=()=>{
+$("#saveLookupSettingsBtn").onclick=()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
   const cfg=lookupConfig();
   ["showName","showMssv","showTotal","showBonus","showConversion","showFundPaid","showActivities","showFinance"].forEach(k=>cfg[k]=$("#lookup_"+k).checked);
   cfg.customFields=$$(".lookup-custom:checked").map(x=>x.value);
@@ -3148,6 +3210,7 @@ async function buildLookupRecord(m,cfg){
 }
 
 async function syncLookupSemester({silent=false}={}){
+  if(semesterLocked()){if(!silent)alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi đồng bộ cổng tra cứu.");return false}
   const cfg=lookupConfig();
   if(!cfg.enabled)return false;
   if(!currentProfile||!["admin","superadmin"].includes(currentProfile.role))return false;
@@ -3253,7 +3316,7 @@ function scheduleAutoLookupSync(immediate=false){
   lookupSyncTimer=setTimeout(()=>syncLookupSemester({silent:true}),immediate?80:650);
 }
 
-$("#createPortalBtn").onclick=async()=>{
+$("#createPortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
   const cfg=lookupConfig();
   const {duplicateKeys,valid}=lookupReadyState();
   if(duplicateKeys.length){
@@ -3272,7 +3335,7 @@ $("#createPortalBtn").onclick=async()=>{
   }
 };
 $("#syncPortalNowBtn").onclick=()=>syncLookupSemester({silent:false});
-$("#closePortalBtn").onclick=async()=>{
+$("#closePortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
   const cfg=lookupConfig();
   if(!cfg.enabled)return;
   if(!confirm("Đóng cổng tra cứu của học kỳ này? Thành viên sẽ tạm thời không tra cứu được."))return;
@@ -3283,7 +3346,7 @@ $("#closePortalBtn").onclick=async()=>{
   renderLookupPortal();
   toast("Đã đóng cổng tra cứu");
 };
-$("#reopenPortalBtn").onclick=async()=>{
+$("#reopenPortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
   const cfg=lookupConfig();
   if(!cfg.enabled)return;
   cfg.open=true;
@@ -3466,7 +3529,7 @@ function openCreateAccount(){
       </select></label>
     </div>
     <div class="permission-admin-note">
-      Tài khoản được tạo qua API bảo mật trên Vercel. Nếu email đã tồn tại trong Firebase Authentication nhưng chưa có hồ sơ quyền, hệ thống có thể liên kết mà không cần mật khẩu cũ.
+      Tài khoản được tạo trực tiếp bằng Firebase Authentication phụ nên không phụ thuộc Vercel API. Nếu email đã tồn tại trong Firebase Authentication nhưng chưa có hồ sơ quyền, hãy nhập đúng mật khẩu hiện tại của email đó để liên kết vào hệ thống.
     </div>
     <h4>Quyền của BCN</h4>${permissionPresetHTML("acc")}
     <div id="accPermissionNote" class="permission-note">BCN được xem/chỉnh sửa theo quyền đã tick, nhưng không có quyền vào menu Tài khoản BCN hoặc Thiết lập.</div>
@@ -3480,29 +3543,40 @@ async function createAccount(){
   const email=$("#accEmail").value.trim().toLowerCase(),password=$("#accPass").value,displayName=$("#accName").value.trim(),wantedRole=$("#accRole").value;
   const newRole=(role()==="superadmin"&&wantedRole==="admin")?"admin":"bcn";
   if(!displayName||!email)return alert("Vui lòng nhập tên và email.");
-  if(password.length<8)return alert("Mật khẩu tạm cần ít nhất 8 ký tự.");
+  if(password.length<8)return alert("Mật khẩu cần ít nhất 8 ký tự.");
   if((currentFirebaseUser?.email||"").toLowerCase()===email)return alert("Email này là tài khoản đang đăng nhập.");
   const existingProfile=accountRows.find(u=>String(u.email||"").toLowerCase()===email);
   if(existingProfile){alert("Email này đã có trong danh sách tài khoản. Hệ thống sẽ mở phần chỉnh sửa.");return editAccountProfile(existingProfile.id)}
   const permissions=newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("acc");
-  let apiError=null;
+
+  let secondary=null,auth2=null,cred=null,createdFresh=false,linkedExisting=false;
   try{
-    const token=await currentFirebaseUser.getIdToken();
-    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})});
-    const data=await res.json().catch(()=>({}));
-    if(res.ok){closeModal();toast(data.linkedExistingAuth?"Đã liên kết tài khoản hiện có":"Đã tạo tài khoản");await renderAccounts();return}
-    apiError=new Error(data.error||`API trả về lỗi ${res.status}`);
-  }catch(e){apiError=e}
-  let secondary=null,auth2=null;
-  try{
-    const appName="accountFallback_"+Date.now()+"_"+Math.random().toString(36).slice(2);secondary=firebase.initializeApp(firebaseConfig,appName);auth2=secondary.auth();
-    const cred=await auth2.createUserWithEmailAndPassword(email,password);
-    await fbDb.collection("users").doc(cred.user.uid).set({displayName,email,role:newRole,active:true,permissions,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||"",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""});
-    await auth2.signOut();await secondary.delete();closeModal();toast("Đã tạo tài khoản");await renderAccounts();
+    secondary=firebase.initializeApp(firebaseConfig,"accountCreate_"+Date.now()+"_"+Math.random().toString(36).slice(2));
+    auth2=secondary.auth();
+    try{cred=await auth2.createUserWithEmailAndPassword(email,password);createdFresh=true}
+    catch(e){
+      if(e?.code!=="auth/email-already-in-use")throw e;
+      try{cred=await auth2.signInWithEmailAndPassword(email,password);linkedExisting=true}
+      catch(signInError){
+        try{
+          const token=await currentFirebaseUser.getIdToken();
+          const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})},7000);
+          const data=await res.json().catch(()=>({}));
+          if(res.ok){try{await auth2.signOut()}catch{}try{await secondary.delete()}catch{}closeModal();toast("Đã liên kết tài khoản hiện có");await renderAccounts();return}
+        }catch(apiError){console.warn("Vercel account API unavailable",apiError)}
+        throw Object.assign(new Error("Email đã tồn tại trong Firebase Authentication nhưng mật khẩu bạn nhập không đúng với tài khoản đó. Hãy nhập mật khẩu hiện tại để liên kết, hoặc xóa tài khoản mồ côi trong Firebase Authentication rồi tạo lại."),{code:"osc/existing-auth-password"});
+      }
+    }
+    const profileSnap=await fbDb.collection("users").doc(cred.user.uid).get();
+    if(profileSnap.exists)throw Object.assign(new Error("Email này đã có hồ sơ quyền trong hệ thống."),{code:"osc/profile-exists"});
+    try{await cred.user.updateProfile({displayName})}catch(e){console.warn("updateProfile",e)}
+    await fbDb.collection("users").doc(cred.user.uid).set({displayName,email,role:newRole,active:true,permissions,linkedExistingAuth:linkedExisting,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||"",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:false});
+    await auth2.signOut();await secondary.delete();closeModal();toast(linkedExisting?"Đã liên kết tài khoản hiện có":"Đã tạo tài khoản BCN");await renderAccounts();
   }catch(e){
-    try{if(auth2)await auth2.signOut()}catch{} try{if(secondary)await secondary.delete()}catch{}
-    const detail=e?.code==="auth/email-already-in-use"?"Email đã tồn tại trong Firebase Authentication. Muốn liên kết email cũ, Vercel API/Firebase Admin phải hoạt động.":(e?.message||e);
-    alert("Không tạo được tài khoản.\nAPI: "+(apiError?.message||"Không xác định")+"\nFallback: "+detail);
+    if(createdFresh&&cred?.user){try{await cred.user.delete()}catch(rollbackError){console.warn("Auth rollback",rollbackError)}}
+    try{if(auth2)await auth2.signOut()}catch{}try{if(secondary)await secondary.delete()}catch{}
+    const msg=e?.code==="auth/invalid-email"?"Email không hợp lệ.":e?.code==="auth/weak-password"?"Mật khẩu chưa đủ mạnh.":e?.code==="auth/operation-not-allowed"?"Firebase Authentication chưa bật Email/Password.":e?.code==="osc/existing-auth-password"||e?.code==="osc/profile-exists"?e.message:"Không tạo được tài khoản: "+(e?.message||e);
+    alert(msg);
   }
 }
 async function editAccountProfile(uid){
@@ -3581,12 +3655,34 @@ async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="delet
 
 /* ===== QR Attendance ===== */
 function attendancePortalLink(token){try{const u=new URL("/diem-danh",location.origin);u.searchParams.set("token",token);return u.href}catch{return `diem-danh.html?token=${encodeURIComponent(token)}`}}
-function openQRAttendance(){if(!canEditModule("attendance"))return;const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000);const local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
-async function createAttendancePortal(gi,ii){const g=sem().groups[gi],it=g?.items[ii];if(!it)return;const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");const token=crypto.randomUUID?crypto.randomUUID():uid()+uid(),data={token,semester,groupId:g.id,itemId:it.id,itemName:it.name,groupName:g.name,points:Number(it.points||0),mode:g.mode,startAt:firebase.firestore.Timestamp.fromDate(start),endAt:firebase.firestore.Timestamp.fromDate(end),instruction:$("#qrInstruction").value.trim(),open:true,createdBy:currentFirebaseUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};await fbDb.collection("attendancePortals").doc(token).set(data);qrCurrentPortal=data;showAttendancePortal(token)}
-async function showAttendancePortal(token){const s=await fbDb.collection("attendancePortals").doc(token).get();if(!s.exists)return;qrCurrentPortal=s.data();const link=attendancePortalLink(token);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(900px,100%)"><div class="modal-head"><div><h2>QR điểm danh đang mở</h2><div class="small-help">${esc(qrCurrentPortal.itemName||"")}</div></div><button onclick="closeModal()">×</button></div><div class="qr-box"><div class="qr-canvas-wrap"><canvas id="attendanceQrCanvas"></canvas></div><div class="qr-details"><label>Link công khai<input value="${esc(link)}" readonly></label><div class="small-help">Hết hạn: ${dateTime(qrCurrentPortal.endAt)}</div><div><button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button> <button class="danger" onclick="closeAttendancePortal('${token}')">Đóng QR</button></div><h3>Chờ duyệt</h3><div id="checkinList">Đang tải…</div></div></div></div></div>`;$("#modalWrap").classList.remove("hidden");QRCode.toCanvas($("#attendanceQrCanvas"),link,{width:220,margin:1},()=>{});watchAttendanceCheckins(token)}
-let checkinUnsub=null;function watchAttendanceCheckins(token){if(checkinUnsub){checkinUnsub();checkinUnsub=null}checkinUnsub=fbDb.collection("attendancePortals").doc(token).collection("checkins").orderBy("createdAt","asc").onSnapshot(s=>{const rows=s.docs.map(d=>({id:d.id,...d.data()}));$("#checkinList").innerHTML=rows.map(r=>`<div class="checkin-card"><div><b>${esc(r.name||"—")}</b><div class="small-help">${esc(r.mssv||"")} • ${dateTime(r.createdAt)} • ${esc(r.status||"pending")}</div></div><div>${r.status==="pending"?`<button class="primary" onclick="approveCheckin('${token}','${r.id}',true)">Duyệt</button> <button class="danger" onclick="approveCheckin('${token}','${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Chưa có lượt điểm danh.</div>`})}
-async function approveCheckin(token,id,approve){const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id),s=await ref.get();if(!s.exists)return;const r=s.data(),portal=(await fbDb.collection("attendancePortals").doc(token).get()).data();if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeText(x.mssv)===normalizeText(r.mssv));if(!m)return alert("Không tìm thấy MSSV trong học kỳ này.");const value=portal.mode==="checkbox"?true:Number(portal.points||0);await fbDb.collection("members").doc(m.id).update({[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});await ref.update({status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});await logAudit({action:"qr-attendance",module:"attendance",summary:`Duyệt QR điểm danh ${m.name} • ${portal.itemName}`,entityId:m.id})}else await ref.update({status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid})}
-async function closeAttendancePortal(token){if(!confirm("Đóng QR điểm danh này?"))return;await fbDb.collection("attendancePortals").doc(token).update({open:false,closedAt:firebase.firestore.FieldValue.serverTimestamp()});toast("Đã đóng QR");closeModal()}
+function attendancePortalStatus(p){const now=Date.now(),start=p.startAt?.toMillis?.()||0,end=p.endAt?.toMillis?.()||0;if(p.open!==true)return {label:"Đã đóng",className:"rejected"};if(start&&now<start)return {label:"Chưa bắt đầu",className:""};if(end&&now>end)return {label:"Hết hạn",className:"rejected"};return {label:"Đang mở",className:"approved"}}
+function stopAttendancePortalWatchers(){try{attendancePortalsUnsub&&attendancePortalsUnsub()}catch{}attendancePortalsUnsub=null;for(const [,fn] of attendanceCheckinUnsubs){try{fn&&fn()}catch{}}attendanceCheckinUnsubs.clear();attendancePortalRows=[];attendanceCheckinRowsByPortal={}}
+function syncAttendanceCheckinWatchers(rows){
+  const wanted=new Set(rows.slice(0,15).map(x=>x.token||x.id));
+  for(const [token,fn] of attendanceCheckinUnsubs){if(!wanted.has(token)){try{fn&&fn()}catch{}attendanceCheckinUnsubs.delete(token);delete attendanceCheckinRowsByPortal[token]}}
+  for(const p of rows.slice(0,15)){const token=p.token||p.id;if(attendanceCheckinUnsubs.has(token))continue;const unsub=fbDb.collection("attendancePortals").doc(token).collection("checkins").onSnapshot(s=>{attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));renderAttendancePortalPanel();if(qrCurrentPortal?.token===token)renderAttendanceCheckinList(token)},e=>console.warn("attendance checkins realtime",token,e));attendanceCheckinUnsubs.set(token,unsub)}
+}
+function watchAttendancePortals(force=false){
+  if(force)stopAttendancePortalWatchers();
+  if(attendancePortalsUnsub||!currentFirebaseUser||!hasViewPermission("viewAttendance")){renderAttendancePortalPanel();return}
+  attendancePortalsUnsub=fbDb.collection("attendancePortals").onSnapshot(s=>{attendancePortalRows=s.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.semester===semester).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));syncAttendanceCheckinWatchers(attendancePortalRows);renderAttendancePortalPanel()},e=>{console.error("attendance portals realtime",e);const root=$("#attendancePortalLiveList");if(root)root.innerHTML=`<div class="empty">Không đồng bộ được QR điểm danh: ${esc(e.message||e)}</div>`})
+}
+function renderAttendancePortalPanel(){
+  const root=$("#attendancePortalLiveList"),badge=$("#attendancePendingBadge");if(!root)return;
+  const rows=(attendancePortalRows||[]).filter(p=>p.semester===semester);let totalPending=0;
+  for(const p of rows)totalPending+=(attendanceCheckinRowsByPortal[p.token||p.id]||[]).filter(x=>x.status==="pending").length;
+  if(badge)badge.textContent=`${totalPending} chờ duyệt`;
+  if(!rows.length){root.innerHTML=`<div class="empty">Chưa có QR điểm danh nào trong học kỳ này.</div>`;return}
+  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token))}')">Copy link</button>${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}</div></div>`}).join("");
+}
+function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
+async function createAttendancePortal(gi,ii){if(!canEditModule("attendance"))return ensureSemesterEditable();const g=sem().groups[gi],it=g?.items[ii];if(!it)return;const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");const token=crypto.randomUUID?crypto.randomUUID():uid()+uid(),data={token,semester,groupId:g.id,itemId:it.id,itemName:it.name,groupName:g.name,points:Number(it.points||0),mode:g.mode,startAt:firebase.firestore.Timestamp.fromDate(start),endAt:firebase.firestore.Timestamp.fromDate(end),instruction:$("#qrInstruction").value.trim(),open:true,createdBy:currentFirebaseUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};try{await fbDb.collection("attendancePortals").doc(token).set(data);qrCurrentPortal={...data,token};toast("Đã tạo QR điểm danh");await logAudit({action:"create-qr",module:"attendance",summary:`Tạo QR điểm danh • ${it.name}`});watchAttendancePortals(true);showAttendancePortal(token)}catch(e){alert("Không tạo được QR: "+(e.message||e))}}
+function renderAttendanceCheckinList(token){const root=$("#checkinList");if(!root)return;const rows=attendanceCheckinRowsByPortal[token]||[];root.innerHTML=rows.map(r=>`<div class="checkin-card"><div><b>${esc(r.name||"—")}</b><div class="small-help">${esc(r.mssv||"")} • ${dateTime(r.createdAt)} • ${esc(r.status||"pending")}</div></div><div>${r.status==="pending"&&canEditModule("attendance")?`<button class="primary" onclick="approveCheckin('${token}','${r.id}',true)">Duyệt</button> <button class="danger" onclick="approveCheckin('${token}','${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Chưa có lượt điểm danh.</div>`}
+async function showAttendancePortal(token){try{const s=await fbDb.collection("attendancePortals").doc(token).get();if(!s.exists)return alert("QR không còn tồn tại.");qrCurrentPortal={id:s.id,...s.data(),token};const link=attendancePortalLink(token),st=attendancePortalStatus(qrCurrentPortal);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(900px,100%)"><div class="modal-head"><div><h2>QR điểm danh • ${esc(st.label)}</h2><div class="small-help">${esc(qrCurrentPortal.itemName||"")}</div></div><button onclick="closeAttendancePortalModal()">×</button></div><div class="qr-box"><div class="qr-canvas-wrap"><canvas id="attendanceQrCanvas"></canvas></div><div class="qr-details"><label>Link công khai<input value="${esc(link)}" readonly></label><div class="small-help">Hết hạn: ${dateTime(qrCurrentPortal.endAt)}</div><div><button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button> ${canEditModule("attendance")&&qrCurrentPortal.open===true?`<button class="danger" onclick="closeAttendancePortal('${token}',true)">Đóng QR</button>`:""}</div><h3>Lượt gửi real-time</h3><div id="checkinList">Đang đồng bộ…</div></div></div></div></div>`;$("#modalWrap").classList.remove("hidden");try{QRCode.toCanvas($("#attendanceQrCanvas"),link,{width:220,margin:1},()=>{})}catch(e){console.warn("QR render",e)}watchAttendanceCheckins(token)}catch(e){alert("Không mở được QR: "+(e.message||e))}}
+function closeAttendancePortalModal(){if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}qrCurrentPortal=null;closeModal()}
+function watchAttendanceCheckins(token){if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}checkinUnsub=fbDb.collection("attendancePortals").doc(token).collection("checkins").onSnapshot(s=>{attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));renderAttendanceCheckinList(token);renderAttendancePortalPanel()},e=>{console.error("checkin modal realtime",e);const root=$("#checkinList");if(root)root.innerHTML=`<div class="empty">Không đồng bộ được lượt gửi: ${esc(e.message||e)}</div>`})}
+async function approveCheckin(token,id,approve){if(!canEditModule("attendance"))return ensureSemesterEditable();const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id),s=await ref.get();if(!s.exists)return;const r=s.data(),portalSnap=await fbDb.collection("attendancePortals").doc(token).get();if(!portalSnap.exists)return alert("QR không tồn tại.");const portal=portalSnap.data();if(semesterLocked(portal.semester))return alert("Học kỳ của QR này đang bị khóa. Hãy mở khóa trong Thiết lập trước.");if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeText(x.mssv)===normalizeText(r.mssv));if(!m)return alert("Không tìm thấy MSSV trong học kỳ này.");const value=portal.mode==="checkbox"?true:Number(portal.points||0);await fbDb.collection("members").doc(m.id).update({[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});await ref.update({status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});await logAudit({action:"qr-attendance",module:"attendance",summary:`Duyệt QR điểm danh ${m.name} • ${portal.itemName}`,entityId:m.id});toast("Đã duyệt và cộng điểm")}else{await ref.update({status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});toast("Đã từ chối lượt điểm danh")}}
+async function closeAttendancePortal(token,closeModalAfter=true){if(!canEditModule("attendance"))return ensureSemesterEditable();if(!confirm("Đóng QR điểm danh này?"))return;try{await fbDb.collection("attendancePortals").doc(token).update({open:false,closedAt:firebase.firestore.FieldValue.serverTimestamp()});toast("Đã đóng QR");if(closeModalAfter)closeAttendancePortalModal();watchAttendancePortals(true)}catch(e){alert("Không đóng được QR: "+(e.message||e))}}
 $("#qrAttendanceBtn").onclick=openQRAttendance;
 /* settings */
 function renderSettings(){
@@ -3678,9 +3774,16 @@ function applyZeroClearBehavior(){
 
 /* ===== Semester clone / lock / settings suite ===== */
 const __renderSettingsBase=renderSettings;
-renderSettings=function(){__renderSettingsBase();if($("#semesterLockSetting"))$("#semesterLockSetting").value=sem().locked?"1":"0";if($("#approvalDeleteMember")){$("#approvalDeleteMember").checked=!!state.approvalConfig.deleteMember;$("#approvalDeleteFinance").checked=!!state.approvalConfig.deleteFinance;$("#approvalBulkAttendance").checked=!!state.approvalConfig.bulkAttendance}const el=$("#semesterChecklistSettings");if(el)el.innerHTML=semesterChecklist().map(x=>`<div class="check-item"><span>${esc(x.label)}</span><b class="${x.ok?"ok":"warn"}">${x.ok?"✓":"!"}</b></div>`).join("")};
+function applySettingsSemesterLock(){
+  const root=$("#settings");if(!root)return;const locked=semesterLocked();root.classList.toggle("semester-locked-overlay",locked);
+  if(locked){root.querySelectorAll("input,select,textarea,button").forEach(el=>{if(["semesterLockSetting","newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].includes(el.id))return;el.disabled=true})}
+  else{root.querySelectorAll("input,select,textarea,button").forEach(el=>el.disabled=false)}
+  if($("#semesterLockSetting"))$("#semesterLockSetting").disabled=false;
+  ["newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].forEach(id=>{const el=$("#"+id);if(el)el.disabled=false});
+}
+renderSettings=function(){__renderSettingsBase();if($("#semesterLockSetting"))$("#semesterLockSetting").value=sem().locked?"1":"0";if($("#approvalDeleteMember")){$("#approvalDeleteMember").checked=!!state.approvalConfig.deleteMember;$("#approvalDeleteFinance").checked=!!state.approvalConfig.deleteFinance;$("#approvalBulkAttendance").checked=!!state.approvalConfig.bulkAttendance}const el=$("#semesterChecklistSettings");if(el)el.innerHTML=semesterChecklist().map(x=>`<div class="check-item"><span>${esc(x.label)}</span><b class="${x.ok?"ok":"warn"}">${x.ok?"✓":"!"}</b></div>`).join("");applySettingsSemesterLock()};
 $("#duplicateSemesterBtn").onclick=async()=>{if(!canEditClub())return;const code=prompt("Mã học kỳ mới, ví dụ SP27");if(!code)return;if(state.semesters[code])return alert("Mã học kỳ đã tồn tại.");const name=prompt("Tên học kỳ mới",code)||code;const src=structuredClone(sem());state.semesters[code]={...src,code,name,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:""}))}))};state.lookupConfig[code]=defaultLookupConfig();save();await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});toast("Đã nhân bản học kỳ")};
-$("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1";if(!want&&role()!=="superadmin"&&sem().locked){e.target.value="1";return alert("Chỉ Super Admin có thể mở khóa học kỳ đã chốt.")}if(want&&!confirm("Khóa học kỳ? Admin/BCN sẽ chỉ xem dữ liệu vận hành của học kỳ này; Super Admin vẫn có thể mở lại.")){e.target.value="0";return}sem().locked=want;save();await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa học kỳ":"Đã mở khóa")};
+$("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1",previous=!!sem().locked;if(want&&!confirm("Khóa toàn bộ dữ liệu học kỳ này? Sau khi khóa, Admin và BCN đều chỉ có thể xem. Muốn chỉnh sửa lại phải mở khóa tại Thiết lập.")){e.target.value="0";return}sem().locked=want;persistStateOnly();const ok=await saveCloudStateNow();if(!ok){sem().locked=previous;persistStateOnly();e.target.value=previous?"1":"0";renderAll();return alert("Không đồng bộ được trạng thái khóa lên Firestore. Hệ thống đã giữ trạng thái cũ để tránh xung đột.")}await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa toàn bộ dữ liệu học kỳ":"Đã mở khóa học kỳ")};
 for(const id of ["approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"]){const el=$("#"+id);if(el)el.onchange=()=>{state.approvalConfig={deleteMember:$("#approvalDeleteMember").checked,deleteFinance:$("#approvalDeleteFinance").checked,bulkAttendance:$("#approvalBulkAttendance").checked};save();toast("Đã lưu chế độ duyệt")}}
 function renderAll(){renderSemesterSelect();renderQLTV();renderMemberList();renderInfo();renderFinance();renderDashboard();if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention();if($("#events")&&!$("#events").classList.contains("hidden"))renderEvents();if($("#settings")&&!$("#settings").classList.contains("hidden"))renderSettings();if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();if($("#freeLookup")&&!$("#freeLookup").classList.contains("hidden"))renderFreeLookup();if($("#approvals")&&!$("#approvals").classList.contains("hidden"))renderApprovalRequests();if($("#audit")&&!$("#audit").classList.contains("hidden"))renderAuditLogs();if($("#trash")&&!$("#trash").classList.contains("hidden"))renderTrashBin();applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess()}
 </script>
