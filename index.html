@@ -990,6 +990,53 @@ body.modal-open .sidebar{pointer-events:none!important}
 body.modal-open .topbar,
 body.modal-open .workspace-dock{pointer-events:none!important}
 
+
+/* ==========================================================
+   V43 CONTINUATION LATEST-RESULT + EVENT QR FIX
+   ========================================================== */
+.continuation-latest-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;
+  background:#edf8f1;border:1px solid #c9e5d4;color:#1f704c;font-size:8px;font-weight:900;white-space:nowrap
+}
+.continuation-old-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;
+  background:#f4f5f6;border:1px solid #dfe4e7;color:#7d878e;font-size:8px;font-weight:850;white-space:nowrap
+}
+.continuation-edit-note{
+  padding:10px 11px;border:1px solid #dbe6df;border-radius:10px;background:#f5fbf7;
+  color:#557063;font-size:10px;line-height:1.5;margin-bottom:12px
+}
+.continuation-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 13px}
+.continuation-edit-field{display:grid;gap:6px;min-width:0}
+.continuation-edit-field.full{grid-column:1/-1}
+.continuation-edit-field>span{font-size:9px;font-weight:850;color:#59656e}
+.continuation-edit-field .choice-stack{display:grid;gap:6px;padding:9px;border:1px solid #e0e6e9;border-radius:10px;background:#fbfcfc}
+.continuation-edit-field .choice-stack label{display:flex;align-items:center;gap:7px;font-size:10px;color:#47545d}
+#editContinuationOverlay{z-index:10600!important}
+.event-qr-box-v43{
+  display:grid;grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr);gap:22px;align-items:center;
+  padding:10px 2px 4px
+}
+.event-qr-visual{
+  min-height:286px;display:grid;place-items:center;padding:18px;border:1px solid #dfe5e8;border-radius:15px;
+  background:linear-gradient(180deg,#fff,#f8fafb);box-shadow:0 12px 34px rgba(31,43,53,.06)
+}
+.event-qr-visual img{display:block;width:250px;height:250px;max-width:100%;object-fit:contain;background:#fff}
+.event-qr-loading,.event-qr-error{font-size:10px;line-height:1.55;text-align:center;color:#758089}
+.event-qr-error{color:#8b334a;background:#fff5f7;border:1px solid #eccfd6;border-radius:10px;padding:12px}
+.event-qr-detail{display:grid;gap:12px;min-width:0}
+.event-qr-detail input{width:100%;font-size:10px}
+.event-qr-actions{display:flex;gap:8px;flex-wrap:wrap}
+.submission-card.continuation-superseded{opacity:.72;background:#fafbfb!important}
+.submission-card.continuation-superseded:hover{opacity:1}
+@media(max-width:760px){
+  .continuation-edit-grid{grid-template-columns:1fr}
+  .continuation-edit-field.full{grid-column:auto}
+  .event-qr-box-v43{grid-template-columns:1fr}
+  .event-qr-visual{min-height:240px}
+  .event-qr-visual img{width:220px;height:220px}
+}
+
 </style>
 </head>
 <body class="auth-login">
@@ -3740,10 +3787,22 @@ function renderEvents(){
 
 async function showEventQr(eventId){
   const ev=eventFor(eventId);if(!ev)return;const link=eventLink(ev);
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(720px,100%)"><div class="modal-head"><div><h2>QR sự kiện</h2><div class="small-help">${esc(ev.title)} • ${esc(state.semesters[ev.semester]?.name||ev.semester)}</div></div><button onclick="closeModal()">×</button></div><div class="event-qr-box"><div id="eventQrHost" class="qr-host"></div><div><label>Đường link<input id="eventQrLink" readonly value="${esc(link)}"></label><div class="small-help" style="margin-top:7px">QR chỉ mở form sự kiện, không chứa dữ liệu cá nhân hay kết quả phản hồi.</div><div class="modal-actions" style="justify-content:flex-start"><button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button><button class="secondary" onclick="downloadEventQr('${eventId}')">Tải QR PNG</button><button class="primary" onclick="window.open('${esc(link)}','_blank','noopener')">Mở form</button></div></div></div></div></div>`;$("#modalWrap").classList.remove("hidden");
-  const host=$("#eventQrHost");host.innerHTML="";new QRCode(host,{text:link,width:230,height:230,correctLevel:QRCode.CorrectLevel?.M??0});setTimeout(()=>host.querySelectorAll("img").forEach(x=>x.remove()),50);
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,calc(100vw - 24px))"><div class="modal-head"><div><h2>QR sự kiện</h2><div class="small-help">${esc(ev.title)} • ${esc(state.semesters[ev.semester]?.name||ev.semester)}</div></div><button onclick="closeModal()">×</button></div><div class="event-qr-box-v43"><div class="event-qr-visual" id="eventQrVisual"><div class="event-qr-loading">Đang tạo mã QR…</div></div><div class="event-qr-detail"><label>Đường link<input id="eventQrLink" readonly value="${esc(link)}"></label><div class="small-help">QR chỉ chứa đường dẫn mở form sự kiện. Mã không chứa dữ liệu cá nhân hoặc kết quả phản hồi.</div><div class="event-qr-actions"><button class="secondary" onclick="copyText(document.getElementById('eventQrLink').value)">Sao chép link</button><button class="secondary" onclick="downloadEventQr('${eventId}')">Tải QR PNG</button><button class="primary" onclick="window.open(document.getElementById('eventQrLink').value,'_blank','noopener,noreferrer')">Mở form</button></div></div></div></div></div>`;
+  $("#modalWrap").classList.remove("hidden");syncModalBodyState();
+  try{
+    const png=await qrCanvasForDownload(link,700),box=$("#eventQrVisual");
+    if(box)box.innerHTML=`<img src="${png}" alt="QR sự kiện ${esc(ev.title)}" width="250" height="250">`;
+  }catch(e){
+    console.error("event QR render",e);const box=$("#eventQrVisual");
+    if(box)box.innerHTML=`<div class="event-qr-error">Không tạo được hình QR.<br>Bạn vẫn có thể dùng nút <b>Sao chép link</b> hoặc <b>Mở form</b>.</div>`;
+  }
 }
-async function downloadEventQr(eventId){const ev=eventFor(eventId);if(!ev)return;const png=await qrCanvasForDownload(eventLink(ev),900),a=document.createElement("a");a.href=png;a.download=`QR_Su_kien_${pdfSafeFileName(ev.title)}_${ev.semester}.png`;document.body.appendChild(a);a.click();a.remove();toast("Đã tải QR sự kiện")}
+async function downloadEventQr(eventId){
+  try{
+    const ev=eventFor(eventId);if(!ev)return;const png=await qrCanvasForDownload(eventLink(ev),900),a=document.createElement("a");
+    a.href=png;a.download=`QR_Su_kien_${pdfSafeFileName(ev.title)}_${ev.semester}.png`;document.body.appendChild(a);a.click();a.remove();toast("Đã tải QR sự kiện");
+  }catch(e){console.error("downloadEventQr",e);alert("Không tải được QR sự kiện: "+(e.message||e))}
+}
 
 async function copyText(text){
   try{await navigator.clipboard.writeText(text);toast("Đã sao chép")}catch{prompt("Sao chép:",text)}
@@ -4160,67 +4219,44 @@ async function findMemberInSemesterByMssv(semKey,mssv){
   const doc=snap.docs.find(d=>normalizeMssvKey(d.data()?.mssv)===key);
   return doc?{id:doc.id,...doc.data()}:null;
 }
-async function processContinuationSubmission(ev,doc){
-  if(!canEditClub()||!ev||ev.specialType!=="continuation")return false;
-  const sub={id:doc.id,...doc.data()};
-  const alreadyApplied=sub.continuationApplied===true;
-
+function continuationSubmissionTimeMs(sub){
+  return tsMillis(sub?.createdAt)||tsMillis(sub?.submittedAt)||0;
+}
+function latestContinuationSubmissionMap(ev,rows=[]){
+  const map=new Map();
+  for(const sub of rows||[]){
+    const mssv=continuationSubmissionMssv(ev,sub);if(!mssv)continue;
+    const prev=map.get(mssv);
+    if(!prev||continuationSubmissionTimeMs(sub)>continuationSubmissionTimeMs(prev)
+      ||(continuationSubmissionTimeMs(sub)===continuationSubmissionTimeMs(prev)&&String(sub.id||"")>String(prev.id||"")))map.set(mssv,sub);
+  }
+  return map;
+}
+function continuationActivityForEvent(ev){
+  if(!ev)return null;
+  for(const g of state.semesters?.[ev.semester]?.groups||[]){
+    const item=(g.items||[]).find(it=>it.specialType==="continuation"&&(it.sourceEventId===ev.id||it.targetSemester===ev.targetSemester));
+    if(item)return item;
+  }
+  return null;
+}
+function updateLocalContinuationMember(member,ev,latest,decision,activity){
+  if(!member)return;
+  member.continuationResponses=member.continuationResponses||{};
+  member.scores=member.scores||{};
+  if(!latest){
+    delete member.continuationResponses[ev.id];
+    if(activity)delete member.scores[activity.id];
+    return;
+  }
+  member.continuationResponses[ev.id]={
+    responded:true,decision,targetSemester:ev.targetSemester||nextMainSemesterCode(ev.semester),
+    sourceEventId:ev.id,latestSubmissionId:latest.id,respondedAt:latest.createdAt||latest.editedAt||null
+  };
+  if(activity){if(decision==="yes")member.scores[activity.id]=true;else delete member.scores[activity.id]}
+}
+async function ensureContinuationTargetMember(ev,sourceMember,mssv){
   const sourceSem=ev.semester,targetSem=ev.targetSemester||nextMainSemesterCode(sourceSem);
-  if(!state.semesters?.[targetSem]){
-    await doc.ref.set({continuationStatus:`Chờ tạo ${parseMainSemester(targetSem)?.name||targetSem}`},{merge:true});
-    return false;
-  }
-  if(semesterLocked(sourceSem)||semesterLocked(targetSem)){
-    await doc.ref.set({continuationStatus:"Đang chờ vì học kỳ bị khóa"},{merge:true});
-    return false;
-  }
-
-  const mssv=continuationSubmissionMssv(ev,sub);
-  if(!mssv){
-    await doc.ref.set({continuationStatus:"Thiếu MSSV"},{merge:true});
-    return false;
-  }
-  const sourceMember=await findMemberInSemesterByMssv(sourceSem,mssv);
-  if(!sourceMember){
-    await doc.ref.set({continuationStatus:"Không tìm thấy MSSV trong kỳ hiện tại"},{merge:true});
-    return false;
-  }
-
-  const decision=continuationDecision(ev,sub)?"yes":"no";
-  await fbDb.collection("members").doc(sourceMember.id).set({
-    [`continuationResponses.${ev.id}`]:{
-      responded:true,
-      decision,
-      targetSemester:targetSem,
-      sourceEventId:ev.id,
-      respondedAt:firebase.firestore.FieldValue.serverTimestamp()
-    },
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy:currentFirebaseUser?.uid||""
-  },{merge:true});
-
-  // Phản hồi cũ đã xử lý: chỉ backfill trạng thái riêng tư vào hồ sơ thành viên,
-  // không chuyển thành viên hoặc cộng điểm lần thứ hai.
-  if(alreadyApplied)return true;
-
-  if(decision==="no"){
-    await doc.ref.set({
-      continuationApplied:true,continuationDecision:"no",
-      continuationStatus:"Không tiếp tục đồng hành",
-      actionApplied:true,actionStatus:"Không tiếp tục đồng hành",
-      actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
-      actionAppliedBy:currentFirebaseUser?.uid||""
-    },{merge:true});
-    return true;
-  }
-
-  const activity=await ensureContinuationActivity(ev);
-  await fbDb.collection("members").doc(sourceMember.id).update({
-    [`scores.${activity.id}`]:true,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy:currentFirebaseUser?.uid||""
-  });
-
   let targetMember=await findMemberInSemesterByMssv(targetSem,mssv);
   if(targetMember){
     await fbDb.collection("members").doc(targetMember.id).set({
@@ -4229,54 +4265,104 @@ async function processContinuationSubmission(ev,doc){
       data:firestorePlain(sourceMember.data||targetMember.data||{}),
       tags:Array.isArray(sourceMember.tags)?sourceMember.tags:(targetMember.tags||[]),
       internalNote:sourceMember.internalNote||targetMember.internalNote||"",
-      continuedFromSemester:sourceSem,
-      continuedEventId:ev.id,
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy:currentFirebaseUser?.uid||""
+      continuedFromSemester:sourceSem,continuedEventId:ev.id,continuationLatestDecision:"yes",
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
     },{merge:true});
-  }else{
-    const id=`cont_${targetSem}_${mssv}`.slice(0,180);
-    await fbDb.collection("members").doc(id).set({
-      semester:targetSem,
-      name:sourceMember.name||"",
-      mssv:sourceMember.mssv||mssv,
-      data:firestorePlain(sourceMember.data||{}),
-      scores:{},
-      fundPaid:false,
-      tags:Array.isArray(sourceMember.tags)?sourceMember.tags:[],
-      internalNote:sourceMember.internalNote||"",
-      continuedFromSemester:sourceSem,
-      continuedEventId:ev.id,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy:currentFirebaseUser?.uid||""
-    },{merge:false});
-    targetMember={id};
+    return targetMember;
   }
-
-  await doc.ref.set({
-    continuationApplied:true,
-    continuationDecision:"yes",
-    continuationTargetSemester:targetSem,
-    continuationStatus:`Đã chuyển sang ${state.semesters[targetSem].name||targetSem}`,
-    actionApplied:true,
-    actionStatus:`Đã đồng hành sang ${state.semesters[targetSem].name||targetSem}`,
-    pointsApplied:eventPointsValue(ev)>0,
-    pointsValue:eventPointsValue(ev)||0,
-    pointsStatus:eventPointsValue(ev)>0?`Đã cộng ${eventPointsValue(ev)} điểm qua hoạt động đồng hành`:"Không cấu hình điểm",
-    actionAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    actionAppliedBy:currentFirebaseUser?.uid||""
-  },{merge:true});
-
-  await logAudit({
-    action:"continuation",
-    module:"events",
-    entityType:"member",
-    entityId:sourceMember.id,
-    summary:`${sourceMember.name} tiếp tục đồng hành → ${state.semesters[targetSem].name||targetSem}`,
-    semesterKey:sourceSem
-  });
+  const id=`cont_${targetSem}_${mssv}`.slice(0,180);
+  await fbDb.collection("members").doc(id).set({
+    semester:targetSem,name:sourceMember.name||"",mssv:sourceMember.mssv||mssv,
+    data:firestorePlain(sourceMember.data||{}),scores:{},fundPaid:false,
+    tags:Array.isArray(sourceMember.tags)?sourceMember.tags:[],internalNote:sourceMember.internalNote||"",
+    continuedFromSemester:sourceSem,continuedEventId:ev.id,continuationLatestDecision:"yes",createdFromContinuation:true,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
+  },{merge:false});
+  return {id};
+}
+async function markContinuationSubmissionVersions(ev,mssv,rows,latest){
+  const mine=(rows||[]).filter(s=>continuationSubmissionMssv(ev,s)===mssv);
+  if(!mine.length)return;
+  await commitInChunks(mine.map(s=>batch=>{
+    const isLatest=!!latest&&s.id===latest.id;
+    const decision=continuationDecision(ev,s)?"yes":"no";
+    const status=isLatest?(decision==="yes"?"Tiếp tục đồng hành • kết quả mới nhất":"Dừng đồng hành • kết quả mới nhất"):"Đã được thay thế bởi phản hồi mới hơn";
+    batch.set(fbDb.collection("eventPortals").doc(ev.id).collection("submissions").doc(s.id),{
+      continuationLatest:isLatest,continuationDecision:decision,continuationStatus:status,
+      continuationSyncedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }));
+}
+async function reconcileContinuationMember(ev,mssv,{rows=null,silent=true}={}){
+  if(!canEditClub()||!ev||ev.specialType!=="continuation"||!mssv)return false;
+  const sourceSem=ev.semester,targetSem=ev.targetSemester||nextMainSemesterCode(sourceSem);
+  if(!state.semesters?.[targetSem])return false;
+  const sourceMember=await findMemberInSemesterByMssv(sourceSem,mssv);
+  if(!sourceMember)return false;
+  let allRows=rows;
+  if(!allRows){
+    const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
+    allRows=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+  const mine=(allRows||[]).filter(s=>continuationSubmissionMssv(ev,s)===mssv);
+  const latest=latestContinuationSubmissionMap(ev,mine).get(mssv)||null;
+  let activity=continuationActivityForEvent(ev);
+  if(latest&&!activity)activity=await ensureContinuationActivity(ev);
+  const memberRef=fbDb.collection("members").doc(sourceMember.id);
+  if(!latest){
+    const patch={
+      [`continuationResponses.${ev.id}`]:firebase.firestore.FieldValue.delete(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
+    };
+    if(activity)patch[`scores.${activity.id}`]=firebase.firestore.FieldValue.delete();
+    await memberRef.update(patch);
+    const local=(state.members||[]).find(m=>m.id===sourceMember.id);updateLocalContinuationMember(local,ev,null,"",activity);
+    if(sourceSem===semester)renderQLTV();
+    if(!silent)toast("Đã xóa trạng thái đồng hành khỏi điểm danh");
+    return true;
+  }
+  const decision=continuationDecision(ev,latest)?"yes":"no";
+  const patch={
+    [`continuationResponses.${ev.id}`]:{
+      responded:true,decision,targetSemester:targetSem,sourceEventId:ev.id,latestSubmissionId:latest.id,
+      respondedAt:latest.createdAt||firebase.firestore.FieldValue.serverTimestamp(),
+      syncedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
+  };
+  if(activity)patch[`scores.${activity.id}`]=decision==="yes"?true:firebase.firestore.FieldValue.delete();
+  await memberRef.set(patch,{merge:true});
+  if(decision==="yes")await ensureContinuationTargetMember(ev,sourceMember,mssv);
+  else{
+    const target=await findMemberInSemesterByMssv(targetSem,mssv);
+    if(target?.continuedEventId===ev.id){
+      await fbDb.collection("members").doc(target.id).set({continuationLatestDecision:"no",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true});
+    }
+  }
+  await markContinuationSubmissionVersions(ev,mssv,allRows,latest);
+  const local=(state.members||[]).find(m=>m.id===sourceMember.id);updateLocalContinuationMember(local,ev,latest,decision,activity);
+  if(sourceSem===semester)renderQLTV();
+  if(!silent)toast(decision==="yes"?"Đã cập nhật: Tiếp tục đồng hành":"Đã cập nhật: Dừng đồng hành");
   return true;
+}
+async function reconcileContinuationEvent(ev,{rows=null,silent=true}={}){
+  if(!canEditClub()||!ev||ev.specialType!=="continuation")return false;
+  let allRows=rows;
+  if(!allRows){
+    const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
+    allRows=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+  const keys=new Set((allRows||[]).map(s=>continuationSubmissionMssv(ev,s)).filter(Boolean));
+  for(const m of (state.members||[]).filter(m=>m.semester===ev.semester&&m.continuationResponses?.[ev.id]))keys.add(normalizeMssvKey(m.mssv));
+  for(const key of keys)await reconcileContinuationMember(ev,key,{rows:allRows,silent:true});
+  if(!silent)toast("Đã đồng bộ kết quả đồng hành mới nhất");
+  return true;
+}
+async function processContinuationSubmission(ev,doc){
+  if(!canEditClub()||!ev||ev.specialType!=="continuation")return false;
+  const sub={id:doc.id,...doc.data()},mssv=continuationSubmissionMssv(ev,sub);
+  if(!mssv){await doc.ref.set({continuationStatus:"Thiếu MSSV"},{merge:true});return false}
+  return reconcileContinuationMember(ev,mssv,{silent:true});
 }
 
 async function saveEventBuilder(){
@@ -4389,7 +4475,12 @@ let eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
 async function openEventSubmissions(eventId){
   const ev=eventFor(eventId);if(!ev)return;currentEventSubmissionEventId=eventId;eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
   try{
-    const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();currentEventSubmissionRows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();currentEventSubmissionRows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>continuationSubmissionTimeMs(b)-continuationSubmissionTimeMs(a));
+    if(ev.specialType==="continuation"){
+      await reconcileContinuationEvent(ev,{rows:currentEventSubmissionRows,silent:true});
+      const refreshed=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();
+      currentEventSubmissionRows=refreshed.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>continuationSubmissionTimeMs(b)-continuationSubmissionTimeMs(a));
+    }
     const rows=currentEventSubmissionRows;
     $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1180px,100%)"><div class="modal-head"><div><h2>Kết quả: ${esc(ev.title)}</h2><div class="small-help">${rows.length} phản hồi • ${esc(state.semesters[ev.semester]?.name||ev.semester||"")}</div></div><button onclick="closeModal()">×</button></div>
       <div class="event-result-filters"><input id="eventResultSearch" placeholder="Tìm tên, MSSV, email, câu trả lời…" oninput="eventResultFilter.q=this.value;renderFilteredEventSubmissions('${ev.id}')"><select onchange="eventResultFilter.status=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi trạng thái</option><option value="pending">Chưa xử lý</option><option value="applied">Đã xử lý</option></select><select onchange="eventResultFilter.points=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi trạng thái điểm</option><option value="pending">Chưa cộng điểm</option><option value="applied">Đã cộng điểm</option></select>${ev.specialType==="continuation"?`<select onchange="eventResultFilter.continuation=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi phản hồi đồng hành</option><option value="yes">Tiếp tục</option><option value="no">Không tiếp tục</option></select>`:`<button class="secondary" onclick="renderFilteredEventSubmissions('${ev.id}')">Lọc</button>`}</div>
@@ -4406,7 +4497,10 @@ function renderSubmissionCard(ev,s){
   const answers=s.answers||{};
   const fields=ev.fields||[];
   const created=s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"";
-  return `<div class="submission-card" id="submissionCard_${s.id}">
+  const latestMap=ev.specialType==="continuation"?latestContinuationSubmissionMap(ev,currentEventSubmissionRows):null;
+  const continuationKey=ev.specialType==="continuation"?continuationSubmissionMssv(ev,s):"";
+  const isContinuationLatest=ev.specialType==="continuation"&&!!continuationKey&&latestMap?.get(continuationKey)?.id===s.id;
+  return `<div class="submission-card ${ev.specialType==="continuation"&&!isContinuationLatest?"continuation-superseded":""}" id="submissionCard_${s.id}">
     <div class="submission-card-head">
       <div class="submission-card-title">
         ${canEditModule("events")?`<input class="submission-select event-submission-check" type="checkbox" value="${esc(s.id)}" onchange="updateEventSubmissionSelection()">`:""}
@@ -4418,6 +4512,7 @@ function renderSubmissionCard(ev,s){
       <div class="submission-meta">
         ${s.actionApplied?'<span class="status-badge paid">Đã áp dụng kết quả</span>':s.actionStatus?`<span class="small-help">${esc(s.actionStatus)}</span>`:""}
         ${s.pointsApplied?`<span class="event-point-status">+${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm</span>`:s.pointsStatus?`<span class="small-help">${esc(s.pointsStatus)}</span>`:""}
+        ${ev.specialType==="continuation"?(isContinuationLatest?`<span class="continuation-latest-badge">✓ Kết quả mới nhất</span>`:`<span class="continuation-old-badge">Đã bị thay thế</span>`):""}
         ${ev.specialType==="continuation"&&s.continuationStatus?`<span class="companion-badge">${esc(s.continuationStatus)}</span>`:""}
         <span class="submission-id">${esc(s.id)}</span>
       </div>
@@ -4433,10 +4528,69 @@ function renderSubmissionCard(ev,s){
     <div class="event-actions">
       ${ev.resultAction.startsWith("fundPaid")&&!s.actionApplied&&canEditModule("finance")?`<button class="primary" onclick="approveEventFundPaid('${ev.id}','${s.id}')">Đánh dấu đã đóng quỹ</button>`:""}
       ${ev.specialType!=="continuation"&&eventPointsValue(ev)>0&&!s.pointsApplied&&canEditModule("attendance")?`<button class="secondary" onclick="applyEventPoints('${ev.id}','${s.id}')">Cộng ${eventPointsValue(ev)} điểm</button>`:""}
+      ${ev.specialType==="continuation"&&canEditModule("events")?`<button class="secondary" onclick="openEditContinuationSubmission('${ev.id}','${s.id}')">Chỉnh sửa kết quả</button>`:""}
       ${canEditModule("events")?`<button class="danger" onclick="deleteSingleEventSubmission('${ev.id}','${s.id}')">Xóa phản hồi</button>`:""}
     </div>
   </div>`;
 }
+function continuationEditFieldHtml(f,value){
+  const id=`editCont_${f.id}`,v=Array.isArray(value)?value:String(value??"");
+  const full=["textarea","checkboxes"].includes(f.type)?" full":"";
+  if(f.type==="textarea")return `<label class="continuation-edit-field${full}"><span>${esc(f.label)}${f.required?" *":""}</span><textarea id="${id}" rows="4">${esc(v)}</textarea></label>`;
+  if(f.type==="radio"||f.type==="select")return `<label class="continuation-edit-field"><span>${esc(f.label)}${f.required?" *":""}</span><select id="${id}"><option value="">-- Chọn --</option>${(f.options||[]).map(x=>`<option value="${esc(x)}" ${String(v)===String(x)?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`;
+  if(f.type==="checkboxes"){
+    const values=new Set(Array.isArray(value)?value:[]);
+    return `<div class="continuation-edit-field full"><span>${esc(f.label)}${f.required?" *":""}</span><div class="choice-stack" id="${id}">${(f.options||[]).map(x=>`<label><input type="checkbox" value="${esc(x)}" ${values.has(x)?"checked":""}> ${esc(x)}</label>`).join("")}</div></div>`;
+  }
+  const type=f.type==="email"?"email":f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text";
+  return `<label class="continuation-edit-field"><span>${esc(f.label)}${f.required?" *":""}</span><input id="${id}" type="${type}" value="${esc(v)}"></label>`;
+}
+async function openEditContinuationSubmission(eventId,submissionId){
+  if(!canEditModule("events"))return;
+  const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;
+  try{
+    let sub=(currentEventSubmissionRows||[]).find(x=>x.id===submissionId);
+    if(!sub){const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).get();if(!snap.exists)return alert("Phản hồi không còn tồn tại.");sub={id:snap.id,...snap.data()}}
+    const fields=(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type));
+    const htmlFields=fields.map(f=>continuationEditFieldHtml(f,sub.answers?.[f.id])).join("");
+    const latest=latestContinuationSubmissionMap(ev,currentEventSubmissionRows).get(continuationSubmissionMssv(ev,sub));
+    $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="editContinuationOverlay" class="overlay"><div class="modal" style="width:min(820px,calc(100vw - 24px))"><div class="modal-head"><div><h2>Chỉnh sửa kết quả đồng hành</h2><div class="small-help">${esc(sub.submitterLabel||"Phản hồi")} • ${latest?.id===sub.id?"Đây là kết quả mới nhất":"Kết quả cũ — chỉnh sửa không thay đổi thứ tự gửi"}</div></div><button onclick="document.getElementById('editContinuationOverlay')?.remove()">×</button></div><div class="continuation-edit-note"><b>Quy tắc đồng bộ:</b> Điểm danh luôn lấy <b>phản hồi được gửi sau cùng</b> theo thời gian gửi. Nếu Admin chỉnh sửa phản hồi mới nhất, điểm danh cập nhật theo nội dung vừa sửa. Nếu chỉnh phản hồi cũ, phản hồi mới hơn vẫn được ưu tiên.</div><div class="continuation-edit-grid">${htmlFields}</div><div class="modal-actions"><button class="ghost" onclick="document.getElementById('editContinuationOverlay')?.remove()">Hủy</button><button class="primary" onclick="saveEditContinuationSubmission('${eventId}','${submissionId}')">Lưu & đồng bộ điểm danh</button></div></div></div>`);
+    syncModalBodyState();
+  }catch(e){console.error(e);alert("Không mở được phần chỉnh sửa: "+(e.message||e))}
+}
+async function saveEditContinuationSubmission(eventId,submissionId){
+  if(!canEditModule("events"))return;
+  const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;
+  try{
+    const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),snap=await ref.get();
+    if(!snap.exists)return alert("Phản hồi không còn tồn tại.");
+    const before={id:snap.id,...snap.data()},oldMssv=continuationSubmissionMssv(ev,before),answers={...(before.answers||{})};
+    const fields=(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type));
+    for(const f of fields){
+      const id=`editCont_${f.id}`;let value;
+      if(f.type==="checkboxes")value=[...document.querySelectorAll(`#${CSS.escape(id)} input[type=checkbox]:checked`)].map(x=>x.value);
+      else value=document.getElementById(id)?.value??"";
+      if(f.required&&((Array.isArray(value)&&!value.length)||(!Array.isArray(value)&&!String(value).trim())))return alert(`Vui lòng nhập: ${f.label}`);
+      answers[f.id]=value;
+    }
+    const mssvField=fields.find(f=>f.systemKey==="mssv")||fields.find(f=>f.type==="mssv");
+    const nameField=fields.find(f=>f.systemKey==="memberName")||fields.find(f=>normalizeText(f.label).includes("ho va ten"));
+    const newMssv=normalizeMssvKey(mssvField?answers[mssvField.id]:"");
+    if(!newMssv)return alert("Phản hồi đồng hành cần có MSSV hợp lệ.");
+    await ref.update({
+      answers,submitterLabel:(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||before.submitterLabel||"Phản hồi",
+      editedAt:firebase.firestore.FieldValue.serverTimestamp(),editedBy:currentFirebaseUser?.uid||"",editedByName:currentUserLabel(),
+      continuationSyncedAt:firebase.firestore.FieldValue.delete()
+    });
+    document.getElementById("editContinuationOverlay")?.remove();
+    const affected=new Set([oldMssv,newMssv].filter(Boolean));
+    for(const key of affected)await reconcileContinuationMember(ev,key,{silent:true});
+    await logAudit({action:"edit-continuation-result",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:`Chỉnh sửa phản hồi đồng hành • ${before.submitterLabel||newMssv}`,semesterKey:ev.semester});
+    toast("Đã lưu và đồng bộ kết quả mới nhất");
+    await openEventSubmissions(eventId);
+  }catch(e){console.error(e);alert("Không lưu được kết quả: "+(e.message||e))}
+}
+
 function selectedEventSubmissionIds(){
   return $$(".event-submission-check:checked").map(x=>x.value);
 }
@@ -4484,9 +4638,14 @@ function exportEventSubmissionsCustom(eventId){
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);ws["!autofilter"]={ref:ws["!ref"]};XLSX.utils.book_append_sheet(wb,ws,"KET QUA");XLSX.writeFile(wb,`Ket_qua_tuy_chon_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`);document.getElementById('customExportOverlay')?.remove();toast("Đã xuất Excel tùy chọn");
 }
 async function exportNonContinuingMembers(eventId){
-  const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;let rows=currentEventSubmissionEventId===eventId?currentEventSubmissionRows:[];if(!rows.length){const s=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();rows=s.docs.map(d=>({id:d.id,...d.data()}))}
-  const source=(state.members||[]).filter(m=>m.semester===ev.semester),responded=new Set(rows.map(s=>continuationSubmissionMssv(ev,s)).filter(Boolean));const declined=rows.filter(s=>!continuationDecision(ev,s)).map((s,i)=>({STT:i+1,"Họ và tên":s.submitterLabel||"",MSSV:continuationSubmissionMssv(ev,s),"Thời gian":s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"","Trạng thái":"Không tiếp tục"}));const noResponse=source.filter(m=>!responded.has(normalizeMssvKey(m.mssv))).map((m,i)=>({STT:i+1,"Họ và tên":m.name||"",MSSV:m.mssv||"","Trạng thái":"Chưa phản hồi"}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(declined),"KHONG TIEP TUC");XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(noResponse),"CHUA PHAN HOI");XLSX.writeFile(wb,`Dong_hanh_${pdfSafeFileName(ev.semester)}_khong_tiep_tuc.xlsx`);toast("Đã xuất danh sách đồng hành")
+  const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;
+  let rows=currentEventSubmissionEventId===eventId?currentEventSubmissionRows:[];
+  if(!rows.length){const s=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();rows=s.docs.map(d=>({id:d.id,...d.data()}))}
+  const latestMap=latestContinuationSubmissionMap(ev,rows),latest=[...latestMap.values()];
+  const source=(state.members||[]).filter(m=>m.semester===ev.semester),responded=new Set(latest.map(s=>continuationSubmissionMssv(ev,s)).filter(Boolean));
+  const declined=latest.filter(s=>!continuationDecision(ev,s)).map((s,i)=>({STT:i+1,"Họ và tên":s.submitterLabel||"",MSSV:continuationSubmissionMssv(ev,s),"Thời gian":s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"","Trạng thái":"Không tiếp tục • kết quả mới nhất"}));
+  const noResponse=source.filter(m=>!responded.has(normalizeMssvKey(m.mssv))).map((m,i)=>({STT:i+1,"Họ và tên":m.name||"",MSSV:m.mssv||"","Trạng thái":"Chưa phản hồi"}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(declined),"KHONG TIEP TUC");XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(noResponse),"CHUA PHAN HOI");XLSX.writeFile(wb,`Dong_hanh_${pdfSafeFileName(ev.semester)}_khong_tiep_tuc.xlsx`);toast("Đã xuất theo kết quả mới nhất")
 }
 
 async function exportEventSubmissions(eventId){
@@ -4523,24 +4682,44 @@ async function exportEventSubmissions(eventId){
     alert("Không xuất được kết quả: "+(e.message||e));
   }
 }
-async function deleteSingleEventSubmission(eventId,submissionId){if(!canEditModule("events"))return;if(!confirm("Chuyển phản hồi này vào Thùng rác?"))return;try{const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),s=await ref.get();if(s.exists)await moveToTrash("eventSubmission",submissionId,s.data(),{eventId,label:s.data().submitterLabel||"Phản hồi",semester:eventFor(eventId)?.semester||semester});await ref.delete();await logAudit({action:"delete",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:"Xóa phản hồi sự kiện"});toast("Đã chuyển phản hồi vào Thùng rác");await openEventSubmissions(eventId)}catch(e){alert("Không xóa được phản hồi: "+(e.message||e))}}
+async function deleteSingleEventSubmission(eventId,submissionId){
+  if(!canEditModule("events"))return;
+  if(!confirm("Chuyển phản hồi này vào Thùng rác?"))return;
+  try{
+    const ev=eventFor(eventId),ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),s=await ref.get();
+    if(!s.exists)return;
+    const data=s.data(),mssv=ev?.specialType==="continuation"?continuationSubmissionMssv(ev,{id:s.id,...data}):"";
+    await moveToTrash("eventSubmission",submissionId,data,{eventId,label:data.submitterLabel||"Phản hồi",semester:ev?.semester||semester});
+    await ref.delete();
+    if(ev?.specialType==="continuation"&&mssv)await reconcileContinuationMember(ev,mssv,{silent:true});
+    await logAudit({action:"delete",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:ev?.specialType==="continuation"?"Xóa phản hồi đồng hành và đồng bộ điểm danh":"Xóa phản hồi sự kiện",semesterKey:ev?.semester||semester});
+    toast(ev?.specialType==="continuation"?"Đã xóa phản hồi và cập nhật điểm danh":"Đã chuyển phản hồi vào Thùng rác");
+    await openEventSubmissions(eventId);
+  }catch(e){alert("Không xóa được phản hồi: "+(e.message||e))}
+}
+
 async function deleteSelectedEventSubmissions(eventId){
   if(!canEditModule("events"))return;
-  const ids=selectedEventSubmissionIds();
-  if(!ids.length)return;
-  if(!confirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nThao tác này không thể hoàn tác.`))return;
+  const ids=selectedEventSubmissionIds();if(!ids.length)return;
+  if(!confirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nCác phản hồi đồng hành sẽ tự đồng bộ lại Điểm danh theo kết quả còn lại mới nhất.`))return;
   try{
-    for(const id of ids){const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id),snap=await ref.get();if(snap.exists)await moveToTrash("eventSubmission",id,snap.data(),{eventId,label:snap.data().submitterLabel||"Phản hồi",semester:eventFor(eventId)?.semester||semester})}
-    await commitInChunks(ids.map(id=>batch=>batch.delete(
-      fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id)
-    )));
-    toast(`Đã xóa ${ids.length} phản hồi`);
+    const ev=eventFor(eventId),affected=new Set();
+    for(const id of ids){
+      const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id),snap=await ref.get();
+      if(snap.exists){
+        const data=snap.data();
+        if(ev?.specialType==="continuation"){const key=continuationSubmissionMssv(ev,{id:snap.id,...data});if(key)affected.add(key)}
+        await moveToTrash("eventSubmission",id,data,{eventId,label:data.submitterLabel||"Phản hồi",semester:ev?.semester||semester});
+      }
+    }
+    await commitInChunks(ids.map(id=>batch=>batch.delete(fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id))));
+    if(ev?.specialType==="continuation")for(const key of affected)await reconcileContinuationMember(ev,key,{silent:true});
+    await logAudit({action:"delete-bulk",module:"events",entityType:"eventSubmission",summary:`Xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" đồng hành và đồng bộ điểm danh":""}`,semesterKey:ev?.semester||semester});
+    toast(`Đã xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" và cập nhật điểm danh":""}`);
     await openEventSubmissions(eventId);
-  }catch(e){
-    console.error(e);
-    alert("Không xóa được các phản hồi đã chọn: "+(e.message||e));
-  }
+  }catch(e){console.error(e);alert("Không xóa được các phản hồi đã chọn: "+(e.message||e))}
 }
+
 function submissionMssv(ev,sub){
   const f=(ev.fields||[]).find(x=>x.type==="mssv");
   return f?normalizeMssvKey(sub.answers?.[f.id]||""):"";
@@ -4594,10 +4773,7 @@ async function processAutomaticEventActions(){
           const target=ev.targetSemester||nextMainSemesterCode(ev.semester);
           if(target&&state.semesters?.[target]&&!semesterLocked(target))await ensureContinuationActivity({...ev,targetSemester:target});
         }
-        const snap=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();
-        for(const d of snap.docs){
-          await processContinuationSubmission(ev,d);
-        }
+        await reconcileContinuationEvent(ev,{silent:true});
       }
     }catch(e){console.warn("auto event action",ev.id,e)}
   }
@@ -5195,7 +5371,10 @@ async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)re
 async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").where("semester","==",semester).limit(200).get();trashRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");renderTrashBin()}catch(e){console.warn(e)}}
 function renderTrashBin(){const root=$("#trashList");if(!root)return;root.innerHTML=(trashRows||[]).map(t=>`<div class="trash-item"><div class="trash-item-main"><h4>${esc(trashTypeLabel(t.type))}: ${esc(t.meta?.label||t.data?.name||t.data?.description||t.sourceId||"")}</h4><p>Xóa bởi ${esc(t.deletedByName||"")} • ${dateTime(t.deletedAt)} • Hết hạn ${dateTime(t.expiresAt)}</p></div><div class="trash-actions"><button class="secondary" onclick="restoreTrash('${t.id}')">Khôi phục</button><button class="danger" onclick="purgeTrash('${t.id}')">Xóa vĩnh viễn</button></div></div>`).join("")||`<div class="empty">Thùng rác trống.</div>`}
 function trashTypeLabel(t){return ({member:"Thành viên",finance:"Giao dịch",event:"Sự kiện",eventSubmission:"Phản hồi sự kiện"})[t]||t}
-async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission")await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
+async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission"){
+  await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});
+  const ev=eventFor(t.meta.eventId);if(ev?.specialType==="continuation"){const key=continuationSubmissionMssv(ev,{id:t.sourceId,...t.data});if(key)await reconcileContinuationMember(ev,key,{silent:true})}
+}else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
 async function purgeTrash(id){if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;try{await fbDb.collection("trashBin").doc(id).delete();toast("Đã xóa vĩnh viễn")}catch(e){alert(e.message||e)}}
 async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(180).get();approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
