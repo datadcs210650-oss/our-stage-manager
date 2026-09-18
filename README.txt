@@ -1,35 +1,57 @@
-OUR STAGE CLUB MANAGER V47 — AUTO SEMESTER ON LOGIN
+OUR STAGE CLUB MANAGER V48 — SIMPLE LOGIN + GOOGLE AUTH
 
-THAY ĐỔI
-Mỗi lần đăng nhập thành công, hệ thống tự chọn học kỳ theo tháng hiện tại:
+GIAO DIỆN ĐĂNG NHẬP
+Trang đăng nhập được tối giản:
+- Bên trái chỉ còn Logo OUR STAGE CLUB.
+- OUR STAGE CLUB.
+- HỆ THỐNG QUẢN TRỊ.
+- Đã bỏ toàn bộ headline “Quản lý CLB...”, mô tả, feature cards và footer thông tin.
+- Bên phải chỉ còn form đăng nhập và nút Google.
 
-- Tháng 01–04 -> Spring (SP)
-- Tháng 05–08 -> Summer (SU)
-- Tháng 09–12 -> Fall (FA)
+ĐĂNG NHẬP GOOGLE
+V48 thêm nút:
+“Tiếp tục với Google”
 
-Ví dụ:
-- 18/09/2026 -> FA26
-- 10/03/2027 -> SP27
-- 20/07/2027 -> SU27
+Cơ chế:
+1. Firebase Auth vẫn dùng SESSION persistence.
+2. Chỉ tài khoản đã được cấp profile users/{uid} mới vào hệ thống.
+3. Nếu email hiện có bằng Email/Password và Firebase yêu cầu liên kết provider:
+   - V48 nhắc người dùng đăng nhập email/password một lần.
+   - Sau khi mật khẩu đúng, credential Google đang chờ được link vào cùng Firebase user.
+   - Từ lần sau có thể dùng nút Google.
+4. Trong “Tài khoản của tôi” có trạng thái Google:
+   - Đã liên kết / Chưa liên kết.
+   - Có nút “Liên kết Google” cho tài khoản chưa liên kết.
+5. Nếu tài khoản chỉ đăng nhập Google và không có password provider, nút Đổi mật khẩu được ẩn.
 
-CÁCH HOẠT ĐỘNG
-- Sau khi tải dữ liệu học kỳ từ Firestore, hệ thống xác định kỳ hiện tại bằng ngày trên thiết bị.
-- Nếu kỳ đó tồn tại, hệ thống vào thẳng kỳ đó.
-- Nếu kỳ chính xác chưa được tạo, hệ thống KHÔNG tự tạo dữ liệu. Nó chọn kỳ hợp lệ gần nhất trước thời điểm hiện tại.
-- Sau khi vào hệ thống, Admin/BCN vẫn đổi học kỳ bằng menu học kỳ như bình thường.
-- Việc đổi kỳ thủ công chỉ áp dụng cho phiên đang dùng. Lần đăng nhập mới tiếp theo lại tự chọn theo tháng hiện tại.
-
-THỨ TỰ MENU HỌC KỲ
-Danh sách được sắp theo:
-SP -> SU -> FA -> SP năm sau.
+BẮT BUỘC CẤU HÌNH FIREBASE
+Code không thể tự bật provider Google trong Firebase Console.
+Bạn cần:
+1. Firebase Console.
+2. Authentication.
+3. Sign-in method.
+4. Bật Google.
+5. Chọn email hỗ trợ nếu Firebase yêu cầu.
+6. Save.
+7. Authentication > Settings > Authorized domains:
+   đảm bảo domain Vercel/domain chính thức của website đã nằm trong danh sách.
 
 FIRESTORE RULES
-V47 không thay đổi Firestore Rules.
+V48 không thay đổi Firestore Rules.
 ZIP không chứa file Rules.
 
 CẬP NHẬT
-1. Thay toàn bộ V47 lên GitHub.
+1. Commit toàn bộ V48 lên GitHub.
 2. Không cần Publish Firestore Rules.
-3. Chờ Vercel Ready.
-4. Command + Shift + R.
-5. Đăng xuất rồi đăng nhập lại để kiểm tra auto semester.
+3. Bật Google provider trong Firebase Authentication.
+4. Kiểm tra Authorized domains.
+5. Chờ Vercel Ready.
+6. Command + Shift + R.
+
+KHUYẾN NGHỊ CHUYỂN TÀI KHOẢN CŨ
+Cách an toàn nhất:
+- Thành viên/Admin đăng nhập bằng Email + Password hiện tại.
+- Vào Tài khoản của tôi.
+- Bấm Liên kết Google.
+- Chọn đúng Google account có cùng email.
+- Sau đó đăng xuất và thử “Tiếp tục với Google”.
