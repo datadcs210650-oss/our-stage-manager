@@ -1,34 +1,54 @@
-OUR STAGE CLUB MANAGER V45 — BCN PERMISSION + LOOKUP PRIVACY SYNC
+OUR STAGE CLUB MANAGER V46 — PERMISSION UI + DATE COLUMN + LOOKUP PRIVACY
 
-PHÂN QUYỀN BCN
-- Không có quyền Xem: menu bị ẩn, Workspace không mở được, openTab bị chặn,
-  Global Search không trả dữ liệu và module không được render vào giao diện.
-- Nếu Admin thu hồi quyền trong lúc BCN đang online, nội dung cũ được làm sạch
-  và hệ thống tự chuyển BCN về chức năng còn quyền.
-- Có quyền Xem nhưng không có Chỉnh sửa: chỉ xem; nút tạo/sửa/xóa/import bị ẩn/khóa.
-- Dashboard và Cần chú ý chỉ hiển thị số liệu thuộc module BCN được cấp quyền.
+SỬA DỨT ĐIỂM PHÂN QUYỀN BCN
+Nguyên nhân giao diện bản trước có thể vẫn thấy menu:
+V40 có CSS `.nav button[data-tab]{display:flex!important}` nên có thể thắng class `.hidden`.
 
-FORM ĐỒNG HÀNH VÀ CỔNG TRA CỨU THÀNH VIÊN
-- Public KHÔNG hiển thị Đã điền/Chưa điền Form Đồng hành.
-- Public KHÔNG hiển thị Tiếp tục/Dừng đồng hành.
-- Public KHÔNG xuất continuationResponses hoặc metadata kết quả form.
-- Nếu hoạt động Đồng hành có điểm, public chỉ hiển thị Điểm hoạt động và số điểm.
-- Admin/BCN có quyền Cổng sự kiện vẫn xem kết quả đầy đủ trong khu vực quản trị.
+V46:
+- Có CSS riêng `.nav button[data-tab].hidden { display:none!important }`.
+- JS đặt trực tiếp `display:none!important` cho menu/nút không được cấp quyền.
+- Section không có quyền bị ẩn vật lý + inert.
+- Workspace Dock loại bỏ cửa sổ không được phép.
+- Global Search và Favorites không hiện module không được phép.
+- Khi Admin thay đổi quyền BCN realtime, giao diện render lại ngay và dọn nội dung cũ.
+- BCN có quyền Xem nhưng không Sửa chỉ thấy dữ liệu, không thấy nút thao tác.
 
-MIGRATION V45
-- Admin đăng nhập lần đầu sẽ rà dữ liệu publicLookupSemesters cũ.
-- Các activity Đồng hành cũ bị xóa field participated/status nhưng giữ earnedPoints.
-- Các field continuationResponses/status/decision ngoài ý muốn bị xóa khỏi public record.
-- Migration chạy một lần bằng marker settings/privacyMigrationV45.
+THIẾT LẬP HOẠT ĐỘNG
+Bảng hoạt động được làm lại thành 4 cột rõ ràng:
+1. Tên hoạt động
+2. Ngày hoạt động
+3. Điểm
+4. Xóa
+
+Ngày hoạt động dùng input type=date, có lịch chọn ngày.
+Dữ liệu cũ dd/mm/yyyy tự chuyển để hiển thị trong ô lịch và vẫn lưu tương thích dạng dd/mm/yyyy.
+
+TRA CỨU THÀNH VIÊN
+V46 KHÔNG HIỂN THỊ BẤT KỲ HOẠT ĐỘNG ĐỒNG HÀNH NÀO trên public:
+- Không Form Đồng hành.
+- Không Đã điền/Chưa điền.
+- Không Tiếp tục/Dừng.
+- Không tên hoạt động Đồng hành.
+- Không điểm Đồng hành.
+
+Hoạt động bình thường vẫn hiển thị.
+
+MIGRATION V46
+Admin đăng nhập lần đầu sẽ:
+- Rà publicLookupSemesters của tất cả kỳ.
+- Xóa toàn bộ activity row Đồng hành đã publish từ bản cũ.
+- Xóa metadata continuation nếu từng bị publish nhầm.
+- Không sửa dữ liệu quản trị nội bộ.
+- Chạy một lần qua marker settings/privacyMigrationV46.
 
 FIRESTORE RULES
-V45 không thay đổi Rules. Quyền server V44 hiện tại đã chặn public đọc event submissions
-và chặn BCN ghi module không được cấp quyền.
-Theo yêu cầu, ZIP V45 KHÔNG chứa file Rules.
+V46 không thay đổi Firestore Rules.
+ZIP không chứa file Rules.
 
 CẬP NHẬT
-1. Commit toàn bộ package V45 lên GitHub.
+1. Thay toàn bộ V46 lên GitHub.
 2. Không cần Publish Firestore Rules.
 3. Chờ Vercel Ready.
 4. Command + Shift + R.
-5. Đăng nhập Admin một lần để migration public lookup cũ chạy.
+5. Đăng nhập ADMIN một lần để migration V46 chạy.
+6. Đăng xuất, đăng nhập BCN giới hạn quyền để kiểm tra menu.

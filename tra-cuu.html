@@ -63,7 +63,7 @@ body.v41-public-shell input,body.v41-public-shell textarea,body.v41-public-shell
 body.v41-member-lookup .wrap{width:min(1040px,calc(100% - 30px));max-width:none!important;padding:0!important}body.v41-member-lookup .lookup{width:min(660px,100%);max-width:none!important;margin:46px auto 0!important;padding:26px!important;border:1px solid var(--v41-line);border-radius:18px;background:#fff;box-shadow:var(--v41-shadow)}body.v41-member-lookup .lookup h1{font-size:clamp(30px,4vw,42px)!important;color:#27313a!important;letter-spacing:-1.2px}body.v41-member-lookup .semester-pill{background:#f3f6f7!important;border-color:#e0e6e9!important;color:#62707a!important}body.v41-member-lookup .notice{background:#f6f8f9!important;border-color:#e1e7ea!important;color:#68757e!important}body.v41-member-lookup #resultView>.wrap{margin-top:28px}body.v41-member-lookup .card,body.v41-member-lookup .stat,body.v41-member-lookup .custom,body.v41-member-lookup .finance-stat{background:#fff!important;border:1px solid var(--v41-line)!important;border-radius:14px!important;box-shadow:0 10px 32px rgba(31,43,53,.055)!important}body.v41-member-lookup .head{background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important}body.v41-member-lookup .invalid{width:min(620px,calc(100% - 30px));max-width:none!important;margin:48px auto 0!important;padding:30px!important;border:1px solid var(--v41-line);border-radius:18px;background:#fff;box-shadow:var(--v41-shadow)}</style>
 </head>
 <body class="v41-public-shell v41-member-lookup"><header class="v41-public-topbar"><div class="v41-public-topbar-inner"><div class="v41-public-brand"><img src="/logo.png" alt="OUR STAGE CLUB"><div><b>OUR STAGE</b><small>PUBLIC PORTAL</small></div></div><div class="v41-public-status"><i></i><span>KẾT NỐI AN TOÀN</span></div></div></header>
-<div class="v41-privacy-strip"><b>Quyền riêng tư:</b> Cổng tra cứu chỉ hiển thị dữ liệu được phép công khai. Trạng thái và câu trả lời Form Đồng hành không được công khai; nếu có điểm Đồng hành, cổng chỉ hiển thị điểm hoạt động.</div>
+<div class="v41-privacy-strip"><b>Quyền riêng tư:</b> Cổng tra cứu chỉ hiển thị dữ liệu được phép công khai. Form Đồng hành, trạng thái Đồng hành và các hoạt động Đồng hành không xuất hiện trên cổng tra cứu thành viên.</div>
 
 
 <div id="invalidView" class="wrap invalid hidden">
@@ -196,16 +196,13 @@ function renderResult(mssv,d){
   if("fundPaid" in d)stats.push(["Đóng quỹ",d.fundPaid?"Đã đóng":"Chưa đóng"]);
 
   const custom=d.customFields||[];
-  const acts=d.activities||[];
+  const acts=(d.activities||[]).filter(a=>!isContinuationPointsOnlyActivity(a));
 
   $("#record").innerHTML=`
     ${profile.length?`<div class="card">${profile.join("")}</div>`:""}
     ${stats.length?`<div class="summary">${stats.map(([k,v])=>`<div class="stat"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join("")}</div>`:""}
     ${custom.length?`<h3 class="section-title">Thông tin thành viên</h3><div class="card"><div class="custom-grid">${custom.map(f=>`<div class="custom"><span>${esc(f.label)}</span><strong>${esc(f.value||"—")}</strong></div>`).join("")}</div></div>`:""}
-    ${acts.length?`<h3 class="section-title">Hoạt động trong kỳ</h3><div class="card"><div class="activities">${acts.map(a=>{
-      const privateContinuation=isContinuationPointsOnlyActivity(a);
-      return `<div class="activity"><div><b>${esc(a.name)}</b><small>${esc(a.group||"")}</small></div><div>${esc(a.date||"—")}</div><div class="${privateContinuation?"":(a.participated?"yes":"no")}">${privateContinuation?"Điểm hoạt động":(a.participated?"Đã tham gia":"Không tham gia")}</div><div>${Number(a.earnedPoints||0)} điểm</div></div>`;
-    }).join("")}</div></div>`:""}
+    ${acts.length?`<h3 class="section-title">Hoạt động trong kỳ</h3><div class="card"><div class="activities">${acts.map(a=>`<div class="activity"><div><b>${esc(a.name)}</b><small>${esc(a.group||"")}</small></div><div>${esc(a.date||"—")}</div><div class="${a.participated?"yes":"no"}">${a.participated?"Đã tham gia":"Không tham gia"}</div><div>${Number(a.earnedPoints||0)} điểm</div></div>`).join("")}</div></div>`:""}
     ${semesterMeta?.finance?`<h3 class="section-title">Thu chi CLB trong kỳ</h3><div class="card">
       <div class="finance-grid">
         <div class="finance-stat"><span>Tổng thu</span><strong>${money(semesterMeta.finance.totalIncome)}</strong></div>

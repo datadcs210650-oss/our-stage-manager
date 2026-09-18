@@ -1061,6 +1061,52 @@ body.modal-open .workspace-dock{pointer-events:none!important}
 .permission-private-empty b{display:block;color:#3d4850;font-size:12px}
 .permission-private-empty small{display:block;margin-top:4px;color:#8a949b;font-size:9px}
 
+
+/* ==========================================================
+   V46 PERMISSION VISIBILITY HARD FIX
+   ========================================================== */
+.nav button[data-tab].hidden,
+.nav button[data-tab][aria-hidden="true"],
+.permission-force-hide,
+.permission-restricted,
+[hidden]{
+  display:none!important;
+}
+body:not(.auth-admin) .sidebar,
+body:not(.auth-admin) .workspace-dock{
+  display:none!important;
+}
+
+/* Settings > activities */
+.activity-settings-group{
+  margin:14px 0!important;padding:16px!important;background:#fbfcfc!important;
+  border:1px solid #e2e7ea!important;border-radius:14px!important
+}
+.activity-settings-head{
+  display:grid;grid-template-columns:minmax(260px,1fr) 170px auto;gap:10px;align-items:center;margin-bottom:13px
+}
+.activity-settings-title input{width:100%!important;font-weight:850!important;font-size:13px!important}
+.activity-setting-table{
+  width:100%;overflow-x:auto;border:1px solid #e4e9ec;border-radius:12px;background:#fff
+}
+.activity-setting-row{
+  display:grid;grid-template-columns:minmax(260px,1fr) 190px 110px 48px;
+  gap:10px;align-items:center;min-width:680px;padding:9px 10px;border-bottom:1px solid #edf0f2
+}
+.activity-setting-row:last-child{border-bottom:0}
+.activity-setting-row.header{
+  background:#f5f7f8;color:#59656e;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.65px
+}
+.activity-date-cell input[type="date"]{
+  width:100%!important;min-height:42px!important;padding:9px 10px!important;
+  font-variant-numeric:tabular-nums;cursor:pointer
+}
+.activity-date-help{margin-top:8px;color:#7e8991;font-size:9px;line-height:1.45}
+@media(max-width:760px){
+  .activity-settings-head{grid-template-columns:1fr}
+  .activity-settings-head>div:last-child{display:flex;gap:8px;flex-wrap:wrap}
+}
+
 </style>
 </head>
 <body class="auth-login">
@@ -1409,7 +1455,7 @@ body.modal-open .workspace-dock{pointer-events:none!important}
         <button class="primary edit-only" id="createEventBtn">+ Tạo cổng sự kiện</button>
       </div>
       <div class="section-note">Mỗi cổng sự kiện thuộc đúng <b>một học kỳ</b>. Khi bạn đổi học kỳ ở menu bên trái, danh sách cổng sự kiện và kết quả hiển thị ở đây cũng tự chuyển sang học kỳ đó.</div>
-      <div class="security-note"><span>🔒</span><div><b>Bảo mật dữ liệu:</b> phản hồi sự kiện, bao gồm kết quả Form Đồng hành, chỉ hiển thị trong khu vực quản trị cho Admin hoặc BCN đã được cấp quyền Cổng sự kiện. Cổng tra cứu thành viên không công khai trạng thái Form Đồng hành.</div></div>
+      <div class="security-note"><span>🔒</span><div><b>Bảo mật dữ liệu:</b> phản hồi sự kiện, bao gồm kết quả Form Đồng hành, chỉ hiển thị trong khu vực quản trị cho Admin hoặc BCN đã được cấp quyền Cổng sự kiện. Cổng tra cứu thành viên không hiển thị Form Đồng hành hoặc hoạt động Đồng hành.</div></div>
       <div id="eventList" class="event-card-list"></div>
       <div id="eventEmpty" class="empty hidden">Học kỳ này chưa có cổng sự kiện nào.</div>
     </section>
@@ -1786,8 +1832,9 @@ function watchOwnProfileRealtime(){
     }
     currentProfile={id:snap.id,...snap.data()};
     $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
-    applyRoleAccess();
     watchRealtimeCollections();
+    renderAll();
+    applyRoleAccess();
   },e=>console.warn("profile realtime",e));
 }
 
@@ -1910,7 +1957,13 @@ function navIconSvg(tab){const type=NAV_META[tab]?.icon||"grid",c='viewBox="0 0 
 function enhanceSidebarNavigation(){const nav=$(".nav");if(!nav)return;nav.querySelectorAll(".nav-group-label").forEach(x=>x.remove());let last="";[...nav.querySelectorAll("button[data-tab]")].forEach(btn=>{const tab=btn.dataset.tab,m=NAV_META[tab]||{label:tab,desc:"",group:""};if(m.group&&m.group!==last){const l=document.createElement("div");l.className="nav-group-label";l.textContent=m.group;nav.insertBefore(l,btn);last=m.group}btn.title=m.label;btn.innerHTML=`<span class="nav-icon">${navIconSvg(tab)}</span><span class="nav-copy"><b>${esc(m.label)}</b><small>${esc(m.desc)}</small></span><span class="nav-arrow">›</span>`})}
 let workspaceHistory=["dashboard"];
 function noteWorkspace(tab){if(!tab)return;workspaceHistory=workspaceHistory.filter(x=>x!==tab);workspaceHistory.push(tab);if(workspaceHistory.length>7)workspaceHistory=workspaceHistory.slice(-7);renderWorkspaceDock(tab)}
-function renderWorkspaceDock(activeTab=""){const root=$("#workspaceDock");if(!root)return;const allowed=new Set($$(".nav button[data-tab]:not(.hidden)").map(b=>b.dataset.tab));workspaceHistory=workspaceHistory.filter(x=>allowed.has(x)||x==="dashboard");if(!workspaceHistory.length)workspaceHistory=["dashboard"];root.innerHTML=workspaceHistory.map(tab=>`<button class="workspace-tab ${tab===activeTab?"active":""}" type="button" onclick="openTab('${tab}')"><span class="workspace-tab-icon">${navIconSvg(tab)}</span><b>${esc(navLabel(tab))}</b>${tab!=="dashboard"?`<span class="workspace-tab-close" role="button" tabindex="0" onclick="closeWorkspaceTab(event,'${tab}')" aria-label="Đóng cửa sổ">×</span>`:""}</button>`).join("")}
+function renderWorkspaceDock(activeTab=""){
+  const root=$("#workspaceDock");if(!root)return;
+  const allowed=new Set($$(".nav button[data-tab]").filter(b=>canAccessTab(b.dataset.tab)).map(b=>b.dataset.tab));
+  workspaceHistory=workspaceHistory.filter(x=>allowed.has(x)||x==="dashboard");
+  if(!workspaceHistory.length)workspaceHistory=["dashboard"];
+  root.innerHTML=workspaceHistory.map(tab=>`<button class="workspace-tab ${tab===activeTab?"active":""}" type="button" onclick="openTab('${tab}')"><span class="workspace-tab-icon">${navIconSvg(tab)}</span><b>${esc(navLabel(tab))}</b>${tab!=="dashboard"?`<span class="workspace-tab-close" role="button" tabindex="0" onclick="closeWorkspaceTab(event,'${tab}')" aria-label="Đóng cửa sổ">×</span>`:""}</button>`).join("");
+}
 function closeWorkspaceTab(ev,tab){ev?.stopPropagation?.();workspaceHistory=workspaceHistory.filter(x=>x!==tab);const active=$(".nav button.active")?.dataset.tab;if(active===tab)openTab(workspaceHistory[workspaceHistory.length-1]||"dashboard");else renderWorkspaceDock(active||"dashboard")}
 function updateWorkspaceWindowMeta(){document.querySelectorAll("main > section[id]").forEach(sec=>{const t=sec.querySelector(".workspace-window-title"),m=sec.querySelector(".window-bar-meta");if(t)t.textContent=navLabel(sec.id);if(m)m.textContent=`${state.semesters?.[semester]?.name||semester} • ${semesterLocked()?"Chỉ xem":"Đang hoạt động"}`})}
 function decorateWorkspaceSections(){document.querySelectorAll("main > section[id]").forEach(sec=>{sec.classList.add("workspace-window");if(sec.firstElementChild?.classList.contains("workspace-window-bar"))return;const bar=document.createElement("div");bar.className="workspace-window-bar";bar.innerHTML=`<div class="window-bar-left"><span class="window-dots"><i></i><i></i><i></i></span><b class="workspace-window-title">${esc(navLabel(sec.id))}</b></div><span class="window-bar-meta"></span>`;sec.insertBefore(bar,sec.firstChild)});updateWorkspaceWindowMeta()}
@@ -1941,7 +1994,7 @@ function renderFavoriteNav(){
 }
 function renderFavoriteSettings(){
   const root=$("#favoriteMenuSettings");if(!root)return;
-  root.innerHTML=FAVORITABLE_TABS.map(tab=>`<label><input type="checkbox" ${(userPreferences.favorites||[]).includes(tab)?"checked":""} onchange="toggleFavoriteTab('${tab}',this.checked)"> ${esc(navLabel(tab))}</label>`).join("");
+  root.innerHTML=FAVORITABLE_TABS.filter(tab=>canAccessTab(tab)).map(tab=>`<label><input type="checkbox" ${(userPreferences.favorites||[]).includes(tab)?"checked":""} onchange="toggleFavoriteTab('${tab}',this.checked)"> ${esc(navLabel(tab))}</label>`).join("");
 }
 async function toggleFavoriteTab(tab,on){const set=new Set(userPreferences.favorites||[]);on?set.add(tab):set.delete(tab);userPreferences.favorites=[...set];renderFavoriteNav();await saveUserPreferences()}
 async function logAudit({action,module="system",entityType="",entityId="",summary="",before=null,after=null,undo=null,semesterKey=semester}){
@@ -2086,7 +2139,7 @@ async function validateAccess(user){
     await loadRealtimeCollectionsOnce();
     showApp();
     startSecureSessionWatch();
-    if(canEditClub())migratePublicLookupPrivacyV45();
+    if(canEditClub())migratePublicLookupPrivacyV46();
     watchSuiteCollections();
     watchOwnProfileRealtime();
     watchCloudStateRealtime();
@@ -2242,9 +2295,13 @@ function applySectionPermissionState(){
     sec.setAttribute("aria-hidden",allowed?"false":"true");
     sec.toggleAttribute("inert",!allowed);
     if(!allowed){
-      sec.classList.add("permission-restricted");
+      sec.classList.add("permission-restricted","permission-force-hide");
+      sec.style.setProperty("display","none","important");
       clearRestrictedModuleUi(module);
-    }else sec.classList.remove("permission-restricted");
+    }else{
+      sec.classList.remove("permission-restricted","permission-force-hide");
+      sec.style.removeProperty("display");
+    }
   }
   for(const tab of ["freeLookup","approvals","audit","trash","accounts","settings"]){
     const sec=$("#"+tab);if(!sec)continue;
@@ -2252,6 +2309,9 @@ function applySectionPermissionState(){
     sec.setAttribute("aria-hidden",allowed?"false":"true");
     sec.toggleAttribute("inert",!allowed);
     sec.classList.toggle("permission-restricted",!allowed);
+    sec.classList.toggle("permission-force-hide",!allowed);
+    if(allowed)sec.style.removeProperty("display");
+    else sec.style.setProperty("display","none","important");
   }
 }
 
@@ -2273,8 +2333,11 @@ function applyRoleAccess(){
   $$(".nav button[data-tab]").forEach(btn=>{
     const allowed=navRules[btn.dataset.tab]!==false;
     btn.classList.toggle("hidden",!allowed);
+    btn.classList.toggle("permission-force-hide",!allowed);
     btn.setAttribute("aria-hidden",allowed?"false":"true");
     btn.tabIndex=allowed?0:-1;
+    if(allowed)btn.style.removeProperty("display");
+    else btn.style.setProperty("display","none","important");
   });
 
   applySectionPermissionState();
@@ -2282,7 +2345,10 @@ function applyRoleAccess(){
   const toggle=(s,show)=>{
     const el=$(s);if(!el)return;
     el.classList.toggle("hidden",!show);
+    el.classList.toggle("permission-force-hide",!show);
     el.setAttribute("aria-hidden",show?"false":"true");
+    if(show)el.style.removeProperty("display");
+    else el.style.setProperty("display","none","important");
   };
   const ea=canEditModule("attendance"),em=canEditModule("members"),ef=canEditModule("finance"),ee=canEditModule("events"),el=canEditModule("lookup");
 
@@ -5223,17 +5289,16 @@ async function buildLookupRecord(m,cfg){
   if(cfg.showConversion)record.conversion=s.conversion;
   if(cfg.showFundPaid)record.fundPaid=!!m.fundPaid;
   if(cfg.showActivities){
-    record.activities=getAllActivities().map(a=>{
-      const v=m.scores?.[a.item.id];
-      const participated=a.group.mode==="checkbox"?v===true:Number(v||0)>0;
-      const earnedPoints=a.group.mode==="checkbox"?(participated?Number(a.item.points||0):0):Number(v||0);
-      if(a.item.specialType==="continuation"||a.group.specialType==="continuation"){
-        return {group:a.group.name,name:a.item.name,date:a.item.date||"",maxPoints:Number(a.item.points||0),earnedPoints,pointsOnly:true};
-      }
-      return {group:a.group.name,name:a.item.name,date:a.item.date||"",maxPoints:Number(a.item.points||0),participated,earnedPoints};
-    });
+    record.activities=getAllActivities()
+      .filter(a=>a.item.specialType!=="continuation"&&a.group.specialType!=="continuation")
+      .map(a=>{
+        const v=m.scores?.[a.item.id];
+        const participated=a.group.mode==="checkbox"?v===true:Number(v||0)>0;
+        const earnedPoints=a.group.mode==="checkbox"?(participated?Number(a.item.points||0):0):Number(v||0);
+        return {group:a.group.name,name:a.item.name,date:a.item.date||"",maxPoints:Number(a.item.points||0),participated,earnedPoints};
+      });
   }
-  record.privacyVersion=45;
+  record.privacyVersion=46;
   const customFields=[];
   for(const fieldKey of (cfg.customFields||[])){
     const f=state.memberFields.find(x=>x.key===fieldKey);if(!f)continue;
@@ -5247,30 +5312,27 @@ async function buildLookupRecord(m,cfg){
 }
 
 
-async function migratePublicLookupPrivacyV45(){
+async function migratePublicLookupPrivacyV46(){
   if(!canEditClub())return;
-  const markerRef=fbDb.collection("settings").doc("privacyMigrationV45");
+  const markerRef=fbDb.collection("settings").doc("privacyMigrationV46");
   try{
     const marker=await markerRef.get();
     if(marker.exists&&marker.data()?.done===true)return;
-    let touched=0;
+    let touched=0,removedActivities=0;
     for(const semKey of Object.keys(state.semesters||{})){
       const col=fbDb.collection(PUBLIC_LOOKUP_ROOT).doc(semKey).collection("members");
       let snap;try{snap=await col.get()}catch{continue}
       const ops=[];
       for(const d of snap.docs){
         const data=d.data()||{},acts=Array.isArray(data.activities)?data.activities:[];
-        let changed=false;
-        const sanitized=acts.map(a=>{
+        const sanitized=acts.filter(a=>{
           const n=normalizeText(`${a.group||""} ${a.name||""}`);
-          const isContinuation=a.pointsOnly===true||n.includes("dong hanh");
-          if(!isContinuation)return a;
-          if(a.participated!==undefined||a.pointsOnly!==true)changed=true;
-          const clean={...a,pointsOnly:true};
-          delete clean.participated;delete clean.formStatus;delete clean.continuationDecision;
-          return clean;
+          const continuation=a.pointsOnly===true||n.includes("dong hanh");
+          if(continuation)removedActivities++;
+          return !continuation;
         });
-        if(["continuationResponses","continuationStatus","continuationDecision","formContinuationStatus"].some(k=>k in data))changed=true;
+        const forbidden=["continuationResponses","continuationStatus","continuationDecision","formContinuationStatus"];
+        const changed=sanitized.length!==acts.length||forbidden.some(k=>k in data)||data.privacyVersion!==46;
         if(changed){
           ops.push(batch=>batch.set(d.ref,{
             activities:sanitized,
@@ -5278,17 +5340,16 @@ async function migratePublicLookupPrivacyV45(){
             continuationStatus:firebase.firestore.FieldValue.delete(),
             continuationDecision:firebase.firestore.FieldValue.delete(),
             formContinuationStatus:firebase.firestore.FieldValue.delete(),
-            privacyVersion:45
+            privacyVersion:46
           },{merge:true}));
           touched++;
         }
       }
       if(ops.length)await commitInChunks(ops);
     }
-    await markerRef.set({done:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||"",records:touched},{merge:true});
-  }catch(e){console.warn("migratePublicLookupPrivacyV45",e)}
+    await markerRef.set({done:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||"",records:touched,removedActivities},{merge:true});
+  }catch(e){console.warn("migratePublicLookupPrivacyV46",e)}
 }
-
 async function syncLookupSemester({silent=false}={}){
   if(semesterLocked()){if(!silent)alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi đồng bộ cổng tra cứu.");return false}
   const cfg=lookupConfig();
@@ -5455,7 +5516,7 @@ $("#lookupTestBtn").onclick=async()=>{
       return;
     }
     const d=snap.data()||{};
-    const activityCount=Array.isArray(d.activities)?d.activities.length:0;
+    const activityCount=(Array.isArray(d.activities)?d.activities:[]).filter(a=>!normalizeText(`${a.group||""} ${a.name||""}`).includes("dong hanh")).length;
     $("#lookupTestResult").textContent=`Tra cứu được MSSV ${key}.\nHọc kỳ: ${d.semesterName||d.semester||semester}\nĐiểm tổng: ${"total" in d?d.total:"Không bật hiển thị"}\nSố hoạt động: ${activityCount}`;
   }catch(e){
     console.error(e);
@@ -6106,6 +6167,25 @@ async function deleteAttendancePortal(token,closeModalAfter=true){
 }
 $("#qrAttendanceBtn").onclick=openQRAttendance;
 /* settings */
+
+function activityDateInputValue(value){
+  const s=String(value||"").trim();
+  if(!s)return "";
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(!m)return "";
+  return `${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;
+}
+function activityDateStoreValue(value){
+  const s=String(value||"").trim();
+  if(!s)return "";
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?`${m[3]}/${m[2]}/${m[1]}`:s;
+}
+function setActivityDate(gi,ii,value){
+  sem().groups[gi].items[ii].date=activityDateStoreValue(value);
+}
+
 function renderSettings(){
   $("#setSemesterCode").value=sem().code;
   $("#setSemesterName").value=sem().name;
@@ -6115,7 +6195,28 @@ function renderSettings(){
   $("#setOpeningBalance").value=formatCurrency(sem().openingBalance||0);
   $("#settingsSemesterHint").innerHTML=`Bạn đang chỉnh học kỳ <b>${esc(sem().name||semester)}</b> (${esc(sem().code||semester)}). Học kỳ này hiện có <b>${members().length}</b> thành viên và <b>${txs().length}</b> giao dịch thu/chi.`;
   $("#memberFields").innerHTML=state.memberFields.map((f,i)=>`<span class="field-chip">${esc(f.label)}${f.system?"":`<button onclick="removeMemberField(${i})">×</button>`}</span>`).join("");
-  $("#activitySettings").innerHTML=sem().groups.map((g,gi)=>`<div class="settings-card" style="margin:12px 0;background:#fafafa"><div class="section-title"><h4><input value="${esc(g.name)}" onchange="sem().groups[${gi}].name=this.value"></h4><div><select onchange="sem().groups[${gi}].mode=this.value"><option value="checkbox" ${g.mode==="checkbox"?"selected":""}>Checkbox</option><option value="number" ${g.mode==="number"?"selected":""}>Nhập điểm</option></select> <button class="secondary" onclick="addActivityItem(${gi})">+ Cột</button></div></div><div class="setting-row header"><span>Tên cột</span><span>Ngày</span><span>Điểm</span><span></span></div>${g.items.map((it,ii)=>`<div class="setting-row"><input value="${esc(it.name)}" onchange="sem().groups[${gi}].items[${ii}].name=this.value"><input value="${esc(it.date||"")}" onchange="sem().groups[${gi}].items[${ii}].date=this.value"><input class="num-clear" type="number" value="${Number(it.points||0)===0?"":Number(it.points||0)}" placeholder="0" onchange="sem().groups[${gi}].items[${ii}].points=Number(this.value||0)"><button class="danger" onclick="removeActivityItem(${gi},${ii})">×</button></div>`).join("")}</div>`).join("");
+  $("#activitySettings").innerHTML=sem().groups.map((g,gi)=>`
+    <div class="activity-settings-group">
+      <div class="activity-settings-head">
+        <div class="activity-settings-title"><input value="${esc(g.name)}" aria-label="Tên nhóm hoạt động" onchange="sem().groups[${gi}].name=this.value"></div>
+        <select aria-label="Kiểu chấm điểm" onchange="sem().groups[${gi}].mode=this.value">
+          <option value="checkbox" ${g.mode==="checkbox"?"selected":""}>Checkbox</option>
+          <option value="number" ${g.mode==="number"?"selected":""}>Nhập điểm</option>
+        </select>
+        <div><button class="secondary" onclick="addActivityItem(${gi})">+ Thêm hoạt động</button></div>
+      </div>
+      <div class="activity-setting-table">
+        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Điểm</span><span></span></div>
+        ${g.items.map((it,ii)=>`
+          <div class="activity-setting-row">
+            <input value="${esc(it.name)}" aria-label="Tên hoạt động" onchange="sem().groups[${gi}].items[${ii}].name=this.value">
+            <div class="activity-date-cell"><input type="date" value="${esc(activityDateInputValue(it.date))}" aria-label="Ngày hoạt động" onchange="setActivityDate(${gi},${ii},this.value)"></div>
+            <input class="num-clear" type="number" min="0" value="${Number(it.points||0)===0?"":Number(it.points||0)}" placeholder="0" aria-label="Điểm hoạt động" onchange="sem().groups[${gi}].items[${ii}].points=Number(this.value||0)">
+            <button class="danger" title="Xóa hoạt động" onclick="removeActivityItem(${gi},${ii})">×</button>
+          </div>`).join("")}
+      </div>
+      <div class="activity-date-help">Cột <b>Ngày hoạt động</b> có lịch chọn ngày. Dữ liệu cũ dạng dd/mm/yyyy được tự chuyển để hiển thị đúng.</div>
+    </div>`).join("");
   applyZeroClearBehavior();
   bindCurrencyInputs($("#settings"));
 }
