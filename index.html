@@ -1176,7 +1176,7 @@ body:not(.auth-admin) .workspace-dock{
       <div class="sidebar-scroll-spacer" aria-hidden="true"></div>
     </div>
     <div class="side-bottom">
-      <select id="semester"></select>
+      <select id="semester" title="Khi đăng nhập, hệ thống tự chọn học kỳ theo tháng hiện tại. Bạn vẫn có thể đổi học kỳ tại đây."></select>
       <button class="logout" id="logoutBtn">Đăng xuất</button>
     </div>
   </aside>
@@ -1680,6 +1680,46 @@ function formatDateVN(v){
   const d=new Date(v+"T00:00:00");
   return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString("vi-VN");
 }
+
+function semesterCodeFromDate(date=new Date()){
+  const d=date instanceof Date?date:new Date(date);
+  const month=d.getMonth()+1;
+  const yy=String(d.getFullYear()%100).padStart(2,"0");
+  const prefix=month<=4?"SP":month<=8?"SU":"FA";
+  return `${prefix}${yy}`;
+}
+function semesterSortValue(code){
+  const p=parseMainSemester(code);
+  if(!p)return -Infinity;
+  const order={SP:1,SU:2,FA:3};
+  return p.year*10+(order[p.prefix]||0);
+}
+function resolveSemesterForLogin(date=new Date()){
+  const desired=semesterCodeFromDate(date);
+  if(state.semesters?.[desired])return desired;
+
+  // If the exact current term has not been created, use the nearest
+  // earlier canonical semester. This never creates or modifies data.
+  const target=semesterSortValue(desired);
+  const available=Object.keys(state.semesters||{})
+    .filter(code=>parseMainSemester(code))
+    .sort((a,b)=>semesterSortValue(a)-semesterSortValue(b));
+
+  const earlier=available.filter(code=>semesterSortValue(code)<=target);
+  if(earlier.length)return earlier[earlier.length-1];
+  if(available.length)return available[0];
+  return Object.keys(state.semesters||{})[0]||"";
+}
+function selectSemesterForNewLogin(){
+  const next=resolveSemesterForLogin(new Date());
+  if(next&&state.semesters?.[next]){
+    semester=next;
+    selectedInfoId=null;
+    selectedMemberIds.clear();
+  }
+  return semester;
+}
+
 function semesterPeriodText(){
   const s=sem().startDate||"",e=sem().endDate||"";
   if(s&&e)return `${formatDateVN(s)} - ${formatDateVN(e)}`;
@@ -2134,6 +2174,11 @@ async function validateAccess(user){
     currentFirebaseUser=user;
     currentProfile=p;
     await loadCloudState();
+
+    // Mỗi lần đăng nhập mới, vào thẳng học kỳ theo tháng hiện tại:
+    // Jan-Apr = Spring, May-Aug = Summer, Sep-Dec = Fall.
+    selectSemesterForNewLogin();
+
     await ensureRealtimeCollectionsV19();
     await loadUserPreferences();
     await loadRealtimeCollectionsOnce();
@@ -2427,8 +2472,15 @@ $("#semester").onchange=e=>{
 /* semester selector */
 function renderSemesterSelect(){
   const sel=$("#semester");
-  sel.innerHTML=Object.entries(state.semesters).map(([k,v])=>`<option value="${esc(k)}" ${k===semester?"selected":""}>${esc(v.name)}</option>`).join("");
-  $("#semCode").textContent=sem().code;
+  const entries=Object.entries(state.semesters).sort(([a],[b])=>{
+    const av=semesterSortValue(a),bv=semesterSortValue(b);
+    if(Number.isFinite(av)&&Number.isFinite(bv))return av-bv;
+    if(Number.isFinite(av))return -1;
+    if(Number.isFinite(bv))return 1;
+    return String(a).localeCompare(String(b));
+  });
+  sel.innerHTML=entries.map(([k,v])=>`<option value="${esc(k)}" ${k===semester?"selected":""}>${esc(v.name)}</option>`).join("");
+  $("#semCode").textContent=sem()?.code||semester;
   renderAttendanceSelector();
 }
 function renderAttendanceSelector(){
