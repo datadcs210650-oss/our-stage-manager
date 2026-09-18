@@ -1220,6 +1220,12 @@ body:not(.auth-admin) .workspace-dock{
   .simple-login-head h2{font-size:27px!important}
 }
 
+
+/* ===== V49 Google OAuth popup compatibility ===== */
+.google-login-note{
+  margin-top:8px;text-align:center;color:#9aa3aa;font-size:8px;line-height:1.4
+}
+
 </style>
 </head>
 <body class="auth-login">
@@ -1285,6 +1291,7 @@ body:not(.auth-admin) .workspace-dock{
           <span class="google-login-mark" aria-hidden="true">G</span>
           <span>Tiếp tục với Google</span>
         </button>
+        <div class="google-login-note">Google Sign-In mở bằng cửa sổ xác thực an toàn.</div>
       </div>
     </div>
   </section>
@@ -2297,7 +2304,7 @@ function hasAuthProvider(providerId,user=fbAuth.currentUser){
   return providerIds(user).includes(providerId);
 }
 function googleAuthErrorMessage(e){
-  const code=e?.code||"";
+  const code=e?.code||"auth/unknown";
   const map={
     "auth/popup-closed-by-user":"Bạn đã đóng cửa sổ đăng nhập Google.",
     "auth/cancelled-popup-request":"Yêu cầu đăng nhập Google trước đó đã được hủy.",
@@ -2305,11 +2312,19 @@ function googleAuthErrorMessage(e){
     "auth/operation-not-allowed":"Đăng nhập Google chưa được bật trong Firebase Authentication.",
     "auth/unauthorized-domain":"Tên miền website chưa được thêm vào Authorized domains của Firebase Authentication.",
     "auth/network-request-failed":"Không thể kết nối tới Google/Firebase. Kiểm tra Internet rồi thử lại.",
-    "auth/too-many-requests":"Có quá nhiều lần thử đăng nhập. Vui lòng chờ rồi thử lại."
+    "auth/too-many-requests":"Có quá nhiều lần thử đăng nhập. Vui lòng chờ rồi thử lại.",
+    "auth/web-storage-unsupported":"Trình duyệt đang chặn bộ nhớ cần thiết cho Firebase Authentication.",
+    "auth/operation-not-supported-in-this-environment":"Môi trường trình duyệt hiện tại không hỗ trợ cửa sổ đăng nhập Google.",
+    "auth/configuration-not-found":"Cấu hình Google Authentication của dự án Firebase chưa hoàn tất.",
+    "auth/internal-error":"Firebase/Google trả về lỗi nội bộ trong quá trình xác thực."
   };
-  return map[code]||"Không thể đăng nhập bằng Google lúc này.";
+  const base=map[code]||"Không thể đăng nhập bằng Google lúc này.";
+  return `${base} (${code})`;
 }
+let googlePopupBusy=false;
 async function signInWithGoogle(){
+  if(googlePopupBusy)return;
+  googlePopupBusy=true;
   const btn=$("#googleLoginBtn");
   setLoginError("");
   try{
@@ -2326,6 +2341,7 @@ async function signInWithGoogle(){
       setLoginError(googleAuthErrorMessage(e));
     }
   }finally{
+    googlePopupBusy=false;
     if(btn){btn.disabled=false;btn.querySelector("span:last-child").textContent="Tiếp tục với Google"}
   }
 }
