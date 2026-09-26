@@ -1,52 +1,61 @@
-OUR STAGE CLUB MANAGER V51 — EVENT PORTAL FIELDS FIX
+OUR STAGE CLUB MANAGER V52 — EVENT INPUT + SUBMIT FIX
 
-LỖI ĐƯỢC KHẮC PHỤC
-Cổng sự kiện có thể hiện tiêu đề và nút “Gửi thông tin” nhưng phần câu hỏi bị trống.
+LỖI ĐƯỢC SỬA
+Cổng sự kiện có thể tải được tiêu đề/trường nhưng người dùng không nhập ổn định,
+mất focus/mất dữ liệu hoặc không gửi được.
 
-V51 sửa theo 3 lớp:
+V52 sửa ở cả NHẬP và GỬI:
 
-1. PUBLIC EVENT
-- Không chỉ đọc event.fields.
-- Có thể khôi phục schema cũ từ:
-  fields
-  formFields
-  questions
-  schema.fields
-  form.fields
-- Tự đổi tên type cũ như paragraph/dropdown/checkbox/tel/studentId...
-  sang type hiện tại.
-- Nếu schema cũ không có câu hỏi nhận câu trả lời, public tự thêm bộ trường cơ bản
-  thay vì để trang trắng.
-- renderFields có try/catch riêng; lỗi một schema cũ không làm mất toàn bộ form.
-- Có dòng trạng thái số trường để dễ nhận biết dữ liệu đã tải.
-- Bỏ mọi min-height rỗng của form; nút Gửi nằm ngay sau các trường.
+1. FIELD KHÔNG BỊ DỰNG LẠI LIÊN TỤC
+Firestore có thể trả snapshot cache rồi snapshot server.
+Bản cũ gọi renderFields() lại mỗi snapshot và thay toàn bộ innerHTML của form.
+Điều này có thể làm mất focus/giá trị vừa nhập.
 
-2. ADMIN
-- Event health chỉ được xem là hợp lệ khi có ít nhất một trường nhận câu trả lời.
-- Tự đọc schema cũ và chuyển về fields chuẩn.
-- Schema mới dùng fieldSchemaVersion 4.
-- Mỗi event có nút “Đồng bộ trường form”.
-- Bấm Mở cổng hoặc QR sự kiện sẽ thử đồng bộ field schema trước.
-- repairCurrentSemesterEventFields tiếp tục sửa tự động khi Admin mở module Sự kiện.
+V52:
+- Tạo schema signature.
+- Nếu schema không đổi, không replace DOM input.
+- Giữ draft trong RAM khi buộc phải render lại.
+- Không dùng localStorage/sessionStorage cho nội dung form.
 
-3. KHÔNG THAY RULES
-V51 không nới hoặc thay Firestore Rules.
-ZIP không chứa Firestore Rules.
+2. INPUT CÓ DOM KEY AN TOÀN
+- Không dùng trực tiếp field.id của Firestore làm CSS selector/input id.
+- Mỗi field dùng ef_0, ef_1, ef_2...
+- answers vẫn lưu bằng field.id gốc, nên không phá dữ liệu kết quả.
 
-FIREBASE / REALTIME
-Website này dùng project `clb-our`.
-Luồng realtime của Admin/Public đang dùng Cloud Firestore `onSnapshot`, không dùng
-Firebase Realtime Database.
+3. BẢO ĐẢM FIELD TƯƠNG TÁC
+- pointer-events:auto
+- input/textarea/select visible + enabled
+- bỏ disabled/readonly từ dữ liệu legacy
+- z-index riêng cho form
+- caret và touch interaction được bật rõ ràng
 
-Nếu một project Firebase KHÁC chạm quota Realtime Database, project `clb-our` không
-bị trừ chung quota đó. Trường hợp ngoại lệ là nhiều project cùng gắn với một Cloud
-Billing account bị suspended/closed; khi đó các project gắn vào billing account đó
-có thể cùng bị ảnh hưởng.
+4. SUBMIT ĐƯỢC LÀM LẠI
+- Dùng native <form submit> thay vì button onclick.
+- Button có type=submit.
+- Thu thập câu trả lời bằng data-field-index và DOM key an toàn.
+- Không dùng querySelector với field.id tùy ý.
+- Trong lúc gửi mới khóa form.
+- Nếu gửi lỗi, nội dung đã nhập vẫn giữ nguyên.
+- Báo riêng:
+  permission-denied
+  resource-exhausted
+  unavailable
+
+5. FIREBASE
+V52 vẫn dùng project `clb-our`.
+Nếu project Firebase khác hết quota Realtime Database thì không làm các input HTML
+của cổng này bị khóa. Nếu V52 báo resource-exhausted khi bấm Gửi thì mới cần kiểm tra
+quota của chính project clb-our.
+
+6. FIRESTORE RULES
+V52 không thay đổi Firestore Rules.
+ZIP không chứa file Rules.
 
 CẬP NHẬT
-1. Commit toàn bộ V51 lên GitHub.
-2. Không cần Publish Firestore Rules.
-3. Giữ vercel.json trong package.
-4. Chờ Vercel Ready.
-5. Command + Shift + R.
-6. Vào Admin > Cổng sự kiện > bấm “Đồng bộ trường form” ở sự kiện cũ một lần nếu cần.
+1. Commit toàn bộ package V52 lên GitHub.
+2. Không Publish Rules.
+3. Chờ Vercel Ready.
+4. Command + Shift + R.
+5. Admin > Cổng sự kiện > “Mở cổng / Test nhập”.
+6. Nhập thử Họ tên + MSSV và bấm Gửi.
+Nếu Firestore từ chối ghi, V52 sẽ hiện mã/nguyên nhân dễ hiểu hơn thay vì trang im lặng.
