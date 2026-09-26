@@ -157,6 +157,28 @@ body{
 .event-submit-state.error{color:#972a43}
 .event-submit-state.ok{color:#23704f}
 
+
+/* ==========================================================
+   V53 SUCCESS PRIVACY STATE
+   ========================================================== */
+body.event-submitted #formView{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.event-submitted #successView{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#successView{
+  max-width:880px;
+  margin:0 auto;
+}
+#successView h1{
+  font-size:clamp(32px,5vw,54px)!important;
+}
+
 </style>
 <style id="v41-public-style">
 :root{--v41-bg:#f1f4f6;--v41-panel:#fff;--v41-text:#222b33;--v41-muted:#77828b;--v41-line:#dfe5e9;--v41-rose:#c85872;--v41-burgundy:#76213a;--v41-shadow:0 22px 65px rgba(30,42,54,.095)}
@@ -198,9 +220,21 @@ body.v41-event-page .wrap{width:min(880px,calc(100% - 28px))!important;max-width
   </div>
 </div>
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
+<script src="/api/firebase-config.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
-firebase.initializeApp(firebaseConfig);
+const firebaseConfig=window.__FIREBASE_CONFIG__||{};
+if(!firebaseConfig.apiKey){
+  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
+}
+const firebaseInitConfig={
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+};
+firebase.initializeApp(firebaseInitConfig);
 const db=firebase.firestore(),$=s=>document.querySelector(s);try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const eventId=new URLSearchParams(location.search).get("event")||"";
 let eventConfig=null;
@@ -294,6 +328,7 @@ let eventFormDirty=false;
 let eventRenderedSchemaSignature="";
 let eventLastRemoteSignature="";
 let eventSubmitting=false;
+let eventSubmissionComplete=false;
 
 function publicDomKey(index){
   return `ef_${index}`;
@@ -352,6 +387,7 @@ function setSubmitState(text="",kind=""){
 function eventTs(v){return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(v?new Date(v).getTime():0)||0}
 function scheduleEventRecheck(){if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(!eventConfig)return;const now=Date.now(),times=[eventTs(eventConfig.openAt),eventTs(eventConfig.closeAt)].filter(x=>x>now);if(times.length)eventScheduleTimer=setTimeout(()=>applyPublicEventState(),Math.min(...times)-now+150)}
 function applyPublicEventState({forceRender=false}={}){
+  if(eventSubmissionComplete)return;
   if(!eventConfig){showClosed("Cổng sự kiện không tồn tại.");return}
   const now=Date.now(),start=eventTs(eventConfig.openAt),end=eventTs(eventConfig.closeAt);
 
@@ -377,6 +413,7 @@ async function init(){
   eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(
     {includeMetadataChanges:false},
     snap=>{
+      if(eventSubmissionComplete)return;
       if(!snap.exists){showClosed("Cổng sự kiện không tồn tại.");return}
       const incoming=snap.data()||{};
       const nextSignature=publicRemoteSignature(incoming);
@@ -442,7 +479,7 @@ function renderFields({force=false}={}){
       let input="";
 
       if(f.type==="textarea"){
-        input=`<textarea id="${domKey}" data-field-index="${index}" autocomplete="off" ${f.required?"required":""} placeholder="Nhập câu trả lời"></textarea>`;
+        input=`<textarea id="${domKey}" data-field-index="${index}" autocomplete="off" maxlength="4000" ${f.required?"required":""} placeholder="Nhập câu trả lời"></textarea>`;
       }else if(f.type==="select"){
         input=`<select id="${domKey}" data-field-index="${index}" ${f.required?"required":""}><option value="">-- Chọn --</option>${(f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
       }else if(f.type==="radio"){
@@ -454,7 +491,7 @@ function renderFields({force=false}={}){
       }else{
         const t=f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":f.type==="email"?"email":f.type==="phone"?"tel":"text";
         const autocomplete=f.type==="email"?' autocomplete="email"':f.type==="phone"?' autocomplete="tel"':f.type==="mssv"?' autocomplete="off"':' autocomplete="off"';
-        input=`<input id="${domKey}" data-field-index="${index}" type="${t}"${autocomplete} ${f.required?"required":""} placeholder="${f.type==="mssv"?"Nhập MSSV":"Nhập thông tin"}">`;
+        input=`<input id="${domKey}" data-field-index="${index}" type="${t}"${autocomplete} ${["text","email","phone","mssv"].includes(f.type)?' maxlength="250"':""} ${f.required?"required":""} placeholder="${f.type==="mssv"?"Nhập MSSV":"Nhập thông tin"}">`;
       }
 
       return `<div class="field" data-field-card="${index}"><label for="${["radio","checkboxes"].includes(f.type)?"":domKey}">${esc(f.label)} ${req}</label>${input}${help}</div>`;
@@ -505,6 +542,76 @@ $("#eventForm").addEventListener("change",()=>{
   eventFormDirty=true;
   setSubmitState("");
 });
+
+
+function secureClearSubmittedForm(){
+  const form=$("#eventForm"),mount=$("#eventFieldsMount");
+  if(form){
+    try{form.reset()}catch{}
+    form.querySelectorAll("input,textarea,select").forEach(el=>{
+      try{
+        if(el.type==="checkbox"||el.type==="radio")el.checked=false;
+        else el.value="";
+      }catch{}
+      el.disabled=true;
+    });
+  }
+  if(mount)mount.replaceChildren();
+  const errorBox=$("#formError");
+  if(errorBox){errorBox.textContent="";errorBox.style.display="none"}
+  setSubmitState("");
+}
+
+function successTitleForEvent(){
+  const custom=String(eventConfig?.successTitle||"").trim();
+  const normalized=custom.toLowerCase();
+  if(!custom||normalized==="gửi thông tin thành công"||normalized==="gui thong tin thanh cong"){
+    return "Đã gửi thông tin";
+  }
+  return custom;
+}
+
+function showSubmissionSuccess(){
+  eventSubmissionComplete=true;
+  eventFormDirty=false;
+
+  // Stop realtime listeners so a later snapshot cannot restore the form.
+  if(eventUnsub){
+    try{eventUnsub()}catch{}
+    eventUnsub=null;
+  }
+  if(eventScheduleTimer){
+    clearTimeout(eventScheduleTimer);
+    eventScheduleTimer=null;
+  }
+
+  secureClearSubmittedForm();
+
+  document.body.classList.add("event-submitted");
+
+  const formView=$("#formView");
+  const successView=$("#successView");
+  if(formView){
+    formView.hidden=true;
+    formView.setAttribute("aria-hidden","true");
+    formView.style.setProperty("display","none","important");
+  }
+  if(successView){
+    successView.hidden=false;
+    successView.setAttribute("aria-hidden","false");
+    successView.style.setProperty("display","block","important");
+  }
+
+  $("#successTitle").textContent=successTitleForEvent();
+  $("#successMessage").textContent=eventConfig?.successMessage||"CLB đã ghi nhận thông tin của bạn.";
+
+  // Do not leave the temporary green submit status visible.
+  setSubmitState("");
+
+  try{
+    successView?.scrollIntoView({behavior:"smooth",block:"start"});
+  }catch{}
+}
 
 $("#eventForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -581,12 +688,7 @@ $("#eventForm").addEventListener("submit",async e=>{
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    eventFormDirty=false;
-    setSubmitState("Đã gửi thông tin.","ok");
-    $("#formView").style.display="none";
-    $("#successView").style.display="block";
-    $("#successTitle").textContent=eventConfig.successTitle||"Gửi thông tin thành công";
-    $("#successMessage").textContent=eventConfig.successMessage||"CLB đã ghi nhận thông tin của bạn.";
+    showSubmissionSuccess();
   }catch(err){
     console.error("event submit",err);
     const code=String(err?.code||"");

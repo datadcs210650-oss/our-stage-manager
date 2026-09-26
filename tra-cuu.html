@@ -101,9 +101,21 @@ body.v41-member-lookup .wrap{width:min(1040px,calc(100% - 30px));max-width:none!
 </div>
 
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
+<script src="/api/firebase-config.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
-firebase.initializeApp(firebaseConfig);
+const firebaseConfig=window.__FIREBASE_CONFIG__||{};
+if(!firebaseConfig.apiKey){
+  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
+}
+const firebaseInitConfig={
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+};
+firebase.initializeApp(firebaseInitConfig);
 const db=firebase.firestore(),$=s=>document.querySelector(s);try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const PUBLIC_LOOKUP_ROOT="publicLookupSemesters";
 const params=new URLSearchParams(location.search);

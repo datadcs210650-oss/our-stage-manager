@@ -71,9 +71,21 @@ body.v41-free-lookup .page{min-height:auto!important;padding:30px 16px 0!importa
   </div><div class="footer">OUR STAGE CLUB • Dữ liệu do CLB công bố trên từng cổng tra cứu</div>
 </div></div>
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
+<script src="/api/firebase-config.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
-firebase.initializeApp(firebaseConfig);const db=firebase.firestore();try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
+const firebaseConfig=window.__FIREBASE_CONFIG__||{};
+if(!firebaseConfig.apiKey){
+  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
+}
+const firebaseInitConfig={
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+};
+firebase.initializeApp(firebaseInitConfig);const db=firebase.firestore();try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const portalId=new URLSearchParams(location.search).get("portal")||"";let meta=null;
 function norm(v){return String(v??"").normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase()}

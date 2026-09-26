@@ -1722,9 +1722,21 @@ body:not(.auth-admin) .workspace-dock{
 
 <div id="modalWrap" class="hidden"></div><div id="toast" class="toast hidden"></div>
 
+<script src="/api/firebase-config.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyDwVHk4sYnjcEST2VQmnQlbGQV-fqromNM",authDomain:"clb-our.firebaseapp.com",projectId:"clb-our",storageBucket:"clb-our.firebasestorage.app",messagingSenderId:"390807081243",appId:"1:390807081243:web:7e8f45f2783c01bf0403be"};
-firebase.initializeApp(firebaseConfig);
+const firebaseConfig=window.__FIREBASE_CONFIG__||{};
+if(!firebaseConfig.apiKey){
+  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
+}
+const firebaseInitConfig={
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+};
+firebase.initializeApp(firebaseInitConfig);
 const fbAuth=firebase.auth(),fbDb=firebase.firestore();
 try{fbDb.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){console.warn("Firestore settings",e)}
 

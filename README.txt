@@ -1,61 +1,81 @@
-OUR STAGE CLUB MANAGER V52 — EVENT INPUT + SUBMIT FIX
+OUR STAGE CLUB MANAGER V53 — SECURITY + SUCCESS STATE FIX
 
-LỖI ĐƯỢC SỬA
-Cổng sự kiện có thể tải được tiêu đề/trường nhưng người dùng không nhập ổn định,
-mất focus/mất dữ liệu hoặc không gửi được.
+GITHUB “SECRET SCANNING 1”
+Trong source cũ có Firebase Web API key được ghi trực tiếp trong 5 file HTML.
+Đây rất có thể là mục GitHub Secret Scanning đang phát hiện.
 
-V52 sửa ở cả NHẬP và GỬI:
+Firebase Web API key không phải mật khẩu truy cập Firestore; Firebase công khai rằng
+API key của Firebase Web app chỉ nhận diện project và quyền dữ liệu vẫn do
+Security Rules + App Check quyết định.
 
-1. FIELD KHÔNG BỊ DỰNG LẠI LIÊN TỤC
-Firestore có thể trả snapshot cache rồi snapshot server.
-Bản cũ gọi renderFields() lại mỗi snapshot và thay toàn bộ innerHTML của form.
-Điều này có thể làm mất focus/giá trị vừa nhập.
+Tuy vậy V53 vẫn loại API key khỏi repository để:
+- tránh cảnh báo GitHub cho các commit mới;
+- tránh tái sử dụng key nhầm ở nơi khác;
+- quản lý cấu hình production bằng Vercel Environment Variables.
 
-V52:
-- Tạo schema signature.
-- Nếu schema không đổi, không replace DOM input.
-- Giữ draft trong RAM khi buộc phải render lại.
-- Không dùng localStorage/sessionStorage cho nội dung form.
+BẮT BUỘC TRƯỚC KHI DEPLOY V53
+Vercel > Project > Settings > Environment Variables:
+Name:
+FIREBASE_WEB_API_KEY
 
-2. INPUT CÓ DOM KEY AN TOÀN
-- Không dùng trực tiếp field.id của Firestore làm CSS selector/input id.
-- Mỗi field dùng ef_0, ef_1, ef_2...
-- answers vẫn lưu bằng field.id gốc, nên không phá dữ liệu kết quả.
+Value:
+Dán Firebase Web API key hiện tại của project clb-our.
 
-3. BẢO ĐẢM FIELD TƯƠNG TÁC
-- pointer-events:auto
-- input/textarea/select visible + enabled
-- bỏ disabled/readonly từ dữ liệu legacy
-- z-index riêng cho form
-- caret và touch interaction được bật rõ ràng
+Apply cho Production (và Preview nếu bạn muốn test preview), sau đó Redeploy.
 
-4. SUBMIT ĐƯỢC LÀM LẠI
-- Dùng native <form submit> thay vì button onclick.
-- Button có type=submit.
-- Thu thập câu trả lời bằng data-field-index và DOM key an toàn.
-- Không dùng querySelector với field.id tùy ý.
-- Trong lúc gửi mới khóa form.
-- Nếu gửi lỗi, nội dung đã nhập vẫn giữ nguyên.
-- Báo riêng:
-  permission-denied
-  resource-exhausted
-  unavailable
+V53 thêm:
+api/firebase-config.js
+Trang web tải Firebase config runtime từ chính domain Vercel.
+Endpoint có Cache-Control: no-store và không chứa key trong GitHub source.
 
-5. FIREBASE
-V52 vẫn dùng project `clb-our`.
-Nếu project Firebase khác hết quota Realtime Database thì không làm các input HTML
-của cổng này bị khóa. Nếu V52 báo resource-exhausted khi bấm Gửi thì mới cần kiểm tra
-quota của chính project clb-our.
+LƯU Ý QUAN TRỌNG
+API key Firebase vẫn xuất hiện trong Network của trình duyệt khi website chạy.
+Điều này là bình thường với Firebase Web. Không dùng API key làm lớp bảo mật dữ liệu.
+Bảo mật dữ liệu phải dựa vào Firestore Rules và Firebase App Check.
 
-6. FIRESTORE RULES
-V52 không thay đổi Firestore Rules.
+GITHUB SECURITY
+V53 thêm:
+- .github/SECURITY.md
+- .github/workflows/codeql.yml
+- .github/dependabot.yml
+- .gitignore
+- .env.example (chỉ placeholder, không chứa key)
+
+Secret Scanning alert cũ có thể vẫn còn vì GitHub quét cả lịch sử commit.
+Sau khi xác nhận “View detected secrets” đúng là Firebase Web API key, bạn có thể
+resolve alert theo chính sách GitHub. Nếu alert là Client Secret, Service Account,
+Private Key hoặc token khác thì KHÔNG được đánh dấu an toàn; phải revoke/rotate.
+
+CỔNG SỰ KIỆN SAU KHI GỬI
+V53 sửa trạng thái thành công:
+- Ngay khi Firestore ghi thành công, form bị xóa khỏi DOM.
+- Input/textarea/select được reset và disabled trước khi xóa.
+- Dừng listener realtime của event để snapshot mới không làm form xuất hiện lại.
+- Xóa dòng trạng thái xanh “Đã gửi thông tin.” cũ.
+- Chỉ hiển thị màn hình thành công.
+- Tiêu đề mặc định chuyển thành “Đã gửi thông tin”.
+- Không giữ câu trả lời trong localStorage/sessionStorage.
+
+CHỐNG DỮ LIỆU QUÁ LỚN Ở CLIENT
+- text/email/phone/MSSV: tối đa 250 ký tự.
+- textarea: tối đa 4000 ký tự.
+Đây là lớp UX/client; Firestore Rules vẫn là lớp bảo vệ server.
+
+SECURITY HEADERS
+Giữ CSP, HSTS, X-Frame-Options: DENY, Referrer-Policy, COOP/CORP.
+Bổ sung:
+- X-Robots-Tag: noindex, nofollow, noarchive
+- Permissions-Policy chặn thêm browsing-topics
+- no-store cho /api/firebase-config.js
+
+FIRESTORE RULES
+V53 không thay đổi Firestore Rules.
 ZIP không chứa file Rules.
 
 CẬP NHẬT
-1. Commit toàn bộ package V52 lên GitHub.
-2. Không Publish Rules.
-3. Chờ Vercel Ready.
+1. Tạo FIREBASE_WEB_API_KEY trong Vercel Environment Variables.
+2. Commit toàn bộ V53 lên GitHub.
+3. Redeploy Vercel.
 4. Command + Shift + R.
-5. Admin > Cổng sự kiện > “Mở cổng / Test nhập”.
-6. Nhập thử Họ tên + MSSV và bấm Gửi.
-Nếu Firestore từ chối ghi, V52 sẽ hiện mã/nguyên nhân dễ hiểu hơn thay vì trang im lặng.
+5. Test Cổng sự kiện: nhập -> Gửi.
+6. Sau thành công chỉ còn màn hình “Đã gửi thông tin”.
