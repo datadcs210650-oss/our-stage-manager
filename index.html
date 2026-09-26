@@ -1226,6 +1226,9 @@ body:not(.auth-admin) .workspace-dock{
   margin-top:8px;text-align:center;color:#9aa3aa;font-size:8px;line-height:1.4
 }
 
+
+/* ===== V50 Google conflict repair ===== */
+.login-error:not(.hidden){line-height:1.55!important}
 </style>
 </head>
 <body class="auth-login">
@@ -2291,18 +2294,27 @@ function ensureMemberScores(m){m.scores=m.scores||{};for(const g of sem().groups
 /* auth */
 
 let pendingGoogleCredential=null;
+let pendingGoogleEmail="";
+let pendingGoogleOrphanUid="";
+let googlePopupBusy=false;
+let authFlowHold=false;
 
 function googleAuthProvider(){
   const provider=new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({prompt:"select_account"});
   return provider;
 }
-function providerIds(user=fbAuth.currentUser){
-  return (user?.providerData||[]).map(x=>x?.providerId).filter(Boolean);
+function providerIds(user=fbAuth.currentUser){return (user?.providerData||[]).map(x=>x?.providerId).filter(Boolean)}
+function hasAuthProvider(providerId,user=fbAuth.currentUser){return providerIds(user).includes(providerId)}
+function normalizeAuthEmail(v){return String(v||"").trim().toLowerCase()}
+function googleCredentialFromError(e){
+  try{return firebase.auth.GoogleAuthProvider.credentialFromError(e)||e?.credential||null}catch{return e?.credential||null}
 }
-function hasAuthProvider(providerId,user=fbAuth.currentUser){
-  return providerIds(user).includes(providerId);
+function googleCredentialFromResult(result){
+  try{return firebase.auth.GoogleAuthProvider.credentialFromResult(result)||null}catch{return null}
 }
+function authErrorEmail(e){return normalizeAuthEmail(e?.email||e?.customData?.email||e?.customData?._tokenResponse?.email||"")}
+function clearPendingGoogleLink(){pendingGoogleCredential=null;pendingGoogleEmail="";pendingGoogleOrphanUid=""}
 function googleAuthErrorMessage(e){
   const code=e?.code||"auth/unknown";
   const map={
@@ -2316,54 +2328,87 @@ function googleAuthErrorMessage(e){
     "auth/web-storage-unsupported":"Trình duyệt đang chặn bộ nhớ cần thiết cho Firebase Authentication.",
     "auth/operation-not-supported-in-this-environment":"Môi trường trình duyệt hiện tại không hỗ trợ cửa sổ đăng nhập Google.",
     "auth/configuration-not-found":"Cấu hình Google Authentication của dự án Firebase chưa hoàn tất.",
-    "auth/internal-error":"Firebase/Google trả về lỗi nội bộ trong quá trình xác thực."
+    "auth/internal-error":"Firebase/Google trả về lỗi nội bộ trong quá trình xác thực.",
+    "auth/account-exists-with-different-credential":"Email này đã tồn tại bằng một phương thức đăng nhập khác.",
+    "auth/credential-already-in-use":"Tài khoản Google này đang được liên kết với một Firebase User khác."
   };
-  const base=map[code]||"Không thể đăng nhập bằng Google lúc này.";
-  return `${base} (${code})`;
+  return `${map[code]||"Không thể đăng nhập bằng Google lúc này."} (${code})`;
 }
-let googlePopupBusy=false;
+async function googleSignedInUserHasProfile(user){
+  try{const snap=await fbDb.collection("users").doc(user.uid).get();return {exists:snap.exists,profile:snap.exists?{id:snap.id,...snap.data()}:null}}
+  catch(e){console.warn("googleSignedInUserHasProfile",e);return {exists:false,profile:null,error:e}}
+}
+async function repairGoogleCredentialConflict({email,password,originalUser,pendingCredential}){
+  const expectedEmail=normalizeAuthEmail(email),originalUid=originalUser?.uid||"";
+  if(!originalUid||!pendingCredential)throw Object.assign(new Error("Thiếu thông tin để xử lý xung đột Google."),{code:"osc/google-repair-missing"});
+  const originalProfile=await fbDb.collection("users").doc(originalUid).get();
+  if(!originalProfile.exists)throw Object.assign(new Error("Tài khoản chính chưa có hồ sơ quyền."),{code:"osc/original-profile-missing"});
+  const duplicateCredential=await fbAuth.signInWithCredential(pendingCredential),duplicateUser=duplicateCredential.user;
+  if(!duplicateUser)throw Object.assign(new Error("Không xác định được Firebase User đang giữ Google credential."),{code:"osc/google-duplicate-missing"});
+  const duplicateEmail=normalizeAuthEmail(duplicateUser.email);
+  if(duplicateUser.uid===originalUid)return duplicateUser;
+  if(expectedEmail&&duplicateEmail&&expectedEmail!==duplicateEmail)throw Object.assign(new Error("Email Google không trùng với email tài khoản chính."),{code:"osc/google-email-mismatch"});
+  const duplicateProfile=await fbDb.collection("users").doc(duplicateUser.uid).get();
+  if(duplicateProfile.exists)throw Object.assign(new Error("Google đang gắn với một Firebase User khác đã có hồ sơ quyền."),{code:"osc/google-conflict-authorized"});
+  const allowCleanup=confirm("Phát hiện Google đang gắn với một Firebase User phụ chưa có quyền truy cập hệ thống.\n\nBạn có muốn xóa User phụ này và liên kết Google vào đúng tài khoản Email/Mật khẩu hiện tại không?");
+  if(!allowCleanup)throw Object.assign(new Error("Bạn đã hủy xử lý xung đột Google."),{code:"osc/google-repair-cancelled"});
+  await duplicateUser.delete();
+  const back=await fbAuth.signInWithEmailAndPassword(email,password);
+  await back.user.linkWithCredential(pendingCredential);
+  return back.user;
+}
 async function signInWithGoogle(){
   if(googlePopupBusy)return;
-  googlePopupBusy=true;
-  const btn=$("#googleLoginBtn");
-  setLoginError("");
+  googlePopupBusy=true;authFlowHold=true;
+  const btn=$("#googleLoginBtn");setLoginError("");
   try{
     if(btn){btn.disabled=true;btn.querySelector("span:last-child").textContent="Đang mở Google…"}
     await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-    await fbAuth.signInWithPopup(googleAuthProvider());
+    const result=await fbAuth.signInWithPopup(googleAuthProvider()),user=result?.user;
+    if(!user)throw Object.assign(new Error("Google không trả về tài khoản người dùng."),{code:"auth/internal-error"});
+    const pendingCred=googleCredentialFromResult(result),profileCheck=await googleSignedInUserHasProfile(user);
+    if(profileCheck.exists){
+      clearPendingGoogleLink();authFlowHold=false;
+      const ok=await validateAccess(user);if(!ok){try{await fbAuth.signOut()}catch{}}
+      return;
+    }
+    pendingGoogleCredential=pendingCred;pendingGoogleEmail=normalizeAuthEmail(user.email);pendingGoogleOrphanUid=user.uid;
+    try{await fbAuth.signOut()}catch{}
+    authFlowHold=false;
+    if(pendingGoogleEmail&&$("#adminEmail"))$("#adminEmail").value=pendingGoogleEmail;
+    setLoginError("Google đã xác thực nhưng đang gắn với một Firebase User chưa có quyền truy cập. Nếu đây là cùng email tài khoản Email/Mật khẩu của bạn, hãy nhập mật khẩu một lần rồi bấm Đăng nhập. Hệ thống sẽ kiểm tra và hợp nhất an toàn.");
   }catch(e){
     console.warn("Google sign-in failed",e?.code||e);
-    if(e?.code==="auth/account-exists-with-different-credential"&&e?.credential){
-      pendingGoogleCredential=e.credential;
-      if(e?.email&&$("#adminEmail"))$("#adminEmail").value=e.email;
-      setLoginError("Email này đã có tài khoản bằng mật khẩu. Hãy đăng nhập bằng email và mật khẩu một lần; hệ thống sẽ liên kết Google tự động.");
-    }else{
-      setLoginError(googleAuthErrorMessage(e));
-    }
+    if(e?.code==="auth/account-exists-with-different-credential"){
+      const pendingCred=googleCredentialFromError(e),email=authErrorEmail(e);
+      if(!pendingCred)setLoginError("Firebase báo xung đột tài khoản nhưng không trả về Google credential để liên kết. (auth/account-exists-with-different-credential)");
+      else{
+        pendingGoogleCredential=pendingCred;pendingGoogleEmail=email;pendingGoogleOrphanUid="";
+        if(email&&$("#adminEmail"))$("#adminEmail").value=email;
+        setLoginError("Email này đã có tài khoản bằng phương thức khác. Hãy nhập mật khẩu tài khoản hiện tại một lần; sau khi xác thực, hệ thống sẽ liên kết Google vào cùng UID.");
+      }
+    }else setLoginError(googleAuthErrorMessage(e));
+    authFlowHold=false;
   }finally{
     googlePopupBusy=false;
     if(btn){btn.disabled=false;btn.querySelector("span:last-child").textContent="Tiếp tục với Google"}
   }
 }
 async function linkGoogleToCurrentAccount(){
-  const user=fbAuth.currentUser;if(!user)return;
-  const btn=$("#linkGoogleProviderBtn");
+  const user=fbAuth.currentUser;if(!user)return;const btn=$("#linkGoogleProviderBtn");
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang liên kết…"}
-    await user.linkWithPopup(googleAuthProvider());
-    await user.reload();
-    renderMyAccount();
-    toast("Đã liên kết tài khoản Google");
+    await user.linkWithPopup(googleAuthProvider());await user.reload();renderMyAccount();toast("Đã liên kết tài khoản Google");
   }catch(e){
     console.error("linkGoogleToCurrentAccount",e);
-    const msg=e?.code==="auth/provider-already-linked"?"Tài khoản Google đã được liên kết.":
-      e?.code==="auth/credential-already-in-use"?"Tài khoản Google này đang được liên kết với một tài khoản khác.":
-      e?.code==="auth/requires-recent-login"?"Hãy đăng xuất, đăng nhập lại rồi thử liên kết Google.":
-      googleAuthErrorMessage(e);
-    alert(msg);
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent="Liên kết Google"}
-  }
+    if(e?.code==="auth/credential-already-in-use"){
+      const pendingCred=googleCredentialFromError(e);
+      if(pendingCred){pendingGoogleCredential=pendingCred;pendingGoogleEmail=normalizeAuthEmail(user.email);pendingGoogleOrphanUid=""}
+      alert("Google này đang được gắn với một Firebase User khác.\n\nĐăng xuất rồi bấm “Tiếp tục với Google”. Nếu hệ thống yêu cầu, nhập mật khẩu tài khoản hiện tại một lần để V50 kiểm tra và sửa xung đột.");
+    }else{
+      const msg=e?.code==="auth/provider-already-linked"?"Tài khoản Google đã được liên kết.":e?.code==="auth/requires-recent-login"?"Hãy đăng xuất, đăng nhập lại rồi thử liên kết Google.":googleAuthErrorMessage(e);alert(msg);
+    }
+  }finally{if(btn){btn.disabled=false;btn.textContent="Liên kết Google"}}
 }
 
 function setLoginError(t){
@@ -2430,41 +2475,54 @@ function startSecureSessionWatch(){clearInterval(sessionWatchTimer);touchUserAct
 function stopSecureSessionWatch(){clearInterval(sessionWatchTimer);sessionWatchTimer=null;$("#sessionWarning")?.remove()}
 
 fbAuth.onAuthStateChanged(async user=>{
+  if(authFlowHold)return;
   if(!user){
-    stopSecureSessionWatch();
-    stopAttendancePortalWatchers();if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
-    persistSafeLocalState();
-    currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
-    document.body.classList.remove("auth-admin","sidebar-open");
-    document.body.classList.add("auth-login");
-    $("#app").classList.add("hidden");
-    $("#loginScreen").classList.remove("hidden");
-    return;
+    stopSecureSessionWatch();stopAttendancePortalWatchers();if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
+    persistSafeLocalState();currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
+    document.body.classList.remove("auth-admin","sidebar-open");document.body.classList.add("auth-login");
+    $("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden");return;
   }
-  const ok=await validateAccess(user);
-  if(!ok){try{await fbAuth.signOut()}catch{}}
+  const ok=await validateAccess(user);if(!ok){try{await fbAuth.signOut()}catch{}}
 });
 $("#loginForm").onsubmit=async e=>{
   e.preventDefault();setLoginError("");
   const email=$("#adminEmail").value.trim(),password=$("#adminPass").value,btn=$("#loginBtn");
   if(!email||!password){setLoginError("Vui lòng nhập đầy đủ email và mật khẩu.");return}
+  authFlowHold=true;
   try{
     if(btn){btn.disabled=true;const s=btn.querySelector("span");if(s)s.textContent="Đang đăng nhập…"}
     if(loginFailCount>=3){const wait=Math.min(8000,1000*Math.pow(2,loginFailCount-3));await new Promise(r=>setTimeout(r,wait))}
     await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-    const credential=await fbAuth.signInWithEmailAndPassword(email,password);
-    loginFailCount=0;
-    if(pendingGoogleCredential&&credential?.user){
-      try{
-        await credential.user.linkWithCredential(pendingGoogleCredential);
-        pendingGoogleCredential=null;
-      }catch(linkError){
-        console.warn("Auto-link Google failed",linkError?.code||linkError);
-        pendingGoogleCredential=null;
+    let passwordCredential=await fbAuth.signInWithEmailAndPassword(email,password);loginFailCount=0;
+    const signedEmail=normalizeAuthEmail(passwordCredential.user?.email);
+    if(pendingGoogleCredential){
+      if(pendingGoogleEmail&&signedEmail&&pendingGoogleEmail!==signedEmail){clearPendingGoogleLink();throw Object.assign(new Error("Email Google khác email tài khoản hệ thống."),{code:"osc/google-email-mismatch"})}
+      const mainProfile=await fbDb.collection("users").doc(passwordCredential.user.uid).get();
+      if(!mainProfile.exists){clearPendingGoogleLink();throw Object.assign(new Error("Tài khoản Email/Mật khẩu chưa có hồ sơ quyền."),{code:"osc/original-profile-missing"})}
+      try{await passwordCredential.user.linkWithCredential(pendingGoogleCredential)}
+      catch(linkError){
+        console.warn("Google link conflict",linkError?.code||linkError);
+        if(linkError?.code==="auth/credential-already-in-use")passwordCredential={user:await repairGoogleCredentialConflict({email,password,originalUser:passwordCredential.user,pendingCredential:pendingGoogleCredential})};
+        else if(linkError?.code!=="auth/provider-already-linked")throw linkError;
       }
+      clearPendingGoogleLink();toast("Đã liên kết Google với tài khoản hệ thống");
     }
-  }catch(e){loginFailCount++;console.warn("Email sign-in failed",e?.code||e);setLoginError(friendlyAuthError(e))}
-  finally{if(btn){btn.disabled=false;const s=btn.querySelector("span");if(s)s.textContent="Đăng nhập"}}
+    authFlowHold=false;
+    const ok=await validateAccess(passwordCredential.user);if(!ok){try{await fbAuth.signOut()}catch{}}
+  }catch(e){
+    loginFailCount++;console.warn("Email sign-in/link failed",e?.code||e);
+    try{if(fbAuth.currentUser&&!currentProfile)await fbAuth.signOut()}catch{}
+    const special={
+      "osc/google-email-mismatch":"Email Google không trùng với email tài khoản hệ thống. Hãy chọn đúng Google account.",
+      "osc/original-profile-missing":"Tài khoản Email/Mật khẩu này chưa được cấp quyền trong hệ thống.",
+      "osc/google-conflict-authorized":"Google đang gắn với một Firebase User khác cũng có hồ sơ quyền. Hệ thống không tự hợp nhất để tránh mất dữ liệu; Admin cần kiểm tra hai tài khoản trong Firebase Authentication.",
+      "osc/google-repair-cancelled":"Bạn đã hủy xử lý xung đột Google.",
+      "osc/google-repair-missing":"Không đủ thông tin để xử lý xung đột Google."
+    };
+    setLoginError(special[e?.code]||(String(e?.code||"").startsWith("auth/")?googleAuthErrorMessage(e):(e?.message||"Không thể hoàn tất đăng nhập.")));
+  }finally{
+    authFlowHold=false;if(btn){btn.disabled=false;const s=btn.querySelector("span");if(s)s.textContent="Đăng nhập"}
+  }
 };
 $("#googleLoginBtn").onclick=signInWithGoogle;
 $("#logoutBtn").onclick=()=>fbAuth.signOut();
@@ -4426,7 +4484,7 @@ function renderEvents(){
           <div class="small-help" style="margin-top:6px">
             ${(()=>{const st=eventAvailability(ev);return `<span class="${st.className}">${esc(st.label)}</span>`})()}
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
-            • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type)).length} trường`:"Thiếu trường"}</span>
+            • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${eventAnswerFieldCount(ev)} trường`:"Thiếu trường"}</span>
             • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span>${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
           </div>
         </div>
@@ -4436,12 +4494,12 @@ function renderEvents(){
       </div>
       <div class="event-actions">
         <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
-        <button class="secondary" onclick="window.open('${esc(eventLink(ev))}','_blank')">Mở cổng</button>
+        <button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng</button>
         <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
         <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
         ${canEditModule("events")?`
           <button class="secondary edit-only" onclick="openEventBuilder('${ev.id}')">Chỉnh sửa</button>
-          ${eventHasUsableFields(ev)?"":`<button class="secondary edit-only" onclick="repairEventFields('${ev.id}')">Khôi phục trường</button>`}
+          <button class="secondary edit-only" onclick="repairEventFields('${ev.id}',{force:true})">Đồng bộ trường form</button>
           <button class="${ev.isOpen?"danger":"primary"} edit-only" onclick="toggleEventOpen('${ev.id}')">${ev.isOpen?"Đóng cổng":"Mở cổng"}</button>
           <button class="danger edit-only" onclick="deleteEventPortal('${ev.id}')">Xóa sự kiện</button>
         `:""}
@@ -4452,8 +4510,20 @@ function renderEvents(){
   $("#eventEmpty").classList.toggle("hidden",list.length>0);
 }
 
+async function openPublicEventPortal(eventId){
+  const ev=eventFor(eventId);if(!ev)return;
+  if(canEditModule("events")){
+    try{await repairEventFields(eventId,{silent:true})}catch(e){console.warn("event pre-open repair",e)}
+  }
+  window.open(eventLink(ev),"_blank","noopener,noreferrer");
+}
+
 async function showEventQr(eventId){
-  const ev=eventFor(eventId);if(!ev)return;const link=eventLink(ev);
+  const ev=eventFor(eventId);if(!ev)return;
+  if(canEditModule("events")){
+    try{await repairEventFields(eventId,{silent:true})}catch(e){console.warn("event QR pre-repair",e)}
+  }
+  const link=eventLink(ev);
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,calc(100vw - 24px))"><div class="modal-head"><div><h2>QR sự kiện</h2><div class="small-help">${esc(ev.title)} • ${esc(state.semesters[ev.semester]?.name||ev.semester)}</div></div><button onclick="closeModal()">×</button></div><div class="event-qr-box-v43"><div class="event-qr-visual" id="eventQrVisual"><div class="event-qr-loading">Đang tạo mã QR…</div></div><div class="event-qr-detail"><label>Đường link<input id="eventQrLink" readonly value="${esc(link)}"></label><div class="small-help">QR chỉ chứa đường dẫn mở form sự kiện. Mã không chứa dữ liệu cá nhân hoặc kết quả phản hồi.</div><div class="event-qr-actions"><button class="secondary" onclick="copyText(document.getElementById('eventQrLink').value)">Sao chép link</button><button class="secondary" onclick="downloadEventQr('${eventId}')">Tải QR PNG</button><button class="primary" onclick="window.open(document.getElementById('eventQrLink').value,'_blank','noopener,noreferrer')">Mở form</button></div></div></div></div></div>`;
   $("#modalWrap").classList.remove("hidden");syncModalBodyState();
   try{
@@ -4493,35 +4563,78 @@ function defaultEventFieldsFor(eventLike={}){
   }
   return structuredClone(EVENT_DEFAULT_FIELDS);
 }
+function eventFieldTypeAlias(type){
+  const t=String(type||"text").trim().toLowerCase();
+  const alias={
+    short:"text",shorttext:"text","short-text":"text","short_text":"text",
+    paragraph:"textarea",long:"textarea",longtext:"textarea","long-text":"textarea","long_text":"textarea",
+    checkbox:"checkboxes",multi:"checkboxes",multiselect:"checkboxes",
+    dropdown:"select",
+    tel:"phone",telephone:"phone",
+    studentid:"mssv","student-id":"mssv",student_id:"mssv",
+    heading:"section",header:"section",
+    richtext:"content","rich-text":"content",note:"content"
+  };
+  return alias[t]||t;
+}
+function extractEventFieldSource(eventLike={},explicitFields=null){
+  const candidates=[
+    explicitFields,
+    eventLike?.fields,
+    eventLike?.formFields,
+    eventLike?.questions,
+    eventLike?.schema?.fields,
+    eventLike?.form?.fields
+  ];
+  return candidates.find(x=>Array.isArray(x)&&x.length)||[];
+}
 function normalizeEventField(f={}){
-  const allowed=new Set(EVENT_FIELD_TYPES?.map?.(x=>x[0])||["text","textarea","radio","checkboxes","select","mssv","email","phone","number","date","time","content","image"]);
-  const type=allowed.has(f.type)?f.type:"text";
+  f=(f&&typeof f==="object")?f:{};
+  const allowed=new Set(EVENT_FIELD_TYPES?.map?.(x=>x[0])||["text","textarea","radio","checkboxes","select","mssv","email","phone","number","date","time","section","content","image"]);
+  const guessed=eventFieldTypeAlias(f.type||f.kind||f.fieldType||f.inputType||"text");
+  const type=allowed.has(guessed)?guessed:"text";
+  const rawOptions=f.options??f.choices??f.items??[];
+  const options=Array.isArray(rawOptions)
+    ? rawOptions.map(x=>typeof x==="object"?(x.label??x.value??x.text??""):x).map(String).filter(Boolean)
+    : String(rawOptions||"").split(",").map(x=>x.trim()).filter(Boolean);
   return {
-    id:String(f.id||("field_"+uid())),
-    label:String(f.label||""),
+    id:String(f.id||f.key||f.fieldId||("field_"+uid())),
+    label:String(f.label||f.question||f.title||f.name||""),
     type,
-    required:!!f.required,
-    options:Array.isArray(f.options)?f.options.map(x=>String(x)):[],
-    caption:String(f.caption||""),
-    imageData:String(f.imageData||""),
-    content:String(f.content||""),
-    description:String(f.description||""),
-    systemKey:String(f.systemKey||"")
+    required:!!(f.required??f.mandatory),
+    options,
+    caption:String(f.caption||f.helpText||""),
+    imageData:String(f.imageData||f.image||f.imageUrl||""),
+    content:String(f.content||f.text||""),
+    description:String(f.description||f.help||""),
+    systemKey:String(f.systemKey||f.system||"")
   };
 }
+function isAnswerEventField(f){
+  return !!f&&!["image","content","section"].includes(f.type)&&!!String(f.label||"").trim();
+}
 function normalizeEventFields(fields,eventLike={}){
-  const src=Array.isArray(fields)&&fields.length?fields:defaultEventFieldsFor(eventLike);
-  return src.map(normalizeEventField);
+  const recovered=extractEventFieldSource(eventLike,fields);
+  let normalized=(recovered.length?recovered:defaultEventFieldsFor(eventLike))
+    .filter(Boolean)
+    .map(normalizeEventField);
+
+  // A legacy form containing only section/content/image is not a usable response form.
+  if(!normalized.some(isAnswerEventField)){
+    normalized=[
+      ...normalized.filter(f=>["section","content","image"].includes(f.type)),
+      ...defaultEventFieldsFor(eventLike).map(normalizeEventField)
+    ];
+  }
+  return normalized;
+}
+function eventAnswerFieldCount(ev){
+  return normalizeEventFields(extractEventFieldSource(ev),ev).filter(isAnswerEventField).length;
 }
 function eventHasUsableFields(ev){
-  return Array.isArray(ev?.fields)&&ev.fields.some(f=>{
-    if(!f)return false;
-    if(f.type==="image")return !!f.imageData;
-    if(f.type==="content")return !!String(f.content||f.label||"").trim();
-    return !!String(f.label||"").trim();
-  });
+  return eventAnswerFieldCount(ev)>0;
 }
-async function repairEventFields(eventId,{silent=false}={}){
+async function repairEventFields(eventId,{silent=false,force=false}={}){
   if(!canEditModule("events"))return false;
   const ev=eventFor(eventId);
   if(!ev)return false;
@@ -4529,21 +4642,31 @@ async function repairEventFields(eventId,{silent=false}={}){
     const ref=fbDb.collection("eventPortals").doc(eventId);
     const snap=await ref.get();
     const remote=snap.exists?snap.data():ev;
-    if(eventHasUsableFields(remote))return true;
 
-    const repaired=normalizeEventFields([],remote);
+    const source=extractEventFieldSource(remote);
+    const repaired=normalizeEventFields(source,remote);
+
+    const canonicalUsable=Array.isArray(remote?.fields)&&remote.fields.some(f=>isAnswerEventField(normalizeEventField(f)));
+    const legacySourceUsed=!canonicalUsable&&source.length>0;
+    const needsRepair=force||!canonicalUsable||legacySourceUsed||remote?.fieldSchemaVersion!==4;
+
+    if(!needsRepair)return true;
+
     await ref.set({
       fields:repaired,
+      fieldSchemaVersion:4,
+      formRepairVersion:51,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
 
     ev.fields=repaired.map(f=>({...f,imageData:""}));
+    ev.fieldSchemaVersion=4;
     persistStateOnly();
-    if(!silent)toast("Đã khôi phục các trường thông tin của sự kiện");
+    if(!silent)toast("Đã đồng bộ lại các trường thông tin của sự kiện");
     return true;
   }catch(e){
     console.error("repairEventFields",e);
-    if(!silent)alert("Không khôi phục được trường sự kiện: "+(e.message||e));
+    if(!silent)alert("Không đồng bộ được trường sự kiện: "+(e.message||e));
     return false;
   }
 }
@@ -5096,7 +5219,7 @@ async function saveEventBuilder(){
     specialType:eventBuilderSpecialType||"",
     targetSemester:eventBuilderSpecialType==="continuation"?eventBuilderTargetSemester:"",
     eventPoints:eventPoints||0,
-    fieldSchemaVersion:3,
+    fieldSchemaVersion:4,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
     fields:fullFields
