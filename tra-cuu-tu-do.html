@@ -71,19 +71,21 @@ body.v41-free-lookup .page{min-height:auto!important;padding:30px 16px 0!importa
   </div><div class="footer">OUR STAGE CLUB • Dữ liệu do CLB công bố trên từng cổng tra cứu</div>
 </div></div>
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
-<script src="/api/firebase-config.js"></script>
+<script src="/api/firebase-config"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
-if(!firebaseConfig.apiKey){
-  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
-}
+const FIREBASE_RUNTIME_CONFIG_OK=
+  typeof firebaseConfig.apiKey==="string" &&
+  /^AIza[0-9A-Za-z_-]{20,}$/.test(firebaseConfig.apiKey) &&
+  firebaseConfig.projectId==="clb-our";
+
 const firebaseInitConfig={
-  apiKey:firebaseConfig.apiKey,
-  authDomain:firebaseConfig.authDomain,
-  projectId:firebaseConfig.projectId,
-  storageBucket:firebaseConfig.storageBucket,
-  messagingSenderId:firebaseConfig.messagingSenderId,
-  appId:firebaseConfig.appId
+  apiKey:FIREBASE_RUNTIME_CONFIG_OK?firebaseConfig.apiKey:"INVALID_RUNTIME_FIREBASE_KEY",
+  authDomain:firebaseConfig.authDomain||"clb-our.firebaseapp.com",
+  projectId:firebaseConfig.projectId||"clb-our",
+  storageBucket:firebaseConfig.storageBucket||"clb-our.firebasestorage.app",
+  messagingSenderId:firebaseConfig.messagingSenderId||"390807081243",
+  appId:firebaseConfig.appId||"1:390807081243:web:7e8f45f2783c01bf0403be"
 };
 firebase.initializeApp(firebaseInitConfig);const db=firebase.firestore();try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -96,4 +98,16 @@ async function init(){if(!portalId)return setState("Link tra cứu không hợp 
 function renderPublicLookupValue(x){const raw=x?.value??"";const text=format(raw,x?.type);if(x?.type==="email"&&String(raw).trim())return `<a href="mailto:${encodeURIComponent(String(raw).trim())}">${esc(text)}</a>`;if(x?.type==="phone"&&String(raw).trim()){const tel=String(raw).replace(/[^0-9+]/g,"");return `<a href="tel:${esc(tel)}">${esc(text)}</a>`}if(x?.type==="url"&&String(raw).trim()){try{const u=new URL(String(raw).trim());if(["http:","https:"].includes(u.protocol))return `<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`}catch{}}return esc(text)}
 async function search(){const value=$("#searchInput").value.trim();if(!value)return setState("Vui lòng nhập thông tin cần tra cứu.",true);$("#searchBtn").disabled=true;$("#result").classList.add("hidden");$("#resultTitle").classList.add("hidden");$("#resultNote").classList.add("hidden");setState("Đang tra cứu…");try{const snap=await db.collection("customLookupPortals").doc(portalId).collection("records").doc(docId(value)).get();if(!snap.exists){setState(meta?.notFoundMessage||"Không tìm thấy dữ liệu phù hợp. Hãy kiểm tra lại thông tin đã nhập.",true);return}const data=snap.data(),values=Array.isArray(data.values)?data.values:[];$("#result").innerHTML=values.map(x=>`<div class="row"><span>${esc(x.label||"Thông tin")}</span><b>${renderPublicLookupValue(x)}</b></div>`).join("")||'<div class="row"><b>Không có trường công khai.</b></div>';$("#resultTitle").textContent=meta?.resultTitle||"Kết quả tra cứu";$("#resultTitle").classList.remove("hidden");$("#result").classList.remove("hidden");setState("Đã tìm thấy dữ liệu.");if(meta?.resultNote){$("#resultNote").textContent=meta.resultNote;$("#resultNote").classList.remove("hidden")}}catch(e){setState("Không thể tra cứu lúc này. Cổng có thể đã được đóng.",true)}finally{$("#searchBtn").disabled=false}}
 $("#searchBtn").onclick=search;$("#searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")search()});init();
-</script></body></html>
+</script>
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+  if(typeof FIREBASE_RUNTIME_CONFIG_OK!=="undefined"&&!FIREBASE_RUNTIME_CONFIG_OK){
+    const box=document.createElement("div");
+    box.style.cssText="position:fixed;left:16px;right:16px;bottom:16px;z-index:99999;padding:12px 14px;border-radius:12px;background:#fff2f4;color:#8b2943;border:1px solid #e6c2cc;font:600 13px/1.5 system-ui;box-shadow:0 12px 30px rgba(0,0,0,.12)";
+    box.textContent="Cổng hiện chưa kết nối được Firebase. Quản trị viên cần kiểm tra FIREBASE_WEB_API_KEY trên Vercel và Redeploy.";
+    document.body.appendChild(box);
+  }
+});
+</script>
+
+</body></html>

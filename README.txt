@@ -1,81 +1,71 @@
-OUR STAGE CLUB MANAGER V53 — SECURITY + SUCCESS STATE FIX
+OUR STAGE CLUB MANAGER V54 — RUNTIME CONFIG + LOGIN FIX
 
-GITHUB “SECRET SCANNING 1”
-Trong source cũ có Firebase Web API key được ghi trực tiếp trong 5 file HTML.
-Đây rất có thể là mục GitHub Secret Scanning đang phát hiện.
+NGUYÊN NHÂN ĐĂNG NHẬP V53 KHÔNG VÀO
+V53 có lỗi đường dẫn Vercel Function.
 
-Firebase Web API key không phải mật khẩu truy cập Firestore; Firebase công khai rằng
-API key của Firebase Web app chỉ nhận diện project và quyền dữ liệu vẫn do
-Security Rules + App Check quyết định.
+File:
+api/firebase-config.js
 
-Tuy vậy V53 vẫn loại API key khỏi repository để:
-- tránh cảnh báo GitHub cho các commit mới;
-- tránh tái sử dụng key nhầm ở nơi khác;
-- quản lý cấu hình production bằng Vercel Environment Variables.
+Trên Vercel được gọi bằng:
+ /api/firebase-config
 
-BẮT BUỘC TRƯỚC KHI DEPLOY V53
-Vercel > Project > Settings > Environment Variables:
-Name:
-FIREBASE_WEB_API_KEY
+không phải:
+ /api/firebase-config.js
+
+V53 lại nạp script từ /api/firebase-config.js nên runtime Firebase config có thể không
+được tải. Khi đó JavaScript dừng từ đầu hoặc Firebase Auth nhận key sai, khiến form login
+vẫn hiện nhưng nhập mật khẩu không thể vào hệ thống.
+
+V54 SỬA
+- Tất cả HTML dùng /api/firebase-config.
+- vercel.json có rewrite tương thích:
+  /api/firebase-config.js -> /api/firebase-config
+  để tab cũ/cache cũ vẫn hoạt động.
+- Không throw làm chết toàn bộ JavaScript nếu Environment Variable sai.
+- Login hiển thị lỗi cấu hình rõ ràng.
+- Chặn Email/Password và Google Login nếu key chưa hợp lệ.
+- Nhận biết key sai định dạng, ví dụ Value = clb-our.
+- Giữ API key ngoài source GitHub.
+
+KIỂM TRA KHÔNG LỘ KEY
+V54 thêm:
+ /api/firebase-health
+
+Mở:
+ https://<domain>/api/firebase-health
+
+Kết quả đúng:
+ {
+   "ok": true,
+   "projectId": "clb-our",
+   "environmentVariable": "FIREBASE_WEB_API_KEY",
+   "configured": true,
+   "keyFormatValid": true
+ }
+
+Endpoint health KHÔNG trả Firebase API key.
+
+VERCEL ENVIRONMENT VARIABLE
+Key:
+ FIREBASE_WEB_API_KEY
 
 Value:
-Dán Firebase Web API key hiện tại của project clb-our.
+ Firebase Web API key thật, bắt đầu bằng AIza...
 
-Apply cho Production (và Preview nếu bạn muốn test preview), sau đó Redeploy.
+Environment:
+ Production
+ và Preview nếu dùng Preview Deployment.
 
-V53 thêm:
-api/firebase-config.js
-Trang web tải Firebase config runtime từ chính domain Vercel.
-Endpoint có Cache-Control: no-store và không chứa key trong GitHub source.
-
-LƯU Ý QUAN TRỌNG
-API key Firebase vẫn xuất hiện trong Network của trình duyệt khi website chạy.
-Điều này là bình thường với Firebase Web. Không dùng API key làm lớp bảo mật dữ liệu.
-Bảo mật dữ liệu phải dựa vào Firestore Rules và Firebase App Check.
-
-GITHUB SECURITY
-V53 thêm:
-- .github/SECURITY.md
-- .github/workflows/codeql.yml
-- .github/dependabot.yml
-- .gitignore
-- .env.example (chỉ placeholder, không chứa key)
-
-Secret Scanning alert cũ có thể vẫn còn vì GitHub quét cả lịch sử commit.
-Sau khi xác nhận “View detected secrets” đúng là Firebase Web API key, bạn có thể
-resolve alert theo chính sách GitHub. Nếu alert là Client Secret, Service Account,
-Private Key hoặc token khác thì KHÔNG được đánh dấu an toàn; phải revoke/rotate.
-
-CỔNG SỰ KIỆN SAU KHI GỬI
-V53 sửa trạng thái thành công:
-- Ngay khi Firestore ghi thành công, form bị xóa khỏi DOM.
-- Input/textarea/select được reset và disabled trước khi xóa.
-- Dừng listener realtime của event để snapshot mới không làm form xuất hiện lại.
-- Xóa dòng trạng thái xanh “Đã gửi thông tin.” cũ.
-- Chỉ hiển thị màn hình thành công.
-- Tiêu đề mặc định chuyển thành “Đã gửi thông tin”.
-- Không giữ câu trả lời trong localStorage/sessionStorage.
-
-CHỐNG DỮ LIỆU QUÁ LỚN Ở CLIENT
-- text/email/phone/MSSV: tối đa 250 ký tự.
-- textarea: tối đa 4000 ký tự.
-Đây là lớp UX/client; Firestore Rules vẫn là lớp bảo vệ server.
-
-SECURITY HEADERS
-Giữ CSP, HSTS, X-Frame-Options: DENY, Referrer-Policy, COOP/CORP.
-Bổ sung:
-- X-Robots-Tag: noindex, nofollow, noarchive
-- Permissions-Policy chặn thêm browsing-topics
-- no-store cho /api/firebase-config.js
+Sau khi sửa Environment Variable BẮT BUỘC Redeploy deployment mới.
 
 FIRESTORE RULES
-V53 không thay đổi Firestore Rules.
-ZIP không chứa file Rules.
+V54 không thay đổi Firestore Rules.
+ZIP không chứa Rules.
 
 CẬP NHẬT
-1. Tạo FIREBASE_WEB_API_KEY trong Vercel Environment Variables.
-2. Commit toàn bộ V53 lên GitHub.
-3. Redeploy Vercel.
-4. Command + Shift + R.
-5. Test Cổng sự kiện: nhập -> Gửi.
-6. Sau thành công chỉ còn màn hình “Đã gửi thông tin”.
+1. Xác nhận FIREBASE_WEB_API_KEY trên Vercel có Value bắt đầu bằng AIza...
+2. Upload toàn bộ V54, bao gồm thư mục api/.
+3. Redeploy.
+4. Mở /api/firebase-health.
+5. Chỉ khi ok=true mới thử đăng nhập.
+6. Command + Shift + R.

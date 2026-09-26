@@ -1,6 +1,7 @@
 module.exports = (req, res) => {
+  const apiKey = process.env.FIREBASE_WEB_API_KEY || "";
   const config = {
-    apiKey: process.env.FIREBASE_WEB_API_KEY || "",
+    apiKey,
     authDomain: "clb-our.firebaseapp.com",
     projectId: "clb-our",
     storageBucket: "clb-our.firebasestorage.app",

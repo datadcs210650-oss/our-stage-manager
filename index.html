@@ -1722,19 +1722,21 @@ body:not(.auth-admin) .workspace-dock{
 
 <div id="modalWrap" class="hidden"></div><div id="toast" class="toast hidden"></div>
 
-<script src="/api/firebase-config.js"></script>
+<script src="/api/firebase-config"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
-if(!firebaseConfig.apiKey){
-  throw new Error("Thiếu FIREBASE_WEB_API_KEY trên Vercel. Hãy cấu hình Environment Variable rồi redeploy.");
-}
+const FIREBASE_RUNTIME_CONFIG_OK=
+  typeof firebaseConfig.apiKey==="string" &&
+  /^AIza[0-9A-Za-z_-]{20,}$/.test(firebaseConfig.apiKey) &&
+  firebaseConfig.projectId==="clb-our";
+
 const firebaseInitConfig={
-  apiKey:firebaseConfig.apiKey,
-  authDomain:firebaseConfig.authDomain,
-  projectId:firebaseConfig.projectId,
-  storageBucket:firebaseConfig.storageBucket,
-  messagingSenderId:firebaseConfig.messagingSenderId,
-  appId:firebaseConfig.appId
+  apiKey:FIREBASE_RUNTIME_CONFIG_OK?firebaseConfig.apiKey:"INVALID_RUNTIME_FIREBASE_KEY",
+  authDomain:firebaseConfig.authDomain||"clb-our.firebaseapp.com",
+  projectId:firebaseConfig.projectId||"clb-our",
+  storageBucket:firebaseConfig.storageBucket||"clb-our.firebasestorage.app",
+  messagingSenderId:firebaseConfig.messagingSenderId||"390807081243",
+  appId:firebaseConfig.appId||"1:390807081243:web:7e8f45f2783c01bf0403be"
 };
 firebase.initializeApp(firebaseInitConfig);
 const fbAuth=firebase.auth(),fbDb=firebase.firestore();
@@ -2370,6 +2372,8 @@ async function repairGoogleCredentialConflict({email,password,originalUser,pendi
   return back.user;
 }
 async function signInWithGoogle(){
+  const configError=runtimeFirebaseConfigError?.()||"";
+  if(configError){setLoginError(configError);return}
   if(googlePopupBusy)return;
   googlePopupBusy=true;authFlowHold=true;
   const btn=$("#googleLoginBtn");setLoginError("");
@@ -2427,10 +2431,26 @@ function setLoginError(t){
   $("#loginError").textContent=t||"";
   $("#loginError").classList.toggle("hidden",!t);
 }
+function runtimeFirebaseConfigError(){
+  if(FIREBASE_RUNTIME_CONFIG_OK)return "";
+  return "Firebase chưa khởi tạo được. Kiểm tra Vercel Environment Variable FIREBASE_WEB_API_KEY: Value phải là Web API key bắt đầu bằng AIza…, không phải Project ID clb-our. Sau khi sửa phải Redeploy.";
+}
+setTimeout(()=>{
+  const msg=runtimeFirebaseConfigError();
+  if(msg)setLoginError(msg);
+},0);
 function friendlyAuthError(e){
   const code=e?.code||"";
   if(["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-email"].includes(code))return "Email hoặc mật khẩu không chính xác.";
-  const map={"auth/too-many-requests":"Có quá nhiều lần đăng nhập không thành công. Vui lòng chờ một lúc rồi thử lại.","auth/network-request-failed":"Không thể kết nối tới Firebase Authentication. Kiểm tra Internet rồi thử lại.","auth/user-disabled":"Tài khoản hiện không thể đăng nhập.","auth/operation-not-allowed":"Phương thức đăng nhập hiện chưa khả dụng.","auth/unauthorized-domain":"Tên miền website chưa được cho phép trong Firebase Authentication."};
+  const map={
+    "auth/too-many-requests":"Có quá nhiều lần đăng nhập không thành công. Vui lòng chờ một lúc rồi thử lại.",
+    "auth/network-request-failed":"Không thể kết nối tới Firebase Authentication. Kiểm tra Internet rồi thử lại.",
+    "auth/user-disabled":"Tài khoản hiện không thể đăng nhập.",
+    "auth/operation-not-allowed":"Phương thức đăng nhập hiện chưa khả dụng.",
+    "auth/unauthorized-domain":"Tên miền website chưa được cho phép trong Firebase Authentication.",
+    "auth/invalid-api-key":"Firebase Web API key không hợp lệ. Kiểm tra FIREBASE_WEB_API_KEY trên Vercel rồi Redeploy.",
+    "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"Firebase Web API key không hợp lệ. Kiểm tra FIREBASE_WEB_API_KEY trên Vercel rồi Redeploy."
+  };
   return map[code]||"Không thể đăng nhập lúc này. Vui lòng thử lại.";
 }
 function friendlyFirestoreError(e,user){
@@ -2498,6 +2518,8 @@ fbAuth.onAuthStateChanged(async user=>{
 });
 $("#loginForm").onsubmit=async e=>{
   e.preventDefault();setLoginError("");
+  const configError=runtimeFirebaseConfigError();
+  if(configError){setLoginError(configError);return}
   const email=$("#adminEmail").value.trim(),password=$("#adminPass").value,btn=$("#loginBtn");
   if(!email||!password){setLoginError("Vui lòng nhập đầy đủ email và mật khẩu.");return}
   authFlowHold=true;
