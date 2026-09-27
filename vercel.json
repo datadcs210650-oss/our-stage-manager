@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/firebase-config.js",
-      "destination": "/api/firebase-config"
-    },
-    {
       "source": "/tra-cuu",
       "destination": "/tra-cuu.html"
     },
@@ -202,24 +198,7 @@
       ]
     },
     {
-      "source": "/api/firebase-config",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        },
-        {
-          "key": "Pragma",
-          "value": "no-cache"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/firebase-health",
+      "source": "/firebase-public-config.js",
       "headers": [
         {
           "key": "Cache-Control",

@@ -220,23 +220,26 @@ body.v41-event-page .wrap{width:min(880px,calc(100% - 28px))!important;max-width
   </div>
 </div>
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
-<script src="/api/firebase-config"></script>
+<script src="/firebase-public-config.js"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
-const FIREBASE_RUNTIME_CONFIG_OK=
+const firebaseConfigReady=
   typeof firebaseConfig.apiKey==="string" &&
-  /^AIza[0-9A-Za-z_-]{20,}$/.test(firebaseConfig.apiKey) &&
+  firebaseConfig.apiKey.startsWith("AIza") &&
   firebaseConfig.projectId==="clb-our";
 
-const firebaseInitConfig={
-  apiKey:FIREBASE_RUNTIME_CONFIG_OK?firebaseConfig.apiKey:"INVALID_RUNTIME_FIREBASE_KEY",
-  authDomain:firebaseConfig.authDomain||"clb-our.firebaseapp.com",
-  projectId:firebaseConfig.projectId||"clb-our",
-  storageBucket:firebaseConfig.storageBucket||"clb-our.firebasestorage.app",
-  messagingSenderId:firebaseConfig.messagingSenderId||"390807081243",
-  appId:firebaseConfig.appId||"1:390807081243:web:7e8f45f2783c01bf0403be"
-};
-firebase.initializeApp(firebaseInitConfig);
+if(!firebaseConfigReady){
+  throw new Error("Không tải được Firebase Web config. Kiểm tra file firebase-public-config.js.");
+}
+
+firebase.initializeApp({
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+});
 const db=firebase.firestore(),$=s=>document.querySelector(s);try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const eventId=new URLSearchParams(location.search).get("event")||"";
 let eventConfig=null;
@@ -410,7 +413,7 @@ function applyPublicEventState({forceRender=false}={}){
   scheduleEventRecheck();
 }
 async function init(){
-  if(!FIREBASE_RUNTIME_CONFIG_OK){showClosed("Cổng sự kiện hiện chưa kết nối được Firebase. Quản trị viên cần kiểm tra FIREBASE_WEB_API_KEY trên Vercel.");return}
+  
   if(!eventId){showClosed("Link sự kiện không hợp lệ.");return}
 
   eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(

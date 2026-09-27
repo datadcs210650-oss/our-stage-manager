@@ -101,23 +101,26 @@ body.v41-member-lookup .wrap{width:min(1040px,calc(100% - 30px));max-width:none!
 </div>
 
 <footer class="v41-public-footer"><div><b>OUR STAGE CLUB</b><span>•</span><span>Cổng thông tin chính thức</span></div><small>Không chia sẻ đường dẫn riêng hoặc thông tin cá nhân cho người không liên quan.</small></footer>
-<script src="/api/firebase-config"></script>
+<script src="/firebase-public-config.js"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
-const FIREBASE_RUNTIME_CONFIG_OK=
+const firebaseConfigReady=
   typeof firebaseConfig.apiKey==="string" &&
-  /^AIza[0-9A-Za-z_-]{20,}$/.test(firebaseConfig.apiKey) &&
+  firebaseConfig.apiKey.startsWith("AIza") &&
   firebaseConfig.projectId==="clb-our";
 
-const firebaseInitConfig={
-  apiKey:FIREBASE_RUNTIME_CONFIG_OK?firebaseConfig.apiKey:"INVALID_RUNTIME_FIREBASE_KEY",
-  authDomain:firebaseConfig.authDomain||"clb-our.firebaseapp.com",
-  projectId:firebaseConfig.projectId||"clb-our",
-  storageBucket:firebaseConfig.storageBucket||"clb-our.firebasestorage.app",
-  messagingSenderId:firebaseConfig.messagingSenderId||"390807081243",
-  appId:firebaseConfig.appId||"1:390807081243:web:7e8f45f2783c01bf0403be"
-};
-firebase.initializeApp(firebaseInitConfig);
+if(!firebaseConfigReady){
+  throw new Error("Không tải được Firebase Web config. Kiểm tra file firebase-public-config.js.");
+}
+
+firebase.initializeApp({
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+});
 const db=firebase.firestore(),$=s=>document.querySelector(s);try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const PUBLIC_LOOKUP_ROOT="publicLookupSemesters";
 const params=new URLSearchParams(location.search);
@@ -231,17 +234,6 @@ function renderResult(mssv,d){
   `;
 }
 init();
-</script>
-
-<script>
-window.addEventListener("DOMContentLoaded",()=>{
-  if(typeof FIREBASE_RUNTIME_CONFIG_OK!=="undefined"&&!FIREBASE_RUNTIME_CONFIG_OK){
-    const box=document.createElement("div");
-    box.style.cssText="position:fixed;left:16px;right:16px;bottom:16px;z-index:99999;padding:12px 14px;border-radius:12px;background:#fff2f4;color:#8b2943;border:1px solid #e6c2cc;font:600 13px/1.5 system-ui;box-shadow:0 12px 30px rgba(0,0,0,.12)";
-    box.textContent="Cổng hiện chưa kết nối được Firebase. Quản trị viên cần kiểm tra FIREBASE_WEB_API_KEY trên Vercel và Redeploy.";
-    document.body.appendChild(box);
-  }
-});
 </script>
 
 </body>

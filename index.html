@@ -1722,23 +1722,26 @@ body:not(.auth-admin) .workspace-dock{
 
 <div id="modalWrap" class="hidden"></div><div id="toast" class="toast hidden"></div>
 
-<script src="/api/firebase-config"></script>
+<script src="/firebase-public-config.js"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
-const FIREBASE_RUNTIME_CONFIG_OK=
+const firebaseConfigReady=
   typeof firebaseConfig.apiKey==="string" &&
-  /^AIza[0-9A-Za-z_-]{20,}$/.test(firebaseConfig.apiKey) &&
+  firebaseConfig.apiKey.startsWith("AIza") &&
   firebaseConfig.projectId==="clb-our";
 
-const firebaseInitConfig={
-  apiKey:FIREBASE_RUNTIME_CONFIG_OK?firebaseConfig.apiKey:"INVALID_RUNTIME_FIREBASE_KEY",
-  authDomain:firebaseConfig.authDomain||"clb-our.firebaseapp.com",
-  projectId:firebaseConfig.projectId||"clb-our",
-  storageBucket:firebaseConfig.storageBucket||"clb-our.firebasestorage.app",
-  messagingSenderId:firebaseConfig.messagingSenderId||"390807081243",
-  appId:firebaseConfig.appId||"1:390807081243:web:7e8f45f2783c01bf0403be"
-};
-firebase.initializeApp(firebaseInitConfig);
+if(!firebaseConfigReady){
+  throw new Error("Không tải được Firebase Web config. Kiểm tra file firebase-public-config.js.");
+}
+
+firebase.initializeApp({
+  apiKey:firebaseConfig.apiKey,
+  authDomain:firebaseConfig.authDomain,
+  projectId:firebaseConfig.projectId,
+  storageBucket:firebaseConfig.storageBucket,
+  messagingSenderId:firebaseConfig.messagingSenderId,
+  appId:firebaseConfig.appId
+});
 const fbAuth=firebase.auth(),fbDb=firebase.firestore();
 try{fbDb.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){console.warn("Firestore settings",e)}
 
@@ -2432,8 +2435,8 @@ function setLoginError(t){
   $("#loginError").classList.toggle("hidden",!t);
 }
 function runtimeFirebaseConfigError(){
-  if(FIREBASE_RUNTIME_CONFIG_OK)return "";
-  return "Firebase chưa khởi tạo được. Kiểm tra Vercel Environment Variable FIREBASE_WEB_API_KEY: Value phải là Web API key bắt đầu bằng AIza…, không phải Project ID clb-our. Sau khi sửa phải Redeploy.";
+  if(firebaseConfigReady)return "";
+  return "Không tải được Firebase Web config. Hãy chắc chắn firebase-public-config.js nằm cùng cấp với index.html.";
 }
 setTimeout(()=>{
   const msg=runtimeFirebaseConfigError();
@@ -2448,8 +2451,8 @@ function friendlyAuthError(e){
     "auth/user-disabled":"Tài khoản hiện không thể đăng nhập.",
     "auth/operation-not-allowed":"Phương thức đăng nhập hiện chưa khả dụng.",
     "auth/unauthorized-domain":"Tên miền website chưa được cho phép trong Firebase Authentication.",
-    "auth/invalid-api-key":"Firebase Web API key không hợp lệ. Kiểm tra FIREBASE_WEB_API_KEY trên Vercel rồi Redeploy.",
-    "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"Firebase Web API key không hợp lệ. Kiểm tra FIREBASE_WEB_API_KEY trên Vercel rồi Redeploy."
+    "auth/invalid-api-key":"Firebase Web config không hợp lệ. Hãy kiểm tra firebase-public-config.js.",
+    "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"Firebase Web config không hợp lệ. Hãy kiểm tra firebase-public-config.js."
   };
   return map[code]||"Không thể đăng nhập lúc này. Vui lòng thử lại.";
 }
