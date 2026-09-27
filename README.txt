@@ -1,52 +1,54 @@
-OUR STAGE CLUB MANAGER V55 — STATIC FIREBASE CONFIG / LOGIN FIX
+OUR STAGE CLUB MANAGER V56 — CENTERED BRAND + ACTIVITY COLUMN LOCK
 
-V55 bỏ hoàn toàn cơ chế FIREBASE_WEB_API_KEY trên Vercel vì cơ chế V53–V54 gây lỗi
-khi deploy/upload thủ công và Vercel Function không nằm đúng cấu trúc.
+1. SIDEBAR BRAND
+- Logo OUR STAGE được đưa vào giữa phần đầu sidebar.
+- Logo nằm trong ô nền trắng, căn giữa.
+- OUR STAGE và CLUB MANAGER nằm giữa bên dưới.
+- Chế độ sidebar thu gọn vẫn giữ logo giữa và ẩn chữ như trước.
 
-Cấu trúc cần upload lên ROOT GitHub:
-firebase-public-config.js
-index.html
-su-kien.html
-tra-cuu.html
-tra-cuu-tu-do.html
-diem-danh.html
-vercel.json
-logo.png
-...
+2. KHÓA TỪNG CỘT ĐIỂM
+Admin/Super Admin vào:
+Thiết lập > Hoạt động
 
-KHÔNG CẦN:
-- thư mục api/
-- api/firebase-config.js
-- api/firebase-health.js
-- FIREBASE_WEB_API_KEY trên Vercel
+Mỗi hoạt động có thêm cột:
+Khóa cột điểm
 
-Sau khi V55 chạy ổn, bạn có thể xóa FIREBASE_WEB_API_KEY khỏi Vercel để tránh nhầm lẫn.
+Trạng thái:
+- 🔓 Đang mở: được phép nhập/chỉnh điểm.
+- 🔒 Đã khóa: cột đã chốt, chỉ xem điểm.
 
-BẢO MẬT
-Firebase Web API key là cấu hình client của Firebase. Firebase công bố rằng key này
-chỉ nhận diện project/app; quyền dữ liệu phải được bảo vệ bởi Firebase Authentication,
-Firestore Security Rules và App Check.
+Khi khóa một cột, hệ thống chặn:
+- Sửa checkbox/điểm trực tiếp trong Điểm danh hoạt động.
+- Import Excel vào cột đó.
+- Tạo QR điểm danh mới cho cột đó.
+- Duyệt QR để ghi điểm vào cột đó.
+- Yêu cầu nhập điểm hàng loạt đã tạo trước đó.
+- Hoàn tác nhật ký làm thay đổi điểm cột đó.
+- Cộng điểm từ Cổng sự kiện vào cột đã khóa.
+- Sửa thủ công cột Đồng hành nếu hoạt động đó được khóa.
 
-Bạn nên vào Google Cloud > APIs & Services > Credentials:
-- Chọn Browser key dùng cho Firebase.
-- Application restrictions: HTTP referrers.
-- Chỉ cho domain website của bạn và domain Firebase cần thiết.
-- API restrictions: chỉ Firebase-related APIs app dùng.
-- Không dùng key này cho Gemini/Generative Language API hoặc API nhạy cảm khác.
+Kết quả hiện có KHÔNG bị xóa khi khóa.
 
-GITHUB SECRET SCANNING
-GitHub có thể vẫn cảnh báo Firebase Web API key. Nếu alert đúng là Firebase Web key
-đã được giới hạn chỉ cho Firebase thì đây không phải credential cấp quyền database.
-Nếu alert là Client Secret, Service Account private key, Stripe secret, token đăng nhập...
-thì phải revoke/rotate, không được bỏ qua.
+3. MỞ KHÓA
+Admin có thể quay lại Thiết lập và bấm:
+🔒 Đã khóa
+để mở khóa cột nếu cần sửa điểm.
 
-FIRESTORE RULES
-V55 không thay Firestore Rules.
+4. ĐỒNG BỘ
+Trạng thái khóa được lưu trong cấu hình học kỳ trên Firestore:
+semester.groups[].items[].locked
+
+Dữ liệu cũ tự mặc định:
+locked = false
+
+Khi tạo học kỳ mới / nhân bản học kỳ:
+các cột điểm luôn bắt đầu ở trạng thái mở khóa.
+
+5. LƯU Ý BẢO MẬT
+Khóa cột điểm là cơ chế chống nhập nhầm trong giao diện quản trị.
+Nó không thay thế Firestore Security Rules và không phải một ranh giới bảo mật
+chống người có quyền truy cập trực tiếp Firestore.
+
+6. FIRESTORE RULES
+V56 không thay đổi Firestore Rules.
 ZIP không chứa Rules.
-
-CẬP NHẬT
-1. Upload toàn bộ V55 lên root repo.
-2. firebase-public-config.js phải cùng cấp index.html.
-3. Chờ Vercel deploy commit main mới.
-4. Command + Shift + R.
-5. Đăng nhập lại.
