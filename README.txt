@@ -1,54 +1,80 @@
-OUR STAGE CLUB MANAGER V56 — CENTERED BRAND + ACTIVITY COLUMN LOCK
+OUR STAGE CLUB MANAGER V57 — PER-ROW SCORING + CUSTOM EXPORTS
 
-1. SIDEBAR BRAND
-- Logo OUR STAGE được đưa vào giữa phần đầu sidebar.
-- Logo nằm trong ô nền trắng, căn giữa.
-- OUR STAGE và CLUB MANAGER nằm giữa bên dưới.
-- Chế độ sidebar thu gọn vẫn giữ logo giữa và ẩn chữ như trước.
+1. LOGO SIDEBAR
+Logo gốc có phần hình nằm lệch trong canvas PNG trong suốt, nên dù thẻ ảnh đã căn giữa
+thì hình logo nhìn vẫn lệch trong nền trắng.
 
-2. KHÓA TỪNG CỘT ĐIỂM
-Admin/Super Admin vào:
-Thiết lập > Hoạt động
+V57 tạo riêng:
+logo-sidebar-centered.png
 
-Mỗi hoạt động có thêm cột:
-Khóa cột điểm
+Artwork được crop theo alpha và đặt lại đúng tâm của canvas. Sidebar chỉ dùng asset này.
+Logo chính logo.png vẫn giữ nguyên cho các trang/PDF khác.
 
-Trạng thái:
-- 🔓 Đang mở: được phép nhập/chỉnh điểm.
-- 🔒 Đã khóa: cột đã chốt, chỉ xem điểm.
+2. MỖI DÒNG HOẠT ĐỘNG CÓ HÌNH THỨC RIÊNG
+Thiết lập > Hoạt động:
+Mỗi dòng có thể chọn:
+- Tickbox
+- Nhập điểm
 
-Khi khóa một cột, hệ thống chặn:
-- Sửa checkbox/điểm trực tiếp trong Điểm danh hoạt động.
-- Import Excel vào cột đó.
-- Tạo QR điểm danh mới cho cột đó.
-- Duyệt QR để ghi điểm vào cột đó.
-- Yêu cầu nhập điểm hàng loạt đã tạo trước đó.
-- Hoàn tác nhật ký làm thay đổi điểm cột đó.
-- Cộng điểm từ Cổng sự kiện vào cột đã khóa.
-- Sửa thủ công cột Đồng hành nếu hoạt động đó được khóa.
+Select ở đầu nhóm chỉ còn là mặc định cho DÒNG MỚI, không ép tất cả dòng cùng loại.
 
-Kết quả hiện có KHÔNG bị xóa khi khóa.
+Dữ liệu cũ:
+Nếu item chưa có mode, V57 lấy mode cũ của group và lưu logic tương thích.
 
-3. MỞ KHÓA
-Admin có thể quay lại Thiết lập và bấm:
-🔒 Đã khóa
-để mở khóa cột nếu cần sửa điểm.
+3. GIỚI HẠN ĐIỂM TỐI ĐA
+Với dòng “Nhập điểm”:
+- Input có min=0.
+- Input có max=Điểm tối đa.
+- JavaScript kiểm tra lại trước khi ghi Firestore.
+- Ví dụ Điểm tối đa = 6: nhập 6 được, nhập 6.5/7/10 bị từ chối.
+- Nếu muốn giảm Điểm tối đa xuống thấp hơn số điểm cao nhất đang có, hệ thống không cho
+  đến khi Admin chỉnh điểm thành viên trước.
 
-4. ĐỒNG BỘ
-Trạng thái khóa được lưu trong cấu hình học kỳ trên Firestore:
-semester.groups[].items[].locked
+4. ĐỔI TICKBOX / NHẬP ĐIỂM
+Nếu đổi hình thức của một hoạt động:
+- Tickbox -> Nhập điểm: thành viên đã tick được quy đổi thành đủ điểm tối đa.
+- Nhập điểm -> Tickbox: điểm > 0 được quy đổi thành đã tick.
+- Dữ liệu thành viên được đồng bộ Firestore.
+- Cột khóa thì không được đổi hình thức.
 
-Dữ liệu cũ tự mặc định:
-locked = false
+5. XUẤT DANH SÁCH THÀNH VIÊN HỌC KỲ
+Nút Xuất DS học kỳ có thể chọn chính xác thông tin muốn xuất:
+- Họ và tên
+- MSSV
+- Email
+- Số điện thoại
+- Ban / Bộ phận
+- Chức vụ
+- Trạng thái
+- Ghi chú
+- Các trường thành viên tùy chỉnh khác nếu có
 
-Khi tạo học kỳ mới / nhân bản học kỳ:
-các cột điểm luôn bắt đầu ở trạng thái mở khóa.
+Có Chọn tất cả / Bỏ chọn.
 
-5. LƯU Ý BẢO MẬT
-Khóa cột điểm là cơ chế chống nhập nhầm trong giao diện quản trị.
-Nó không thay thế Firestore Security Rules và không phải một ranh giới bảo mật
-chống người có quyền truy cập trực tiếp Firestore.
+6. XUẤT DANH SÁCH TỪNG HOẠT ĐỘNG / SỰ KIỆN
+Nút “Xuất báo cáo hoạt động” mở cổng xác nhận:
+- Chỉ Có tham gia
+- Chỉ Không tham gia
+- Cả hai
 
-6. FIRESTORE RULES
-V56 không thay đổi Firestore Rules.
+Có thể chọn thông tin thành viên muốn xuất:
+Họ tên, MSSV, Email, SĐT và các trường tùy chỉnh khác.
+
+File luôn kèm:
+- Tham gia
+- Điểm
+và sheet THONG TIN ghi rõ hình thức, điểm tối đa, bộ lọc, học kỳ.
+
+7. KHÓA CỘT
+Tính năng khóa cột từ V56 vẫn giữ nguyên.
+Cột khóa không thể:
+- nhập tay
+- đổi hình thức
+- đổi điểm tối đa
+- import Excel
+- duyệt QR cộng điểm
+- nhận điểm từ event portal
+
+8. FIRESTORE RULES
+V57 không thay Firestore Rules.
 ZIP không chứa Rules.
