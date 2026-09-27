@@ -130,6 +130,99 @@ body.v41-public-shell input,body.v41-public-shell textarea,body.v41-public-shell
 @media(max-width:680px){.v41-public-topbar{height:64px}.v41-public-brand img{width:40px;height:40px}.v41-public-status span{display:none}.v41-public-status{padding:7px}.v41-public-footer{display:grid;justify-items:center;text-align:center}.v41-public-footer div{justify-content:center}.v41-public-footer small{text-align:center}}
 
 body.v41-free-lookup .page{min-height:auto!important;padding:30px 16px 0!important}body.v41-free-lookup .wrap{width:min(820px,100%)!important}body.v41-free-lookup .card{border:1px solid var(--v41-line)!important;border-radius:18px!important;padding:26px!important;background:radial-gradient(circle at 94% 4%,rgba(200,88,114,.07),transparent 28%),#fff!important;box-shadow:var(--v41-shadow)!important}body.v41-free-lookup .eyebrow{color:#8a4055!important}body.v41-free-lookup h1{font-size:clamp(28px,4vw,38px)!important;color:#29333b!important;letter-spacing:-1px}body.v41-free-lookup .state{border-color:#e2e7ea!important;background:#f7f9fa!important}body.v41-free-lookup .row{border-color:#e4e9ec!important;box-shadow:0 7px 20px rgba(31,43,53,.035)!important}body.v41-free-lookup .footer{display:none}</style>
+<style>
+/* ==========================================================
+   V61 — PUBLIC BRAND ALIGNMENT FIX
+   Fixes flex auto-margin that separated the logo from its text.
+   ========================================================== */
+
+/* Never let global auto margins push text away inside flex brand rows */
+.v41-public-brand > img,
+.brand > img,
+.logo-top > img{
+  margin:0!important;
+  flex:0 0 auto!important;
+}
+
+/* Top navigation brand stays compact on the left */
+.v41-public-brand{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  width:auto!important;
+  text-align:left!important;
+}
+.v41-public-brand > div{
+  flex:0 0 auto!important;
+}
+
+/* Main public-page identity block is centered as ONE group */
+body.v41-public-shell .page .brand,
+body.v41-public-shell .page .logo-top{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:14px!important;
+  width:fit-content!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:left!important;
+}
+
+/* Keep logo visibly centered inside its own white tile */
+body.v41-public-shell .page .brand > img,
+body.v41-public-shell .page .logo-top > img{
+  object-fit:contain!important;
+  object-position:50% 50%!important;
+  flex:0 0 auto!important;
+}
+
+/* Do not stretch the text block across the page */
+body.v41-public-shell .page .brand > div,
+body.v41-public-shell .page .logo-top > div{
+  width:auto!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+}
+
+/* Free lookup screenshot issue: force the logo + title to remain together */
+body.v41-free-lookup .brand{
+  margin-bottom:24px!important;
+}
+body.v41-free-lookup .brand > img{
+  width:68px!important;
+  height:68px!important;
+  padding:5px!important;
+  border-radius:16px!important;
+}
+body.v41-free-lookup .brand > div{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+}
+body.v41-free-lookup .brand b{
+  line-height:1.1!important;
+}
+body.v41-free-lookup .brand small{
+  white-space:nowrap!important;
+}
+
+@media(max-width:560px){
+  body.v41-public-shell .page .brand,
+  body.v41-public-shell .page .logo-top{
+    gap:10px!important;
+  }
+  body.v41-free-lookup .brand > img{
+    width:58px!important;
+    height:58px!important;
+  }
+  body.v41-free-lookup .brand small{
+    white-space:normal!important;
+  }
+}
+</style>
 </head>
 <body class="v41-public-shell v41-free-lookup"><header class="v41-public-topbar"><div class="v41-public-topbar-inner"><div class="v41-public-brand"><img src="/logo-ui-centered.png" alt="OUR STAGE CLUB"><div><b>OUR STAGE</b><small>PUBLIC PORTAL</small></div></div><div class="v41-public-status"><i></i><span>KẾT NỐI AN TOÀN</span></div></div></header>
 
@@ -137,7 +230,7 @@ body.v41-free-lookup .page{min-height:auto!important;padding:30px 16px 0!importa
   <div class="brand"><img src="/logo-ui-centered.png" alt="Our Stage Club" onerror="this.style.display='none'"><div><b>OUR STAGE</b><small>Cổng tra cứu thông tin</small></div></div>
   <div class="card" id="portalCard"><div class="eyebrow">TRA CỨU TỰ DO</div><h1 id="title">Đang tải…</h1><p id="description">Vui lòng chờ.</p>
     <div id="instructionText" class="note hidden" style="margin-top:12px"></div>
-    <div id="searchArea" class="hidden"><label id="searchLabel" style="font-size:12px;font-weight:800"></label><div class="search"><input id="searchInput" maxlength="160" autocomplete="off" autocomplete="off"><button id="searchBtn">Tra cứu</button></div></div>
+    <div id="searchArea" class="hidden"><label id="searchLabel" style="font-size:12px;font-weight:800"></label><div class="search"><input id="searchInput" maxlength="160" autocomplete="off"><button id="searchBtn">Tra cứu</button></div></div>
     <div id="state" class="state">Đang kiểm tra cổng tra cứu…</div>
     <div id="resultTitle" class="hidden" style="margin-top:18px;font-size:17px;font-weight:900;color:#541025"></div>
     <div id="result" class="result hidden"></div><div id="resultNote" class="note hidden"></div>

@@ -1,28 +1,20 @@
-OUR STAGE CLUB MANAGER V59 — SECURITY AUDIT & HARDENING
+OUR STAGE CLUB MANAGER V61 — PUBLIC BRAND ALIGNMENT FIX
 
-V59 keeps all V58 features and applies a defensive security pass.
+V61 is based on the V59 security-hardened package.
 
-Main changes:
-- Firebase JS 12.19.0.
-- SheetJS CE 0.20.3 instead of xlsx 0.18.5.
-- Spreadsheet import limits: 8 MB, 10,000 rows, 100 columns.
-- Event image file/type limits.
-- Public member lookup never publishes finance proof/evidence.
-- Existing public proof fields are scrubbed by an Admin migration.
-- Public finance display becomes opt-in by default.
-- Custom lookup key may remain private.
-- New-tab links use noopener,noreferrer.
-- Removed unnecessary QR second-CDN fallback.
-- X-DNS-Prefetch-Control: off.
+FIXED
+- Logo and OUR STAGE text on public pages no longer get pushed far apart.
+- The cause was a global `margin-left:auto; margin-right:auto` applied to logo images
+  inside flex brand rows.
+- Topbar brand remains compact and left-aligned.
+- Main page brand is centered as one cohesive logo + text group.
+- Free Lookup header specifically keeps logo and “OUR STAGE / Cổng tra cứu thông tin”
+  together in the center area.
+- Logo artwork still uses `logo-ui-centered.png`, so it remains visually centered
+  inside the white logo tile.
+- Mobile layout is preserved.
 
-READ:
-SECURITY_AUDIT_V59.md
-
-IMPORTANT:
-V59 deliberately does NOT include a Firestore Rules file because the exact deployed current Rules
-were not present in V58. A client-code audit cannot guarantee database security without auditing
-the deployed Rules.
-
-Recommended next security step:
-Audit the exact deployed Firestore Rules, then configure Firebase App Check and enable enforcement
-after monitoring legitimate traffic.
+SECURITY
+- Keeps all V59 security hardening.
+- No Firestore Rules changes.
+- No Rules file included.
