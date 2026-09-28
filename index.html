@@ -1619,6 +1619,17 @@ img[src$="logo-ui-centered.png"]{
 .attendance-row-duplicate{background:#fff7eb}
 .attendance-preview select{min-width:230px}
 
+
+/* ==========================================================
+   V66 LOGIN ACCESS RECOVERY
+   ========================================================== */
+.login-bootstrap-note{
+  margin-top:8px;
+  font-size:8px;
+  color:#7a858d;
+  line-height:1.4;
+}
+
 </style>
 <style>
 /* ==========================================================
@@ -2660,8 +2671,10 @@ async function ensureRealtimeCollectionsV19(){
   }catch(e){console.error("ensureRealtimeCollectionsV19",e);return false}
 }
 async function loadRealtimeCollectionsOnce(){
-  try{
-    if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
+  let hadError=false;
+
+  if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
+    try{
       const s=await fbDb.collection("members").get();
       state.members=s.docs.map(d=>({id:d.id,...d.data()}));
       state.members.forEach(m=>{
@@ -2669,28 +2682,60 @@ async function loadRealtimeCollectionsOnce(){
         if(!m.universityId||!universityById(m.universityId))m.universityId=memberUniversityId(m);
         m.schoolType=legacySchoolTypeForUniversity(m.universityId);
       });
+
       const divisionRepair=ensureDivisionCatalogV64();
       if(canEditClub()&&(divisionRepair.configChanged||divisionRepair.memberChanged)){
-        if(divisionRepair.memberChanged){
-          await commitInChunks(state.members.map(m=>b=>b.set(
-            fbDb.collection("members").doc(m.id),
-            {divisions:memberDivisionIds(m),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},
-            {merge:true}
-          )));
+        try{
+          if(divisionRepair.memberChanged){
+            const repairable=state.members.filter(m=>!semesterLocked(m.semester||semester));
+            if(repairable.length){
+              await commitInChunks(repairable.map(m=>b=>b.set(
+                fbDb.collection("members").doc(m.id),
+                {
+                  divisions:memberDivisionIds(m),
+                  updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+                  updatedBy:currentFirebaseUser?.uid||""
+                },
+                {merge:true}
+              )));
+            }
+          }
+          if(divisionRepair.configChanged)await saveCloudStateNow();
+        }catch(repairError){
+          console.warn("division repair deferred",repairError?.code||repairError,repairError?.message||"");
         }
-        if(divisionRepair.configChanged)await saveCloudStateNow();
       }
-    }else state.members=[];
-    if(canEditClub()||hasViewPermission("viewFinance")){
+    }catch(e){
+      hadError=true;
+      console.warn("members one-time load failed",e?.code||e,e?.message||"");
+      state.members=[];
+    }
+  }else state.members=[];
+
+  if(canEditClub()||hasViewPermission("viewFinance")){
+    try{
       const s=await fbDb.collection("financeTransactions").get();
       state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));
-    }else state.transactions=[];
-    if(canEditClub()||hasViewPermission("viewEvents")){
+    }catch(e){
+      hadError=true;
+      console.warn("finance one-time load failed",e?.code||e,e?.message||"");
+      state.transactions=[];
+    }
+  }else state.transactions=[];
+
+  if(canEditClub()||hasViewPermission("viewEvents")){
+    try{
       const s=await fbDb.collection("eventPortals").get();
       state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));
-    }else state.events=[];
-    persistStateOnly();
-  }catch(e){console.warn("loadRealtimeCollectionsOnce",e)}
+    }catch(e){
+      hadError=true;
+      console.warn("events one-time load failed",e?.code||e,e?.message||"");
+      state.events=[];
+    }
+  }else state.events=[];
+
+  persistStateOnly();
+  return !hadError;
 }
 function renderRealtimeData(){
   persistStateOnly();
@@ -3195,58 +3240,158 @@ function friendlyAuthError(e){
   };
   return map[code]||"Không thể đăng nhập lúc này. Vui lòng thử lại.";
 }
-function friendlyFirestoreError(e,user){
-  console.error("Firestore access check failed",{code:e?.code,message:e?.message,uid:user?.uid});
-  if(e?.code==="permission-denied")return "Tài khoản đã xác thực nhưng chưa được cấp quyền truy cập hệ thống.";
+function friendlyFirestoreError(e,user,stage="profile"){
+  console.error("Firestore access check failed",{stage,code:e?.code,message:e?.message,uid:user?.uid});
+  if(e?.code==="permission-denied")return stage==="profile"
+    ?"Tài khoản đã xác thực nhưng Firestore đang từ chối đọc hồ sơ quyền của chính tài khoản này. Hãy kiểm tra document users/{UID} và Firestore Rules."
+    :"Đã đăng nhập nhưng một phần dữ liệu đang bị Firestore từ chối quyền truy cập.";
   if(e?.code==="unavailable")return "Dịch vụ dữ liệu tạm thời không khả dụng. Hãy kiểm tra kết nối và thử lại.";
-  return "Không thể kiểm tra quyền truy cập. Vui lòng thử lại hoặc liên hệ quản trị hệ thống.";
+  if(e?.code==="failed-precondition")return "Firestore chưa sẵn sàng cho cấu hình hiện tại. Vui lòng thử lại sau khi kiểm tra Database/Rules.";
+  if(e?.code==="unauthenticated")return "Phiên xác thực Firebase chưa hợp lệ. Vui lòng đăng nhập lại.";
+  return stage==="profile"
+    ?"Không đọc được hồ sơ quyền của tài khoản. Vui lòng thử lại hoặc kiểm tra Firestore Rules."
+    :"Đã đăng nhập nhưng có lỗi khi tải dữ liệu hệ thống.";
 }
-async function loadProfile(user){
+async function loadProfile(user,{retries=2}={}){
   const ref=fbDb.collection("users").doc(user.uid);
-  const snap=await ref.get();
-  return snap.exists?{id:snap.id,...snap.data()}:null;
+  let lastError=null;
+  for(let attempt=0;attempt<=retries;attempt++){
+    try{
+      const snap=await ref.get();
+      return snap.exists?{id:snap.id,...snap.data()}:null;
+    }catch(e){
+      lastError=e;
+      if(e?.code==="permission-denied"||e?.code==="unauthenticated")break;
+      if(attempt<retries)await new Promise(r=>setTimeout(r,350*(attempt+1)));
+    }
+  }
+  throw lastError||new Error("Không đọc được hồ sơ tài khoản.");
 }
 async function migrateMemberStructureV62(){
-  const stateChanged=ensureLegacyDivisionsFromMembers();
-  if(!canEditClub()){persistStateOnly();return}
-  const ops=[];
-  for(const m of state.members||[]){const school=memberSchoolType(m),divs=memberDivisionIds(m);if(m.schoolType!==school||JSON.stringify(m.divisions||[])!==JSON.stringify(divs)){m.schoolType=school;m.divisions=divs;ops.push(b=>b.update(fbDb.collection("members").doc(m.id),{schoolType:school,divisions:divs,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid}))}}
-  if(ops.length)await commitInChunks(ops);
-  if(stateChanged)await saveCloudStateNow();
-  persistStateOnly();
+  try{
+    const repair=ensureLegacyDivisionsFromMembers();
+    const configChanged=!!repair?.configChanged;
+    if(!canEditClub()){persistStateOnly();return true}
+
+    const ops=[];
+    for(const m of state.members||[]){
+      // Do not let a maintenance migration block login because an old semester is locked.
+      if(semesterLocked(m.semester||semester))continue;
+      const school=memberSchoolType(m),divs=memberDivisionIds(m);
+      if(m.schoolType!==school||JSON.stringify(m.divisions||[])!==JSON.stringify(divs)){
+        m.schoolType=school;m.divisions=divs;
+        ops.push(b=>b.update(
+          fbDb.collection("members").doc(m.id),
+          {
+            schoolType:school,
+            divisions:divs,
+            updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy:currentFirebaseUser?.uid||""
+          }
+        ));
+      }
+    }
+    if(ops.length)await commitInChunks(ops);
+    if(configChanged)await saveCloudStateNow();
+    persistStateOnly();
+    return true;
+  }catch(e){
+    // Migration is maintenance, not authorization. Never sign a valid user out because it failed.
+    console.warn("migrateMemberStructureV62 skipped",e?.code||e,e?.message||"");
+    persistStateOnly();
+    return false;
+  }
+}
+
+async function runLoginStep(label,fn,{warn=true}={}){
+  try{
+    return {ok:true,value:await fn()};
+  }catch(e){
+    console.warn(`login bootstrap: ${label}`,e?.code||e,e?.message||"");
+    if(warn)loginBootstrapWarnings.push(label);
+    return {ok:false,error:e};
+  }
+}
+let loginBootstrapWarnings=[];
+
+function forceShowAuthorizedShell(){
+  document.body.classList.remove("auth-login");
+  document.body.classList.add("auth-admin");
+  $("#loginScreen")?.classList.add("hidden");
+  $("#app")?.classList.remove("hidden");
+  if($("#adminChip"))$("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
+}
+
+async function bootstrapAuthorizedSession(user){
+  loginBootstrapWarnings=[];
+
+  // Configuration/data loading failures must not be confused with "no permission".
+  await runLoginStep("cấu hình CLB",async()=>{
+    const loaded=await loadCloudState();
+    if(!loaded)normalizeState();
+  });
+
+  selectSemesterForNewLogin();
+
+  await runLoginStep("khởi tạo dữ liệu",()=>ensureRealtimeCollectionsV19(),{warn:false});
+  await runLoginStep("tùy chọn tài khoản",()=>loadUserPreferences(),{warn:false});
+  await runLoginStep("dữ liệu thành viên/thu chi/sự kiện",()=>loadRealtimeCollectionsOnce());
+  await runLoginStep("chuyển đổi dữ liệu cũ",()=>migrateMemberStructureV62(),{warn:false});
+
+  try{
+    showApp();
+  }catch(e){
+    // A rendering bug must never sign out an already-authorized account.
+    console.error("showApp render failed",e);
+    forceShowAuthorizedShell();
+    try{applyRoleAccess()}catch{}
+    loginBootstrapWarnings.push("giao diện");
+  }
+
+  startSecureSessionWatch();
+
+  await runLoginStep("thông báo / QR / nhật ký",()=>watchSuiteCollections(),{warn:false});
+  try{watchOwnProfileRealtime()}catch(e){console.warn("own profile realtime",e)}
+  if(canEditClub()){
+    Promise.resolve().then(()=>migratePublicLookupPrivacyV46()).catch(e=>console.warn("lookup privacy migration",e));
+    Promise.resolve().then(()=>migratePublicFinanceProofV59()).catch(e=>console.warn("finance privacy migration",e));
+  }
+
+  if(loginBootstrapWarnings.length){
+    setTimeout(()=>toast(`Đã đăng nhập. Một số dữ liệu chưa tải được (${[...new Set(loginBootstrapWarnings)].join(", ")}). Bấm ↻ Đồng bộ để thử lại.`),250);
+  }
 }
 
 async function validateAccess(user){
+  let p=null;
   try{
-    const p=await loadProfile(user);
-    if(!p){setLoginError("Tài khoản đã xác thực nhưng chưa được cấp hồ sơ truy cập. Hãy liên hệ quản trị hệ thống.");return false;}
-    if(p.active!==true){
-      setLoginError("Tài khoản hiện chưa được phép truy cập hệ thống. Hãy liên hệ quản trị hệ thống.");
-      return false;
-    }
-    currentFirebaseUser=user;
-    currentProfile=p;
-    await loadCloudState();
-
-    // Mỗi lần đăng nhập mới, vào thẳng học kỳ theo tháng hiện tại:
-    // Jan-Apr = Spring, May-Aug = Summer, Sep-Dec = Fall.
-    selectSemesterForNewLogin();
-
-    await ensureRealtimeCollectionsV19();
-    await loadUserPreferences();
-    await loadRealtimeCollectionsOnce();
-    await migrateMemberStructureV62();
-    showApp();
-    startSecureSessionWatch();
-    if(canEditClub()){migratePublicLookupPrivacyV46();migratePublicFinanceProofV59();}
-    await watchSuiteCollections();
-    watchOwnProfileRealtime();
-    return true;
+    // This is the actual authorization check.
+    p=await loadProfile(user,{retries:2});
   }catch(e){
-    console.error("Firestore profile check failed:",e);
-    setLoginError(friendlyFirestoreError(e,user));
+    setLoginError(friendlyFirestoreError(e,user,"profile"));
     return false;
   }
+
+  if(!p){
+    setLoginError("Tài khoản đã xác thực nhưng chưa có document quyền trong Firestore: users/"+user.uid+".");
+    return false;
+  }
+  if(p.active!==true){
+    setLoginError("Tài khoản hiện chưa được phép truy cập hệ thống. Hãy kiểm tra trường active = true trong users/"+user.uid+".");
+    return false;
+  }
+  if(!["superadmin","admin","bcn"].includes(String(p.role||"").toLowerCase())){
+    setLoginError("Hồ sơ tài khoản có role không hợp lệ. Role phải là superadmin, admin hoặc bcn.");
+    return false;
+  }
+
+  currentFirebaseUser=user;
+  currentProfile={...p,role:String(p.role).toLowerCase()};
+  setLoginError("");
+
+  // Once the profile is valid, boot errors are operational errors, not authorization failures.
+  await bootstrapAuthorizedSession(user);
+  return true;
 }
 initV40Shell();
 const SESSION_IDLE_LIMIT=30*60*1000,SESSION_WARN_AT=28*60*1000;
@@ -3265,7 +3410,8 @@ fbAuth.onAuthStateChanged(async user=>{
     document.body.classList.remove("auth-admin","sidebar-open");document.body.classList.add("auth-login");
     $("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden");return;
   }
-  const ok=await validateAccess(user);if(!ok){try{await fbAuth.signOut()}catch{}}
+  const ok=await validateAccess(user);
+  if(!ok){try{await fbAuth.signOut()}catch{}}
 });
 $("#loginForm").onsubmit=async e=>{
   e.preventDefault();setLoginError("");
@@ -3304,7 +3450,7 @@ $("#loginForm").onsubmit=async e=>{
       "osc/google-repair-cancelled":"Bạn đã hủy xử lý xung đột Google.",
       "osc/google-repair-missing":"Không đủ thông tin để xử lý xung đột Google."
     };
-    setLoginError(special[e?.code]||(String(e?.code||"").startsWith("auth/")?googleAuthErrorMessage(e):(e?.message||"Không thể hoàn tất đăng nhập.")));
+    setLoginError(special[e?.code]||(String(e?.code||"").startsWith("auth/")?friendlyAuthError(e):(e?.message||"Không thể hoàn tất đăng nhập.")));
   }finally{
     authFlowHold=false;if(btn){btn.disabled=false;const s=btn.querySelector("span");if(s)s.textContent="Đăng nhập"}
   }

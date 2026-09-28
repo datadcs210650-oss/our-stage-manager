@@ -1,0 +1,24 @@
+V66 LOGIN TEST
+
+1. Deploy the full V66 package.
+2. Hard refresh: Command + Shift + R.
+3. Login with Email/Password.
+
+EXPECTED:
+- Valid Firebase Auth + valid users/{UID} profile enters the app.
+- A noncritical migration/data/render error no longer signs the account out.
+- If some data fails, the app shows a short warning and you can press ↻ Đồng bộ.
+
+IF ACCESS IS STILL DENIED:
+Check Firebase Console:
+Authentication > Users:
+- copy the UID of the account.
+
+Firestore Database > Data > users > {same UID}:
+- document must exist
+- active must be boolean true
+- role must be exactly superadmin / admin / bcn
+
+The V66 error message will now distinguish these cases.
+
+No Firestore Rules change is required for V66.

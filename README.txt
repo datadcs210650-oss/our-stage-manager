@@ -1,51 +1,56 @@
-OUR STAGE CLUB MANAGER V65 — ATTENDANCE EXCEL SCAN FIX
+OUR STAGE CLUB MANAGER V66 — LOGIN ACCESS RECOVERY
 
 FIXED
-Upload DS tham gia Excel now actually marks attendance and immediately updates
-the visible attendance table.
+The login flow no longer treats every post-login JavaScript / migration / collection-load
+failure as “Không thể kiểm tra quyền truy cập”.
 
-ROOT CAUSE
-Since V62 removed persistent member realtime listeners, the old Excel import wrote
-scores to Firestore but did not update the local member state. The write could succeed
-while the current attendance table still looked unchecked until a manual refresh.
+ROOT CAUSE IN V65
+validateAccess() wrapped ALL of these in one try/catch:
+- read users/{uid}
+- load clubState
+- initialize collections
+- load preferences
+- load members/finance/events
+- legacy member/division migration
+- render UI
+- suite/QR loaders
 
-V65 FIX
-1. After a successful Firestore batch write, local member scores are updated immediately.
-2. The attendance table, member views, division stats and visible lookup settings refresh.
-3. Public member lookup synchronization remains enabled for Admin.
-4. The Admin approval path for bulk attendance also refreshes local state after approval.
+Therefore a migration or UI/data error after a successful authentication could throw and
+the app would incorrectly report an access-check error and sign the user out.
 
-ROBUST EXCEL SCANNING
-For every Excel row, V65 scans the full current-semester member list:
-1. exact MSSV in recognized MSSV column;
-2. exact MSSV in any Excel cell;
-3. MSSV embedded with other text in a cell;
-4. exact full name;
-5. full name in any Excel cell.
+V66
+Authorization is now decided only by:
+1. Firebase Authentication user exists.
+2. users/{UID} document can be read.
+3. active === true.
+4. role is superadmin / admin / bcn.
 
-MSSV is always preferred over name.
-
-If the same member appears more than once in Excel:
-- the preview flags duplicate rows;
-- the member is only marked once.
-
-If a name is ambiguous:
-- the system does not guess;
-- Admin can manually choose the member in the preview.
-
-Large Excel files:
-- entire file is still processed;
-- preview is limited to 600 rows to avoid browser slowdown.
-
-BEHAVIOR
-- Checkbox activity: matched member becomes checked.
-- Number activity: matched member receives the configured maximum score.
-- Members absent from the Excel file keep their existing attendance/score.
-- Locked activity columns remain protected.
-- Semester mismatch after file selection is blocked.
+After that, data/bootstrap operations are isolated:
+- A failed member migration cannot sign the user out.
+- A locked old semester cannot make the legacy migration block login.
+- Members / Finance / Events load independently.
+- A render error cannot sign an authorized user out.
+- The UI can open and shows a warning asking Admin to press Sync if a noncritical dataset fails.
+- Profile read has a short retry for transient Firestore/network failures.
+- Password login now uses password-specific Firebase error messages instead of Google error text.
 
 SECURITY
-- Existing V59/V64 hardening is preserved.
-- Spreadsheet security limits remain: size, rows, columns.
-- No new persistent Admin/BCN realtime listener is introduced.
-- Firestore Rules are unchanged; no Rules file is included.
+This does NOT bypass authentication or Firestore authorization.
+A missing/disabled/invalid-role users/{UID} profile is still denied.
+Permission-denied when reading the user's own profile is still denied.
+
+FIRESTORE PROFILE REQUIRED
+users/{Firebase Auth UID}:
+- active: true
+- role: "superadmin", "admin", or "bcn"
+- permissions: map (for BCN)
+
+If the account still cannot enter after V66, the new error text identifies whether:
+- users/{UID} is missing,
+- active is not true,
+- role is invalid,
+- Firestore Rules deny the self-profile read.
+
+RULES
+V66 does not change Firestore Rules.
+If you published hardened V60 Rules, keep them.
