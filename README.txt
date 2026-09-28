@@ -1,42 +1,51 @@
-OUR STAGE CLUB MANAGER V62 — PHÂN BAN + THỨ TỰ IMPORT + MANUAL SYNC
+OUR STAGE CLUB MANAGER V65 — ATTENDANCE EXCEL SCAN FIX
 
-1. NHÓM SINH VIÊN
-- Mỗi thành viên có schoolType: fptu / external / unknown.
-- Admin/Super Admin đánh dấu trong modal thành viên.
-- BCN có quyền thành viên chỉ xem, không sửa hai trường phân loại này.
-- Có bộ lọc Nhóm sinh viên trong danh sách thành viên.
+FIXED
+Upload DS tham gia Excel now actually marks attendance and immediately updates
+the visible attendance table.
 
-2. PHÂN BAN NHIỀU-LỰA-CHỌN
-- state.divisions lưu danh mục phân ban trong cấu hình CLB.
-- Member.divisions là mảng ID nên một thành viên có thể thuộc nhiều phân ban.
-- Dữ liệu cũ Ban/Bộ phận được nhận diện để tạo phân ban tương thích.
-- Menu riêng “Phân ban” gồm:
-  + danh sách phân ban;
-  + số thành viên;
-  + tỷ lệ hoạt động trung bình;
-  + số đang hoạt động;
-  + FPTU / trường khác;
-  + bảng thành viên và tỷ lệ hoạt động từng người.
-- Chỉ Admin/Super Admin tạo, đổi tên, xóa và đánh dấu phân ban.
+ROOT CAUSE
+Since V62 removed persistent member realtime listeners, the old Excel import wrote
+scores to Firestore but did not update the local member state. The write could succeed
+while the current attendance table still looked unchecked until a manual refresh.
 
-3. GIỮ ĐÚNG THỨ TỰ UPLOAD EXCEL
-- Member có displayOrder.
-- Khi upload danh sách, các dòng hợp lệ được xếp đúng thứ tự file từ 1..N.
-- Thành viên không có trong file được nối phía sau theo thứ tự ổn định hiện tại.
-- Firestore load lại sẽ sort theo displayOrder, không còn xáo trộn theo thứ tự document.
+V65 FIX
+1. After a successful Firestore batch write, local member scores are updated immediately.
+2. The attendance table, member views, division stats and visible lookup settings refresh.
+3. Public member lookup synchronization remains enabled for Admin.
+4. The Admin approval path for bulk attendance also refreshes local state after approval.
 
-4. BỎ REAL-TIME GIỮA ADMIN/BCN
-- Không còn listener onSnapshot liên tục cho members / finance / events / clubState / notifications / approvals / audit / trash / QR list.
-- Dữ liệu được GET một lần khi đăng nhập, đổi học kỳ hoặc khi bấm “Đồng bộ”.
-- Listener realtime hồ sơ tài khoản của chính người đang đăng nhập vẫn giữ để có thể thu hồi quyền / vô hiệu hóa tài khoản ngay.
-- QR Admin chuyển sang nút Làm mới lượt gửi.
-- Giảm số Firestore read khi nhiều tài khoản BCN cùng mở trang.
+ROBUST EXCEL SCANNING
+For every Excel row, V65 scans the full current-semester member list:
+1. exact MSSV in recognized MSSV column;
+2. exact MSSV in any Excel cell;
+3. MSSV embedded with other text in a cell;
+4. exact full name;
+5. full name in any Excel cell.
 
-5. CỔNG TRA CỨU THÀNH VIÊN
-- Giữ tính năng sync lookup.
-- Thay đổi của Admin vẫn dùng scheduleAutoLookupSync.
-- Khi Admin bấm “Đồng bộ”, hệ thống tải dữ liệu mới từ Firestore rồi sync cổng tra cứu, nên thay đổi từ BCN cũng được đưa lên cổng mà không cần listener real-time.
+MSSV is always preferred over name.
 
-6. FIRESTORE RULES
-- V62 không cần thay Rules chỉ để lưu schoolType, divisions, displayOrder vì member docs hiện cho editMembers cập nhật các trường này.
-- ZIP không chứa Rules.
+If the same member appears more than once in Excel:
+- the preview flags duplicate rows;
+- the member is only marked once.
+
+If a name is ambiguous:
+- the system does not guess;
+- Admin can manually choose the member in the preview.
+
+Large Excel files:
+- entire file is still processed;
+- preview is limited to 600 rows to avoid browser slowdown.
+
+BEHAVIOR
+- Checkbox activity: matched member becomes checked.
+- Number activity: matched member receives the configured maximum score.
+- Members absent from the Excel file keep their existing attendance/score.
+- Locked activity columns remain protected.
+- Semester mismatch after file selection is blocked.
+
+SECURITY
+- Existing V59/V64 hardening is preserved.
+- Spreadsheet security limits remain: size, rows, columns.
+- No new persistent Admin/BCN realtime listener is introduced.
+- Firestore Rules are unchanged; no Rules file is included.

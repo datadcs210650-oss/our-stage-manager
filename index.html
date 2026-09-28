@@ -1567,6 +1567,58 @@ img[src$="logo-ui-centered.png"]{
   margin-right:auto!important;
 }
 
+
+/* ==========================================================
+   V63 UNIVERSITY SETTINGS / EXPORT FILTER
+   ========================================================== */
+.university-settings-list{display:flex;flex-direction:column;gap:8px}
+.university-settings-row{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) 130px 48px;
+  gap:8px;align-items:center;padding:10px;border:1px solid #e1e6e9;border-radius:12px;background:#fafbfc
+}
+.university-settings-row input[type="text"]{width:100%}
+.university-home-choice{
+  display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;
+  padding:7px 9px;border:1px solid #e0e5e8;border-radius:10px;background:#fff;
+  font-size:8px;font-weight:900
+}
+.university-marker-preview{display:block;margin-top:4px;color:#7a858d;font-size:7px;line-height:1.35}
+.university-pill{
+  display:inline-flex;align-items:center;max-width:230px;padding:4px 8px;border-radius:999px;
+  border:1px solid #dfe5e8;background:#f8fafb;color:#4c5962;font-size:8px;font-weight:850;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.university-pill.home{border-color:#c8dfd4;background:#eff9f4;color:#25704e}
+.university-export-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.university-export-grid label{
+  display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #e0e5e8;
+  border-radius:10px;background:#fff;font-size:9px;font-weight:800
+}
+.university-detect-hint{margin-top:5px;color:#738089;font-size:8px;line-height:1.4}
+@media(max-width:760px){
+  .university-settings-row{grid-template-columns:minmax(210px,1fr) minmax(220px,1fr) 120px 48px;min-width:720px}
+  .university-settings-card{overflow:auto}
+  .university-export-grid{grid-template-columns:1fr}
+}
+
+
+/* ==========================================================
+   V65 ATTENDANCE EXCEL SCAN FIX
+   ========================================================== */
+.attendance-scan-help{
+  margin-top:10px;
+  padding:9px 11px;
+  border:1px solid #dce8e2;
+  border-radius:10px;
+  background:#f5fbf8;
+  color:#4f6158;
+}
+.attendance-row-matched{background:#fbfffd}
+.attendance-row-unmatched{background:#fffaf1}
+.attendance-row-duplicate{background:#fff7eb}
+.attendance-preview select{min-width:230px}
+
 </style>
 <style>
 /* ==========================================================
@@ -2097,6 +2149,22 @@ img[src$="logo-ui-centered.png"]{
         </div>
       </div>
 
+      <div class="settings-card university-settings-card" style="margin-top:16px">
+        <div class="section-title">
+          <div>
+            <h3>Trường đại học & nhận diện MSSV</h3>
+            <p class="small-help">Đổi tên trường và khai báo các tiền tố MSSV dùng để tự nhận diện. Ví dụ: <b>Đại học FPT → C</b>. Có thể nhập nhiều tiền tố, cách nhau bằng dấu phẩy hoặc dấu chấm phẩy.</p>
+          </div>
+        </div>
+        <div id="universitySettings"></div>
+        <div class="modal-actions" style="margin-top:12px;justify-content:flex-start">
+          <button class="secondary global-setting-control" type="button" id="addUniversityBtn">+ Thêm trường</button>
+          <button class="secondary global-setting-control" type="button" id="reclassifyUniversitiesBtn">Nhận diện lại theo MSSV</button>
+          <button class="primary global-setting-control" type="button" id="saveUniversitiesBtn">Lưu cấu hình trường</button>
+        </div>
+        <div class="small-help" style="margin-top:8px">Nếu nhiều trường có tiền tố giống nhau, hệ thống ưu tiên tiền tố dài hơn. Thành viên được Admin chọn trường thủ công sẽ không bị đổi khi bấm “Nhận diện lại theo MSSV”.</div>
+      </div>
+
       <div class="settings-card" style="margin-top:16px">
         <h3>Hoạt động và cột chấm điểm trong học kỳ</h3>
         <div class="setup-note">Bạn có thể đổi tên nhóm, tên cột, ngày, số điểm mặc định; thêm hoặc xóa cột. Bảng QLTV sẽ tự thay đổi theo thiết lập.</div>
@@ -2163,7 +2231,15 @@ const DEFAULT_STATE={
     {key:"status",label:"Trạng thái",type:"text",required:false},
     {key:"note",label:"Ghi chú",type:"text",required:false}
   ],
-  divisions:[],
+  universities:[
+    {id:"fptu",name:"Đại học FPT",markers:["C"],isHome:true,createdAt:""},
+    {id:"external",name:"Trường khác",markers:[],isHome:false,createdAt:""}
+  ],
+  divisions:[
+    {id:"div_dien-vien-bien-kich",name:"Diễn viên & Biên kịch",createdAt:""},
+    {id:"div_truyen-thong-san-xuat",name:"Truyền thông & Sản xuất",createdAt:""}
+  ],
+  divisionSetupVersion:1,
   members:[],transactions:[]
 };
 let state=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||structuredClone(DEFAULT_STATE);
@@ -2467,8 +2543,20 @@ function permittedModuleSummary(){
 function normalizeState(){
   state.lookupConfig=state.lookupConfig||{};
   state.events=state.events||[];
+  state.universities=Array.isArray(state.universities)&&state.universities.length?state.universities:structuredClone(DEFAULT_STATE.universities);
+  state.universities=state.universities.filter(u=>u&&u.id&&u.name).map(u=>({
+    id:String(u.id),name:String(u.name).trim(),markers:parseUniversityMarkers(u.markers),
+    isHome:!!u.isHome,createdAt:u.createdAt||""
+  }));
+  if(state.universities.length&&!state.universities.some(u=>u.isHome))state.universities[0].isHome=true;
+  if(state.universities.filter(u=>u.isHome).length>1){
+    let seen=false;state.universities.forEach(u=>{if(u.isHome&&!seen)seen=true;else if(u.isHome)u.isHome=false});
+  }
   state.divisions=Array.isArray(state.divisions)?state.divisions:[];
-  state.divisions=state.divisions.filter(x=>x&&x.id&&x.name).map(x=>({id:String(x.id),name:String(x.name).trim(),createdAt:x.createdAt||""}));
+  state.divisions=state.divisions
+    .filter(x=>x&&x.id&&x.name)
+    .map(x=>({id:String(x.id),name:String(x.name).trim().slice(0,120),createdAt:x.createdAt||""}));
+  if(!Number.isFinite(Number(state.divisionSetupVersion)))state.divisionSetupVersion=0;
   state.memberFields=state.memberFields||structuredClone(DEFAULT_STATE.memberFields);
   state.members=state.members||[];
   state.transactions=state.transactions||[];
@@ -2546,7 +2634,7 @@ function watchCloudStateRealtime(){
 }
 
 function memberDocPayload(m){
-  return {semester:m.semester||semester,name:m.name||"",mssv:m.mssv||"",data:m.data||{},scores:m.scores||{},fundPaid:!!m.fundPaid,tags:Array.isArray(m.tags)?m.tags:[],internalNote:m.internalNote||"",schoolType:memberSchoolType(m),divisions:memberDivisionIds(m),displayOrder:Number(m.displayOrder||nextMemberDisplayOrder(m.semester||semester)),
+  return {semester:m.semester||semester,name:m.name||"",mssv:m.mssv||"",data:m.data||{},scores:m.scores||{},fundPaid:!!m.fundPaid,tags:Array.isArray(m.tags)?m.tags:[],internalNote:m.internalNote||"",schoolType:memberSchoolType(m),universityId:memberUniversityId(m),universitySource:memberUniversitySource(m),divisions:memberDivisionIds(m).slice(0,20),displayOrder:Number(m.displayOrder||nextMemberDisplayOrder(m.semester||semester)),
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""};
 }
 function txDocPayload(t){
@@ -2576,7 +2664,22 @@ async function loadRealtimeCollectionsOnce(){
     if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
       const s=await fbDb.collection("members").get();
       state.members=s.docs.map(d=>({id:d.id,...d.data()}));
-      ensureLegacyDivisionsFromMembers();
+      state.members.forEach(m=>{
+        if(!m.universitySource)m.universitySource=m.universityId?"manual":"auto";
+        if(!m.universityId||!universityById(m.universityId))m.universityId=memberUniversityId(m);
+        m.schoolType=legacySchoolTypeForUniversity(m.universityId);
+      });
+      const divisionRepair=ensureDivisionCatalogV64();
+      if(canEditClub()&&(divisionRepair.configChanged||divisionRepair.memberChanged)){
+        if(divisionRepair.memberChanged){
+          await commitInChunks(state.members.map(m=>b=>b.set(
+            fbDb.collection("members").doc(m.id),
+            {divisions:memberDivisionIds(m),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},
+            {merge:true}
+          )));
+        }
+        if(divisionRepair.configChanged)await saveCloudStateNow();
+      }
     }else state.members=[];
     if(canEditClub()||hasViewPermission("viewFinance")){
       const s=await fbDb.collection("financeTransactions").get();
@@ -2732,25 +2835,179 @@ window.addEventListener("unhandledrejection",e=>{
   if($("#app")&&!$("#app").classList.contains("hidden"))toast("Có lỗi đồng bộ dữ liệu. Vui lòng thử lại.");
 });
 function sem(){return state.semesters[semester]}
-const MEMBER_SCHOOL_TYPES=[
-  {value:"fptu",label:"Sinh viên FPTU"},
-  {value:"external",label:"Sinh viên trường khác"},
-  {value:"unknown",label:"Chưa xác định"}
+const UNKNOWN_UNIVERSITY_ID="unknown";
+
+function normalizeUniversityMarker(v){
+  return String(v||"").trim().toUpperCase().replace(/\s+/g,"");
+}
+function normalizeStudentCode(v){
+  return String(v||"").trim().toUpperCase().replace(/\s+/g,"");
+}
+function parseUniversityMarkers(v){
+  const src=Array.isArray(v)?v:String(v||"").split(/[;,\n|]/);
+  return [...new Set(src.map(normalizeUniversityMarker).filter(Boolean))].slice(0,30);
+}
+function universityIdFromName(name){
+  const base=normalizeText(name).replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,42)||uid();
+  let id=`uni_${base}`,n=2;
+  while((state.universities||[]).some(u=>u.id===id&&normalizeText(u.name)!==normalizeText(name)))id=`uni_${base}_${n++}`;
+  return id;
+}
+function universities(){return Array.isArray(state.universities)?state.universities:[]}
+function universityById(id){return universities().find(u=>u.id===id)||null}
+function homeUniversity(){return universities().find(u=>u.isHome===true)||universities()[0]||null}
+function universityLabelById(id){
+  if(id===UNKNOWN_UNIVERSITY_ID||!id)return "Chưa xác định";
+  return universityById(id)?.name||"Chưa xác định";
+}
+function inferUniversityIdFromMssv(mssv){
+  const code=normalizeStudentCode(mssv);
+  if(!code)return UNKNOWN_UNIVERSITY_ID;
+  const rules=[];
+  for(const u of universities()){
+    for(const marker of parseUniversityMarkers(u.markers))rules.push({id:u.id,marker});
+  }
+  rules.sort((a,b)=>b.marker.length-a.marker.length);
+  return rules.find(r=>code.startsWith(r.marker))?.id||UNKNOWN_UNIVERSITY_ID;
+}
+function legacyUniversityIdFromSchoolType(v,mssv=""){
+  const n=normalizeText(v),inferred=inferUniversityIdFromMssv(mssv);
+  if(inferred!==UNKNOWN_UNIVERSITY_ID)return inferred;
+  if(["fptu","fpt","sinh vien fptu","sinh vien truong nay","truong nay"].includes(n))return homeUniversity()?.id||UNKNOWN_UNIVERSITY_ID;
+  if(["external","sinh vien truong khac","truong khac","khac"].includes(n))return universities().find(u=>!u.isHome)?.id||UNKNOWN_UNIVERSITY_ID;
+  return UNKNOWN_UNIVERSITY_ID;
+}
+function memberUniversityId(m){
+  const explicit=String(m?.universityId||"");
+  if(explicit&&universityById(explicit))return explicit;
+  if(m?.universitySource==="auto")return inferUniversityIdFromMssv(m?.mssv||"");
+  return legacyUniversityIdFromSchoolType(m?.schoolType||"",m?.mssv||"");
+}
+function memberUniversityLabel(m){return universityLabelById(memberUniversityId(m))}
+function memberUniversitySource(m){return m?.universitySource==="manual"?"manual":"auto"}
+function memberUniversityClass(m){
+  const id=memberUniversityId(m);
+  if(id===UNKNOWN_UNIVERSITY_ID)return "unknown";
+  return universityById(id)?.isHome?"fptu":"external";
+}
+function legacySchoolTypeForUniversity(id){
+  if(id===UNKNOWN_UNIVERSITY_ID||!universityById(id))return "unknown";
+  return universityById(id)?.isHome?"fptu":"external";
+}
+/* Backward-compatible helpers */
+function normalizeSchoolType(v){return legacySchoolTypeForUniversity(legacyUniversityIdFromSchoolType(v,""))}
+function memberSchoolType(m){return legacySchoolTypeForUniversity(memberUniversityId(m))}
+function memberSchoolLabel(m){return memberUniversityLabel(m)}
+function memberSchoolClass(m){return memberUniversityClass(m)}
+
+const DEFAULT_DIVISION_CATALOG=[
+  {id:"div_dien-vien-bien-kich",name:"Diễn viên & Biên kịch"},
+  {id:"div_truyen-thong-san-xuat",name:"Truyền thông & Sản xuất"}
 ];
-function normalizeSchoolType(v){const n=normalizeText(v);if(["fptu","fpt","sinh vien fptu","sinh vien truong nay","truong nay"].includes(n))return "fptu";if(["external","sinh vien truong khac","truong khac","khac"].includes(n))return "external";return "unknown"}
-function memberSchoolType(m){return normalizeSchoolType(m?.schoolType||"unknown")}
-function memberSchoolLabel(m){return MEMBER_SCHOOL_TYPES.find(x=>x.value===memberSchoolType(m))?.label||"Chưa xác định"}
-function memberSchoolClass(m){return memberSchoolType(m)==="fptu"?"fptu":memberSchoolType(m)==="external"?"external":"unknown"}
-function divisionIdFromName(name){const base=normalizeText(name).replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,42)||uid();let id=`div_${base}`;let n=2;while(state.divisions.some(d=>d.id===id&&normalizeText(d.name)!==normalizeText(name)))id=`div_${base}_${n++}`;return id}
+
+function divisionIdFromName(name){
+  const base=normalizeText(name).replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,42)||uid();
+  let id=`div_${base}`,n=2;
+  while((state.divisions||[]).some(d=>d.id===id&&normalizeText(d.name)!==normalizeText(name)))id=`div_${base}_${n++}`;
+  return id;
+}
 function divisionById(id){return (state.divisions||[]).find(d=>d.id===id)||null}
-function memberDivisionIds(m){const out=Array.isArray(m?.divisions)?m.divisions.filter(id=>divisionById(id)):[];const legacy=String(m?.data?.department||"").trim();if(legacy){const d=(state.divisions||[]).find(x=>normalizeText(x.name)===normalizeText(legacy));if(d&&!out.includes(d.id))out.push(d.id)}return [...new Set(out)]}
+function sanitizeDivisionName(name){
+  return String(name||"").replace(/\s+/g," ").trim().slice(0,120);
+}
+function legacyDivisionNames(m){
+  const raw=String(m?.data?.department||"").trim();
+  if(!raw)return [];
+  return [...new Set(raw.split(/[;\n|]/).map(sanitizeDivisionName).filter(Boolean))];
+}
+function recoveredDivisionName(id){
+  const known=DEFAULT_DIVISION_CATALOG.find(x=>x.id===id);
+  if(known)return known.name;
+  const slug=String(id||"").replace(/^div[_-]?/i,"").replace(/[-_]+/g," ").trim();
+  if(!slug)return "Phân ban khôi phục";
+  return slug.split(/\s+/).map(x=>x?x.charAt(0).toUpperCase()+x.slice(1):x).join(" ").slice(0,120);
+}
+function ensureDivisionCatalogV64(){
+  state.divisions=Array.isArray(state.divisions)?state.divisions:[];
+  let configChanged=false,memberChanged=false;
+
+  // One-time migration for V62/V63 installs whose catalog was empty.
+  if(Number(state.divisionSetupVersion||0)<1){
+    if(!state.divisions.length){
+      for(const seed of DEFAULT_DIVISION_CATALOG){
+        state.divisions.push({...seed,createdAt:new Date().toISOString()});
+      }
+      configChanged=true;
+    }
+    state.divisionSetupVersion=1;
+    configChanged=true;
+  }
+
+  // Recover catalog entries referenced by members, instead of silently hiding them.
+  for(const m of state.members||[]){
+    if(!Array.isArray(m.divisions)){m.divisions=[];memberChanged=true}
+
+    for(const legacyName of legacyDivisionNames(m)){
+      let d=state.divisions.find(x=>normalizeText(x.name)===normalizeText(legacyName));
+      if(!d){
+        d={id:divisionIdFromName(legacyName),name:legacyName,createdAt:new Date().toISOString()};
+        state.divisions.push(d);
+        configChanged=true;
+      }
+      if(!m.divisions.includes(d.id)){
+        m.divisions.push(d.id);
+        memberChanged=true;
+      }
+    }
+
+    for(const id of [...m.divisions]){
+      if(!id||divisionById(id))continue;
+      state.divisions.push({
+        id:String(id).slice(0,160),
+        name:recoveredDivisionName(id),
+        createdAt:new Date().toISOString()
+      });
+      configChanged=true;
+    }
+
+    const cleaned=[...new Set(m.divisions.filter(id=>divisionById(id)))];
+    if(cleaned.length!==m.divisions.length||cleaned.some((id,i)=>id!==m.divisions[i])){
+      m.divisions=cleaned;
+      memberChanged=true;
+    }
+  }
+
+  // No duplicate names / IDs.
+  const seenIds=new Set(),seenNames=new Set();
+  const cleaned=[];
+  for(const d of state.divisions){
+    const id=String(d?.id||"").trim(),name=sanitizeDivisionName(d?.name);
+    if(!id||!name||seenIds.has(id)||seenNames.has(normalizeText(name)))continue;
+    seenIds.add(id);seenNames.add(normalizeText(name));
+    cleaned.push({id,name,createdAt:d.createdAt||""});
+  }
+  if(cleaned.length!==state.divisions.length){
+    state.divisions=cleaned;
+    configChanged=true;
+  }
+
+  return {configChanged,memberChanged};
+}
+function memberDivisionIds(m){
+  const out=Array.isArray(m?.divisions)?m.divisions.filter(id=>divisionById(id)):[];
+  for(const legacy of legacyDivisionNames(m)){
+    const d=(state.divisions||[]).find(x=>normalizeText(x.name)===normalizeText(legacy));
+    if(d&&!out.includes(d.id))out.push(d.id);
+  }
+  return [...new Set(out)];
+}
 function memberDivisionNames(m){return memberDivisionIds(m).map(id=>divisionById(id)?.name).filter(Boolean)}
 function memberOrderValue(m){const n=Number(m?.displayOrder);return Number.isFinite(n)&&n>0?n:Number.MAX_SAFE_INTEGER}
 function memberSortStable(a,b){const oa=memberOrderValue(a),ob=memberOrderValue(b);if(oa!==ob)return oa-ob;return String(a.name||"").localeCompare(String(b.name||""),"vi")||String(a.mssv||"").localeCompare(String(b.mssv||""),"vi")}
 function members(){return state.members.filter(m=>m.semester===semester).sort(memberSortStable)}
 function txs(){return state.transactions.filter(t=>t.semester===semester)}
 function nextMemberDisplayOrder(semKey=semester){const rows=(state.members||[]).filter(m=>m.semester===semKey);return rows.reduce((max,m)=>Math.max(max,Number(m.displayOrder||0)),0)+1}
-function ensureLegacyDivisionsFromMembers(){let stateChanged=false;for(const m of state.members||[]){if(!m.schoolType)m.schoolType="unknown";if(!Array.isArray(m.divisions))m.divisions=[];const legacy=String(m.data?.department||"").trim();if(!legacy)continue;let d=(state.divisions||[]).find(x=>normalizeText(x.name)===normalizeText(legacy));if(!d){d={id:divisionIdFromName(legacy),name:legacy};state.divisions.push(d);stateChanged=true}if(!m.divisions.includes(d.id))m.divisions.push(d.id)}return stateChanged}
+function ensureLegacyDivisionsFromMembers(){return ensureDivisionCatalogV64()}
 
 function scoreMemberForSemester(m,semKey=semester){
   const cfg=state.semesters?.[semKey]||{groups:[]};
@@ -3110,9 +3367,10 @@ async function refreshAdminData(showMessage=true){
     await loadCloudState();
     if(!state.semesters?.[semester])semester=resolveSemesterForLogin(new Date());
     await loadRealtimeCollectionsOnce();
-    ensureLegacyDivisionsFromMembers();
+    ensureDivisionCatalogV64();
     await watchSuiteCollections();
     renderAll();
+    if(canViewModule("members"))renderDivisions();
     if(canEditClub()&&lookupConfig()?.enabled)await syncLookupSemester({silent:true});
     const stamp=new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});if($("#manualSyncStatus"))$("#manualSyncStatus").textContent=`SYNC ${stamp}`;
     if(showMessage)toast("Đã tải dữ liệu mới nhất");
@@ -3314,6 +3572,165 @@ $("#downloadAttendanceTemplateBtn").onclick=()=>{
   XLSX.utils.book_append_sheet(wb,ws,"DS THAM GIA");
   XLSX.writeFile(wb,`Mau_Tham_Gia_${semester}.xlsx`);
 };
+
+function normalizeAttendanceName(v){
+  return normalizeText(v)
+    .replace(/[.,;:()[\]{}"'`~!@#$%^&*+=?/\\_-]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function attendanceCellValues(row){
+  return Object.values(row||{})
+    .map(v=>String(v??"").trim())
+    .filter(Boolean)
+    .slice(0,MAX_SPREADSHEET_COLS);
+}
+function attendanceHeaderValue(row,aliases){
+  for(const [key,value] of Object.entries(row||{})){
+    if(aliases.includes(normalizeText(key)))return value;
+  }
+  return "";
+}
+function buildAttendanceMemberIndex(){
+  const rows=members();
+  const byMssv=new Map(),byName=new Map();
+
+  for(const m of rows){
+    const mk=normalizeMssvKey(m.mssv);
+    if(mk){
+      if(!byMssv.has(mk))byMssv.set(mk,[]);
+      byMssv.get(mk).push(m);
+    }
+    const nk=normalizeAttendanceName(m.name);
+    if(nk){
+      if(!byName.has(nk))byName.set(nk,[]);
+      byName.get(nk).push(m);
+    }
+  }
+  return {rows,byMssv,byName};
+}
+function uniqueAttendanceCandidate(list){
+  const ids=[...new Set((list||[]).filter(Boolean).map(m=>m.id))];
+  if(ids.length!==1)return null;
+  return (list||[]).find(m=>m.id===ids[0])||null;
+}
+function scanAttendanceRowAgainstMembers(row,index){
+  const {rows:current,byMssv,byName}=attendanceMemberIndex;
+  const values=attendanceCellValues(row);
+
+  const explicitName=attendanceHeaderValue(row,[
+    "ho va ten","ho ten","ten","name","full name","ten sinh vien","sinh vien",
+    "ho va ten sinh vien","student name","full name student"
+  ]);
+  const explicitMssv=attendanceHeaderValue(row,[
+    "mssv","ma so sinh vien","ma sinh vien","student id","student code","studentid",
+    "ms sv","masv","ma sv","id sinh vien"
+  ]);
+
+  const rawName=String(explicitName||"").trim();
+  const rawMssv=String(explicitMssv||"").trim();
+
+  // 1. Exact MSSV from a recognized MSSV column.
+  const explicitMssvKey=normalizeMssvKey(rawMssv);
+  if(explicitMssvKey){
+    const hit=uniqueAttendanceCandidate(byMssv.get(explicitMssvKey));
+    if(hit)return {index,rawName,rawMssv,memberId:hit.id,matchType:"MSSV",ambiguous:false};
+  }
+
+  // 2. Scan every Excel cell for an exact MSSV.
+  const exactMssvCandidates=[];
+  for(const cell of values){
+    const key=normalizeMssvKey(cell);
+    const matches=byMssv.get(key)||[];
+    exactMssvCandidates.push(...matches);
+  }
+  let hit=uniqueAttendanceCandidate(exactMssvCandidates);
+  if(hit)return {index,rawName:rawName||hit.name,rawMssv:rawMssv||hit.mssv||"",memberId:hit.id,matchType:"Quét MSSV",ambiguous:false};
+
+  // 3. Scan combined row text for a known MSSV embedded with other text.
+  const compactCells=values.map(v=>normalizeMssvKey(v)).filter(Boolean);
+  const embeddedMssvCandidates=[];
+  for(const m of current){
+    const mk=normalizeMssvKey(m.mssv);
+    if(!mk||mk.length<5)continue;
+    if(compactCells.some(cell=>cell.includes(mk)))embeddedMssvCandidates.push(m);
+  }
+  hit=uniqueAttendanceCandidate(embeddedMssvCandidates);
+  if(hit)return {index,rawName:rawName||hit.name,rawMssv:rawMssv||hit.mssv||"",memberId:hit.id,matchType:"MSSV trong ô",ambiguous:false};
+
+  // 4. Exact name from recognized name column.
+  const explicitNameKey=normalizeAttendanceName(rawName);
+  if(explicitNameKey){
+    const names=byName.get(explicitNameKey)||[];
+    hit=uniqueAttendanceCandidate(names);
+    if(hit)return {index,rawName,rawMssv:rawMssv||hit.mssv||"",memberId:hit.id,matchType:"Họ tên",ambiguous:false};
+    if(names.length>1)return {index,rawName,rawMssv,memberId:"",matchType:"Trùng họ tên",ambiguous:true};
+  }
+
+  // 5. Scan every cell for exact member name.
+  const exactNameCandidates=[];
+  for(const cell of values){
+    const key=normalizeAttendanceName(cell);
+    exactNameCandidates.push(...(byName.get(key)||[]));
+  }
+  hit=uniqueAttendanceCandidate(exactNameCandidates);
+  if(hit)return {index,rawName:rawName||hit.name,rawMssv:rawMssv||hit.mssv||"",memberId:hit.id,matchType:"Quét họ tên",ambiguous:false};
+
+  // 6. Last safe fallback: member name contained in one Excel cell.
+  const normalizedCells=values.map(normalizeAttendanceName).filter(Boolean);
+  const embeddedNameCandidates=[];
+  for(const m of current){
+    const nk=normalizeAttendanceName(m.name);
+    if(!nk||nk.length<5)continue;
+    if(normalizedCells.some(cell=>cell===nk||cell.includes(nk)))embeddedNameCandidates.push(m);
+  }
+  hit=uniqueAttendanceCandidate(embeddedNameCandidates);
+  if(hit)return {index,rawName:rawName||hit.name,rawMssv:rawMssv||hit.mssv||"",memberId:hit.id,matchType:"Họ tên trong ô",ambiguous:false};
+
+  return {
+    index,
+    rawName:rawName||String(values[0]||""),
+    rawMssv,
+    memberId:"",
+    matchType:"Chưa khớp",
+    ambiguous:false
+  };
+}
+function markAttendancePreviewDuplicates(){
+  const seen=new Map();
+  for(const row of attendancePreviewRows){
+    row.duplicate=false;
+    if(!row.memberId)continue;
+    if(seen.has(row.memberId)){
+      row.duplicate=true;
+      row.matchType="Trùng dòng trong Excel";
+    }else seen.set(row.memberId,row.index);
+  }
+}
+function refreshAttendancePreviewMatch(index,memberId){
+  const row=attendancePreviewRows[index];
+  if(!row)return;
+  row.memberId=memberId||"";
+  row.matchType=memberId?"Gán thủ công":"Chưa khớp";
+  row.ambiguous=false;
+  markAttendancePreviewDuplicates();
+  openAttendancePreview();
+}
+function applyAttendanceUpdatesToLocal(itemId,updates,semKey=semester){
+  if(semKey!==semester)return;
+  for(const u of updates||[]){
+    const m=findMember(u.id);
+    if(!m)continue;
+    ensureMemberScores(m);
+    m.scores[itemId]=u.val;
+  }
+  persistStateOnly();
+  renderQLTV();
+  if(canViewModule("members")){renderMemberList();renderInfo();renderDivisions()}
+  if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboard();
+  if($("#lookupPortal")&&!$("#lookupPortal").classList.contains("hidden"))renderLookupPortal();
+}
+
 $("#uploadAttendanceBtn").onclick=()=>{
   const key=$("#attendanceActivitySelect").value;
   if(!key)return alert("Chưa có hoạt động để nhập.");
@@ -3321,46 +3738,182 @@ $("#uploadAttendanceBtn").onclick=()=>{
   if(selected?.item?.locked)return alert(lockedActivityMessage(selected.item.id));
   $("#attendanceExcelInput").click();
 };
+
+let attendanceMemberIndex={rows:[],byMssv:new Map(),byName:new Map()};
+
 $("#attendanceExcelInput").onchange=async e=>{
-  const file=e.target.files[0]; if(!file)return;
-  const [gi,ii]=$("#attendanceActivitySelect").value.split(":").map(Number);
-  const group=sem().groups[gi],item=group?.items[ii];
-  if(!group||!item){e.target.value="";return alert("Không tìm thấy hoạt động đã chọn.");}
-  if(item.locked){e.target.value="";return alert(lockedActivityMessage(item.id));}
-  attendanceTarget={gi,ii,group,item};
+  const file=e.target.files[0];if(!file)return;
+
+  const selectedKey=$("#attendanceActivitySelect").value;
+  const [gi,ii]=String(selectedKey||"").split(":").map(Number);
+  const group=sem().groups?.[gi],item=group?.items?.[ii];
+  if(!group||!item){
+    e.target.value="";
+    return alert("Không tìm thấy hoạt động đã chọn.");
+  }
+  if(item.locked){
+    e.target.value="";
+    return alert(lockedActivityMessage(item.id));
+  }
+
+  attendanceTarget={gi,ii,group,item,semesterKey:semester,fileName:file.name||"Danh sách tham gia"};
+
   let ws;
   try{({ws}=await readSpreadsheetSecure(file))}
-  catch(err){e.target.value="";return alert("Không đọc được file Excel: "+(err.message||err))}
-  const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
-  if(rows.length>MAX_SPREADSHEET_ROWS){e.target.value="";return alert("File có quá nhiều dòng.");}
-  const current=members();
-  attendancePreviewRows=rows.map((row,idx)=>{
-    const entries=Object.entries(row);
-    const nameVal=entries.find(([k])=>["ho va ten","họ và tên","ho ten","họ tên","ten","tên","name","full name"].includes(normalizeText(k)))?.[1] ?? entries[0]?.[1] ?? "";
-    const mssvVal=entries.find(([k])=>["mssv","ma so sinh vien","mã số sinh viên","student id","id"].includes(normalizeText(k)))?.[1] ?? "";
-    const nName=normalizeText(nameVal), nMssv=normalizeText(mssvVal);
-    let matches=current.filter(m=>nMssv && normalizeText(m.mssv)===nMssv);
-    if(matches.length!==1)matches=current.filter(m=>nName && normalizeText(m.name)===nName);
-    return {index:idx+1,rawName:String(nameVal||""),rawMssv:String(mssvVal||""),memberId:matches.length===1?matches[0].id:""};
-  });
+  catch(err){
+    e.target.value="";
+    return alert("Không đọc được file Excel: "+(err.message||err));
+  }
+
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:"",raw:false,blankrows:false});
+  if(rows.length>MAX_SPREADSHEET_ROWS){
+    e.target.value="";
+    return alert("File có quá nhiều dòng.");
+  }
+  if(!rows.length){
+    e.target.value="";
+    return alert("File Excel không có dữ liệu thành viên.");
+  }
+
+  // IMPORTANT: build the scan index from the full current-semester member list.
+  // Each Excel row is compared against that index, not against neighboring Excel rows.
+  attendanceMemberIndex=buildAttendanceMemberIndex();
+  attendancePreviewRows=rows
+    .map((row,idx)=>scanAttendanceRowAgainstMembers(row,idx+1))
+    .filter(r=>r.rawName||r.rawMssv||r.memberId);
+
+  markAttendancePreviewDuplicates();
   e.target.value="";
   openAttendancePreview();
 };
+
 function openAttendancePreview(){
   const t=attendanceTarget;
   if(!t)return;
-  const matched=attendancePreviewRows.filter(r=>r.memberId).length;
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Nhập tham gia hoạt động</h2><div class="small-help">${esc(t.group.name)} → <b>${esc(t.item.name)}</b> • ${Number(t.item.points||0)} điểm</div></div><button onclick="closeModal()">×</button></div>
-  <div class="import-summary"><div><span>Dòng trong file</span><strong>${attendancePreviewRows.length}</strong></div><div><span>Khớp thành viên</span><strong>${matched}</strong></div><div><span>Chưa khớp</span><strong>${attendancePreviewRows.length-matched}</strong></div></div>
-  <div class="attendance-preview"><table><thead><tr><th>#</th><th>Tên trong file</th><th>MSSV</th><th>Thành viên được gán</th></tr></thead><tbody>
-  ${attendancePreviewRows.map((r,i)=>`<tr><td>${r.index}</td><td>${esc(r.rawName||"—")}</td><td>${esc(r.rawMssv||"—")}</td><td><select onchange="attendancePreviewRows[${i}].memberId=this.value"><option value="">— Chưa khớp —</option>${members().map(m=>`<option value="${m.id}" ${r.memberId===m.id?"selected":""}>${esc(m.name)}${m.mssv?` — ${esc(m.mssv)}`:""}</option>`).join("")}</select></td></tr>`).join("")}
-  </tbody></table></div>
-  <div class="small-help" style="margin-top:10px">Chỉ những dòng đã gán thành viên mới được cập nhật. Hệ thống không tự xóa điểm danh của người không có trong file.</div>
-  <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="applyAttendanceImport()">Áp dụng điểm danh</button></div></div></div>`;
+
+  const uniqueMatchedIds=new Set(attendancePreviewRows.filter(r=>r.memberId&&!r.duplicate).map(r=>r.memberId));
+  const matched=uniqueMatchedIds.size;
+  const unmatched=attendancePreviewRows.filter(r=>!r.memberId).length;
+  const duplicates=attendancePreviewRows.filter(r=>r.duplicate).length;
+  const currentMembers=members();
+
+  const shown=attendancePreviewRows.length>600
+    ? [
+        ...attendancePreviewRows.filter(r=>!r.memberId||r.duplicate).slice(0,250),
+        ...attendancePreviewRows.filter(r=>r.memberId&&!r.duplicate).slice(0,350)
+      ].slice(0,600)
+    : attendancePreviewRows;
+
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Nhập tham gia hoạt động</h2><div class="small-help">${esc(t.group.name)} → <b>${esc(t.item.name)}</b> • ${Number(t.item.points||0)} điểm • ${activityMode(t.group,t.item)==="checkbox"?"Tickbox":"Nhập đủ điểm tối đa"}</div></div><button onclick="closeModal()">×</button></div>
+    <div class="import-summary">
+      <div><span>Dòng Excel</span><strong>${attendancePreviewRows.length}</strong></div>
+      <div><span>Khớp thành viên</span><strong>${matched}</strong></div>
+      <div><span>Chưa khớp</span><strong>${unmatched}</strong></div>
+      <div><span>Dòng trùng</span><strong>${duplicates}</strong></div>
+    </div>
+    <div class="small-help attendance-scan-help">Hệ thống đã quét <b>${currentMembers.length} thành viên</b> của học kỳ ${esc(semester)} và đối chiếu từng dòng Excel bằng MSSV trước, sau đó mới dùng họ tên. Một thành viên xuất hiện nhiều lần trong Excel chỉ được điểm danh một lần.</div>
+    ${attendancePreviewRows.length>600?`<div class="small-help" style="margin-top:8px">File có ${attendancePreviewRows.length} dòng. Bảng bên dưới chỉ hiển thị tối đa 600 dòng để tránh trình duyệt bị chậm; khi áp dụng, hệ thống vẫn xử lý toàn bộ file.</div>`:""}
+    <div class="attendance-preview"><table><thead><tr><th>#</th><th>Tên trong file</th><th>MSSV</th><th>Khớp theo</th><th>Thành viên được gán</th></tr></thead><tbody>
+      ${shown.map(r=>{
+        const realIndex=attendancePreviewRows.indexOf(r);
+        const cls=r.duplicate?"attendance-row-duplicate":(!r.memberId?"attendance-row-unmatched":"attendance-row-matched");
+        return `<tr class="${cls}"><td>${r.index}</td><td>${esc(r.rawName||"—")}</td><td>${esc(r.rawMssv||"—")}</td><td>${esc(r.matchType||"—")}</td><td><select onchange="refreshAttendancePreviewMatch(${realIndex},this.value)"><option value="">— Chưa khớp —</option>${currentMembers.map(m=>`<option value="${m.id}" ${r.memberId===m.id?"selected":""}>${esc(m.name)}${m.mssv?` — ${esc(m.mssv)}`:""}</option>`).join("")}</select>${r.duplicate?`<div class="small-help" style="color:#a06000">Dòng trùng — chỉ dòng đầu tiên của thành viên này được áp dụng.</div>`:""}</td></tr>`;
+      }).join("")}
+    </tbody></table></div>
+    <div class="small-help" style="margin-top:10px">Chỉ thành viên có trong <b>Danh sách thành viên của học kỳ hiện tại</b> mới được điểm danh. Người không có trong Excel không bị xóa điểm cũ.</div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="applyAttendanceImport()">Áp dụng điểm danh (${matched})</button></div>
+  </div></div>`;
   $("#modalWrap").classList.remove("hidden");
 }
-async function applyAttendanceImport(){if(!canEditModule("attendance")||!attendanceTarget)return;const {group,item}=attendanceTarget;if(!ensureActivityColumnUnlocked(item.id))return;const seen=new Set(),updates=[];attendancePreviewRows.forEach(r=>{if(!r.memberId||seen.has(r.memberId))return;updates.push({id:r.memberId,val:activityMode(group,item)==="checkbox"?true:activityMaxPoints(item)});seen.add(r.memberId)});if(shouldRequestApproval("bulkAttendance")){await createApprovalRequest("bulkAttendance",{itemId:item.id,semester,updates},`Nhập điểm danh hàng loạt: ${item.name} (${updates.length} thành viên)`);closeModal();return}try{await commitInChunks(updates.map(u=>b=>b.update(fbDb.collection("members").doc(u.id),{[`scores.${item.id}`]:u.val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""})));await logImportHistory({type:"Điểm danh",fileName:"Danh sách tham gia",total:attendancePreviewRows.length,updated:updates.length,skipped:attendancePreviewRows.length-updates.length,details:item.name});await logAudit({action:"bulk-update",module:"attendance",summary:`Nhập điểm danh ${item.name} cho ${updates.length} thành viên`});closeModal();toast(`Đã cập nhật ${updates.length} thành viên cho ${item.name}`)}catch(e){alert("Không nhập được điểm danh: "+(e.message||e))}}
 
+async function applyAttendanceImport(){
+  if(!canEditModule("attendance")||!attendanceTarget)return;
+
+  const {group,item,semesterKey,fileName}=attendanceTarget;
+  if(semesterKey!==semester)return alert("Bạn đã đổi học kỳ sau khi chọn file. Hãy upload lại danh sách cho học kỳ hiện tại.");
+  if(!ensureActivityColumnUnlocked(item.id))return;
+
+  const seen=new Set(),updates=[];
+  for(const r of attendancePreviewRows){
+    if(!r.memberId||seen.has(r.memberId))continue;
+    const member=findMember(r.memberId);
+    if(!member||member.semester!==semester)continue;
+    updates.push({
+      id:r.memberId,
+      val:activityMode(group,item)==="checkbox"?true:activityMaxPoints(item)
+    });
+    seen.add(r.memberId);
+  }
+
+  if(!updates.length){
+    return alert("Không có thành viên nào trong file khớp với Danh sách thành viên của học kỳ này.");
+  }
+
+  if(shouldRequestApproval("bulkAttendance")){
+    await createApprovalRequest(
+      "bulkAttendance",
+      {itemId:item.id,semester,updates},
+      `Nhập điểm danh hàng loạt: ${item.name} (${updates.length} thành viên)`
+    );
+    closeModal();
+    return toast(`Đã gửi yêu cầu điểm danh ${updates.length} thành viên để Admin duyệt`);
+  }
+
+  // Keep a local rollback snapshot because V62+ no longer has a persistent
+  // member realtime listener between Admin/BCN accounts.
+  const before=updates.map(u=>({id:u.id,value:findMember(u.id)?.scores?.[item.id]}));
+
+  try{
+    await commitInChunks(updates.map(u=>b=>b.update(
+      fbDb.collection("members").doc(u.id),
+      {
+        [`scores.${item.id}`]:u.val,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy:currentFirebaseUser?.uid||""
+      }
+    )));
+
+    // Critical V65 fix: update the local state immediately so the attendance
+    // table checks/points are visible without requiring a manual Firestore refresh.
+    applyAttendanceUpdatesToLocal(item.id,updates,semester);
+
+    await logImportHistory({
+      type:"Điểm danh",
+      fileName:fileName||"Danh sách tham gia",
+      total:attendancePreviewRows.length,
+      updated:updates.length,
+      skipped:attendancePreviewRows.length-updates.length,
+      details:`${item.name} • quét theo danh sách thành viên học kỳ`
+    });
+    await logAudit({
+      action:"bulk-update",
+      module:"attendance",
+      entityType:"activity",
+      entityId:item.id,
+      summary:`Nhập điểm danh ${item.name} cho ${updates.length} thành viên`,
+      before:{matched:0},
+      after:{matched:updates.length}
+    });
+
+    // Preserve public member lookup synchronization requested by the user.
+    if(canEditClub())scheduleAutoLookupSync(true);
+
+    closeModal();
+    toast(`Đã điểm danh ${updates.length} thành viên cho ${item.name}`);
+  }catch(e){
+    // Restore local values if a future refactor updates local state before the write.
+    for(const old of before){
+      const m=findMember(old.id);
+      if(!m)continue;
+      ensureMemberScores(m);
+      if(old.value===undefined)delete m.scores[item.id];
+      else m.scores[item.id]=old.value;
+    }
+    persistStateOnly();
+    renderQLTV();
+    alert("Không nhập được điểm danh: "+(e.message||e));
+  }
+}
 
 /* import danh sách đóng quỹ */
 $("#downloadFundTemplateBtn").onclick=()=>{
@@ -3630,10 +4183,16 @@ function memberDuplicateConflicts(candidate,excludeId=""){
 /* dynamic member modal */
 function openMemberModal(m=null){
   if(!canEditModule("members"))return;
-  const obj=m||{id:"",semester,fundPaid:false,scores:{},data:{status:"Đang hoạt động"},schoolType:"fptu",divisions:[],displayOrder:nextMemberDisplayOrder()};
-  const fieldsHtml=state.memberFields.map(f=>{const value=(f.system?obj[f.key]:obj.data?.[f.key])||"";if(f.key==="status")return `<label>${esc(f.label)}<select id="mf_${f.key}">${MEMBER_STATUS_OPTIONS.map(x=>`<option value="${esc(x)}" ${memberStatus(obj)===x?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`;return `<label class="${f.key==="note"?"full":""}">${esc(f.label)}<input id="mf_${f.key}" type="${f.type==="date"?"date":f.type==="number"?"number":"text"}" value="${esc(value)}"></label>`}).join("");
+  const obj=m||{id:"",semester,fundPaid:false,scores:{},data:{status:"Đang hoạt động"},schoolType:"unknown",universityId:"",universitySource:"auto",divisions:[],displayOrder:nextMemberDisplayOrder()};
+  const fieldsHtml=state.memberFields.map(f=>{const value=(f.system?obj[f.key]:obj.data?.[f.key])||"";if(f.key==="status")return `<label>${esc(f.label)}<select id="mf_${f.key}">${MEMBER_STATUS_OPTIONS.map(x=>`<option value="${esc(x)}" ${memberStatus(obj)===x?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`;return `<label class="${f.key==="note"?"full":""}">${esc(f.label)}<input id="mf_${f.key}" type="${f.type==="date"?"date":f.type==="number"?"number":"text"}" value="${esc(value)}" ${f.key==="mssv"?'oninput="updateMemberUniversityPreview()"':""}></label>`}).join("");
   const selected=new Set(memberDivisionIds(obj));
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>${obj.id?"Sửa":"Thêm"} thành viên</h2><button onclick="closeModal()">×</button></div><div class="form-grid">${fieldsHtml}<label>Nhóm sinh viên<select id="mf_schoolType" ${canEditClub()?"":"disabled"}>${MEMBER_SCHOOL_TYPES.filter(x=>x.value!=="unknown"||memberSchoolType(obj)==="unknown").map(x=>`<option value="${x.value}" ${memberSchoolType(obj)===x.value?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label><div class="full"><b style="font-size:9px">Phân ban — có thể chọn nhiều</b><div class="division-checkbox-grid">${(state.divisions||[]).map(d=>`<label><input class="mf-division" type="checkbox" value="${esc(d.id)}" ${selected.has(d.id)?"checked":""} ${canEditClub()?"":"disabled"}> ${esc(d.name)}</label>`).join("")||`<div class="small-help">Chưa có phân ban. Admin có thể tạo trong menu Phân ban.</div>`}</div></div><label>Tag (cách nhau bằng dấu phẩy)<input id="mf_tags" value="${esc((obj.tags||[]).join(", "))}" placeholder="VD: Diễn viên, BCN"></label><label class="full">Ghi chú nội bộ<textarea id="mf_internalNote" rows="3" placeholder="Chỉ Admin/BCN thấy, không công khai">${esc(obj.internalNote||"")}</textarea></label><label>Đóng quỹ<select id="mf_fund" ${canEditModule("finance")?"":"disabled"}><option value="0">Chưa đóng</option><option value="1" ${obj.fundPaid?"selected":""}>Đã đóng</option></select></label></div><div class="security-note"><span>🔒</span><div>Nhóm sinh viên và phân ban chỉ Admin/Super Admin được đánh dấu. Thành viên có thể thuộc nhiều phân ban.</div></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveMemberModal('${obj.id||""}')">Lưu</button></div></div></div>`;$("#modalWrap").classList.remove("hidden");applyZeroClearBehavior()
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>${obj.id?"Sửa":"Thêm"} thành viên</h2><button onclick="closeModal()">×</button></div><div class="form-grid">${fieldsHtml}<label>Trường đại học
+  <select id="mf_university" ${canEditClub()?"":"disabled"}>
+    <option value="auto" ${memberUniversitySource(obj)!=="manual"?"selected":""}>Tự nhận diện theo MSSV</option>
+    ${universities().map(u=>`<option value="${esc(u.id)}" ${memberUniversitySource(obj)==="manual"&&memberUniversityId(obj)===u.id?"selected":""}>${esc(u.name)}${u.isHome?" • Trường chính":""}</option>`).join("")}
+  </select>
+  <span class="university-detect-hint" id="mf_university_hint">${memberUniversityId(obj)===UNKNOWN_UNIVERSITY_ID?"Không nhận diện được trường từ MSSV hiện tại.":`Hiện tại: ${esc(memberUniversityLabel(obj))}${memberUniversitySource(obj)==="manual"?" • chọn thủ công":" • theo MSSV"}`}</span>
+</label><div class="full"><b style="font-size:9px">Phân ban — có thể chọn nhiều</b><div class="division-checkbox-grid">${(state.divisions||[]).map(d=>`<label><input class="mf-division" type="checkbox" value="${esc(d.id)}" ${selected.has(d.id)?"checked":""} ${canEditClub()?"":"disabled"}> ${esc(d.name)}</label>`).join("")||`<div class="small-help">Chưa có phân ban. Admin có thể tạo trong menu Phân ban.</div>`}</div></div><label>Tag (cách nhau bằng dấu phẩy)<input id="mf_tags" value="${esc((obj.tags||[]).join(", "))}" placeholder="VD: Diễn viên, BCN"></label><label class="full">Ghi chú nội bộ<textarea id="mf_internalNote" rows="3" placeholder="Chỉ Admin/BCN thấy, không công khai">${esc(obj.internalNote||"")}</textarea></label><label>Đóng quỹ<select id="mf_fund" ${canEditModule("finance")?"":"disabled"}><option value="0">Chưa đóng</option><option value="1" ${obj.fundPaid?"selected":""}>Đã đóng</option></select></label></div><div class="security-note"><span>🔒</span><div>Trường đại học và phân ban chỉ Admin/Super Admin được đánh dấu. Thành viên có thể thuộc nhiều phân ban.</div></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveMemberModal('${obj.id||""}')">Lưu</button></div></div></div>`;$("#modalWrap").classList.remove("hidden");applyZeroClearBehavior()
 }
 async function saveMemberModal(id){
   if(!canEditModule("members"))return;
@@ -3642,7 +4201,23 @@ async function saveMemberModal(id){
   for(const f of state.memberFields){const v=$("#mf_"+f.key).value;if(f.system)m[f.key]=v;else m.data[f.key]=v}
   m.tags=$("#mf_tags").value.split(",").map(x=>x.trim()).filter(Boolean).slice(0,20);m.internalNote=$("#mf_internalNote").value.trim();
   if(canEditModule("finance"))m.fundPaid=$("#mf_fund").value==="1";
-  if(canEditClub()){m.schoolType=normalizeSchoolType($("#mf_schoolType").value);m.divisions=$$(".mf-division:checked").map(x=>x.value).filter(id=>divisionById(id))}else{m.schoolType=existing?.schoolType||"unknown";m.divisions=Array.isArray(existing?.divisions)?existing.divisions:[]}
+  if(canEditClub()){
+    const universityChoice=$("#mf_university")?.value||"auto";
+    if(universityChoice==="auto"){
+      m.universitySource="auto";
+      m.universityId=inferUniversityIdFromMssv(m.mssv);
+    }else{
+      m.universitySource="manual";
+      m.universityId=universityById(universityChoice)?universityChoice:UNKNOWN_UNIVERSITY_ID;
+    }
+    m.schoolType=legacySchoolTypeForUniversity(m.universityId);
+    m.divisions=$$(".mf-division:checked").map(x=>x.value).filter(id=>divisionById(id));
+  }else{
+    m.universityId=existing?.universityId||memberUniversityId(existing);
+    m.universitySource=existing?.universitySource||"auto";
+    m.schoolType=existing?.schoolType||legacySchoolTypeForUniversity(m.universityId);
+    m.divisions=Array.isArray(existing?.divisions)?existing.divisions:[];
+  }
   ensureMemberScores(m);if(!m.name)return alert("Vui lòng nhập họ và tên.");
   m.data=m.data||{};if(!m.data.status)m.data.status="Đang hoạt động";
   const conflicts=memberDuplicateConflicts(m,id||"");
@@ -3652,7 +4227,7 @@ async function saveMemberModal(id){
     if(id&&!canEditModule("finance"))delete payload.fundPaid;
     await fbDb.collection("members").doc(m.id).set(payload,{merge:true});
     const idx=state.members.findIndex(x=>x.id===m.id);if(idx>=0)state.members[idx]={...state.members[idx],...m};else state.members.push(m);
-    await logAudit({action:id?"update":"create",module:"members",entityType:"member",entityId:m.id,summary:`${id?"Cập nhật":"Thêm"} thành viên ${m.name}`,after:{name:m.name,mssv:m.mssv,schoolType:m.schoolType,divisions:m.divisions,tags:m.tags||[]}});
+    await logAudit({action:id?"update":"create",module:"members",entityType:"member",entityId:m.id,summary:`${id?"Cập nhật":"Thêm"} thành viên ${m.name}`,after:{name:m.name,mssv:m.mssv,universityId:m.universityId,universitySource:m.universitySource,divisions:m.divisions,tags:m.tags||[]}});
     persistStateOnly();renderAll();if(canEditClub())scheduleAutoLookupSync(true);closeModal();toast("Đã lưu thành viên");
   }catch(e){alert("Không lưu được thành viên: "+(e.message||e))}
 }
@@ -3736,27 +4311,46 @@ function openMemberExportModal(){
     <div style="display:flex;gap:8px;margin-bottom:8px"><button class="secondary" type="button" onclick="toggleMemberExportFields(true)">Chọn tất cả</button><button class="ghost" type="button" onclick="toggleMemberExportFields(false)">Bỏ chọn</button></div>
     <div class="export-field-grid">
       ${state.memberFields.map(f=>`<label><input class="member-export-field" type="checkbox" value="${esc(f.key)}" ${defaults.has(f.key)?"checked":""}> ${esc(f.label)}</label>`).join("")}
+      <label><input class="member-export-field" type="checkbox" value="__university" checked> Trường đại học</label>
+      <label><input class="member-export-field" type="checkbox" value="__divisions"> Phân ban</label>
+    </div>
+  </div>
+  <div class="export-filter-box">
+    <h4>Lọc theo trường đại học</h4>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><button class="secondary" type="button" onclick="toggleMemberExportUniversities(true)">Chọn tất cả</button><button class="ghost" type="button" onclick="toggleMemberExportUniversities(false)">Bỏ chọn</button></div>
+    <div class="university-export-grid">
+      ${universities().map(u=>`<label><input class="member-export-university" type="checkbox" value="${esc(u.id)}" checked> ${esc(u.name)}</label>`).join("")}
+      <label><input class="member-export-university" type="checkbox" value="${UNKNOWN_UNIVERSITY_ID}" checked> Chưa xác định</label>
     </div>
   </div>
   <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="exportMembersByMode()">Xuất Excel</button></div></div></div>`;
   $("#modalWrap").classList.remove("hidden");
 }
-function toggleMemberExportFields(checked){
-  $$(".member-export-field").forEach(x=>x.checked=checked);
+function toggleMemberExportFields(checked){$$(".member-export-field").forEach(x=>x.checked=checked)}
+function toggleMemberExportUniversities(checked){$$(".member-export-university").forEach(x=>x.checked=checked)}
+function memberExportValue(m,key){
+  if(key==="__university")return memberUniversityLabel(m);
+  if(key==="__divisions")return memberDivisionNames(m).join(", ");
+  const f=state.memberFields.find(x=>x.key===key);
+  return f?memberFieldValueForExport(m,f):"";
 }
 function exportMembersByMode(){
   const mode=document.querySelector('input[name="memberExportMode"]:checked')?.value||"info";
   const selectedKeys=$$(".member-export-field:checked").map(x=>x.value);
   if(!selectedKeys.length)return alert("Hãy chọn ít nhất một thông tin thành viên để xuất.");
 
-  const fields=selectedKeys.map(k=>state.memberFields.find(f=>f.key===k)).filter(Boolean);
+  const selectedUniversityIds=$$(".member-export-university:checked").map(x=>x.value);
+  if(!selectedUniversityIds.length)return alert("Hãy chọn ít nhất một trường đại học để xuất.");
   const activities=getAllActivities();
-  let source=[...members()];
+  let source=members().filter(m=>selectedUniversityIds.includes(memberUniversityId(m)));
   if(mode==="score")source.sort((a,b)=>scoreMember(b).total-scoreMember(a).total||String(a.name||"").localeCompare(String(b.name||""),"vi"));
 
   const rows=source.map((m,i)=>{
     const row={"STT":i+1};
-    fields.forEach(f=>row[f.label]=memberFieldValueForExport(m,f));
+    selectedKeys.forEach(key=>{
+      const label=key==="__university"?"Trường đại học":key==="__divisions"?"Phân ban":state.memberFields.find(f=>f.key===key)?.label||key;
+      row[label]=memberExportValue(m,key);
+    });
     if(mode==="score"){
       const s=scoreMember(m);
       row["Điểm tổng"]=s.total;row["Điểm cộng"]=s.bonus;row["Quy đổi"]=s.conversion;
@@ -3779,7 +4373,7 @@ function exportMembersByMode(){
 
 /* xlsx - luôn quét và xem trước trước khi nhập */
 $("#downloadTemplateBtn").onclick=()=>{
-  const headers=[...state.memberFields.map(f=>f.label),"Nhóm sinh viên","Phân ban"];
+  const headers=[...state.memberFields.map(f=>f.label),"Trường đại học","Phân ban"];
   const ws=XLSX.utils.aoa_to_sheet([headers]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"DANH SACH THANH VIEN");
@@ -3788,10 +4382,10 @@ $("#downloadTemplateBtn").onclick=()=>{
 $("#uploadExcelBtn").onclick=()=>$("#excelInput").click();
 
 
-function memberImportFieldDefs(){return [...state.memberFields.map(f=>({...f,extra:false})),{key:"schoolType",label:"Nhóm sinh viên",extra:true},{key:"divisions",label:"Phân ban",extra:true}]}
-function autoMemberHeaderMap(headers){const saved=userPreferences.importMappings?.members||{},out={};for(const f of memberImportFieldDefs()){const aliases=[normalizeText(f.label),normalizeText(f.key),...(f.key==="name"?["ho va ten","ho ten","full name","name"]:f.key==="mssv"?["mssv","ma so sinh vien","student id"]:f.key==="email"?["email","mail"]:f.key==="phone"?["so dien thoai","dien thoai","phone","sdt"]:f.key==="schoolType"?["nhom sinh vien","loai sinh vien","truong","school type"]:f.key==="divisions"?["phan ban","cac phan ban","division","divisions"]:[])];const h=saved[f.key]&&headers.includes(saved[f.key])?saved[f.key]:headers.find(x=>aliases.includes(normalizeText(x)));out[f.key]=h||""}return out}
+function memberImportFieldDefs(){return [...state.memberFields.map(f=>({...f,extra:false})),{key:"university",label:"Trường đại học",extra:true},{key:"divisions",label:"Phân ban",extra:true}]}
+function autoMemberHeaderMap(headers){const saved=userPreferences.importMappings?.members||{},out={};for(const f of memberImportFieldDefs()){const aliases=[normalizeText(f.label),normalizeText(f.key),...(f.key==="name"?["ho va ten","ho ten","full name","name"]:f.key==="mssv"?["mssv","ma so sinh vien","student id"]:f.key==="email"?["email","mail"]:f.key==="phone"?["so dien thoai","dien thoai","phone","sdt"]:f.key==="university"?["truong dai hoc","ten truong","truong","university","school","nhom sinh vien","loai sinh vien","school type"]:f.key==="divisions"?["phan ban","cac phan ban","division","divisions"]:[])];const h=saved[f.key]&&headers.includes(saved[f.key])?saved[f.key]:headers.find(x=>aliases.includes(normalizeText(x)));out[f.key]=h||""}return out}
 function prepareMemberImport(rows,headers,fileName){memberImportHeaders=headers;window.__memberImportRawRows=rows;window.__memberImportFileName=fileName;const map=autoMemberHeaderMap(headers),unmapped=state.memberFields.filter(f=>!map[f.key]);if(unmapped.length)return openMemberImportMappingModal(map);applyMemberImportMapping(map)}
-function openMemberImportMappingModal(map){const defs=memberImportFieldDefs();$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Ghép cột Excel</h2><div class="small-help">Nhóm sinh viên và Phân ban là tùy chọn. Phân ban có thể ghi nhiều tên, cách nhau bằng dấu phẩy hoặc dấu chấm phẩy.</div></div><button onclick="closeModal()">×</button></div><div class="import-map-grid">${defs.map(f=>`<label>${esc(f.label)}<select id="map_${f.key}"><option value="">— Bỏ qua —</option>${memberImportHeaders.map(h=>`<option value="${esc(h)}" ${map[f.key]===h?"selected":""}>${esc(h)}</option>`).join("")}</select></label>`).join("")}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="confirmMemberImportMapping()">Tiếp tục</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
+function openMemberImportMappingModal(map){const defs=memberImportFieldDefs();$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Ghép cột Excel</h2><div class="small-help">Trường đại học và Phân ban là tùy chọn. Nếu bỏ trống Trường đại học, hệ thống tự nhận diện theo MSSV. Phân ban có thể ghi nhiều tên, cách nhau bằng dấu phẩy hoặc dấu chấm phẩy.</div></div><button onclick="closeModal()">×</button></div><div class="import-map-grid">${defs.map(f=>`<label>${esc(f.label)}<select id="map_${f.key}"><option value="">— Bỏ qua —</option>${memberImportHeaders.map(h=>`<option value="${esc(h)}" ${map[f.key]===h?"selected":""}>${esc(h)}</option>`).join("")}</select></label>`).join("")}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="confirmMemberImportMapping()">Tiếp tục</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
 async function confirmMemberImportMapping(){const map={};for(const f of memberImportFieldDefs())map[f.key]=$("#map_"+f.key).value;if(!map.name)return alert("Hãy chọn cột Họ và tên.");userPreferences.importMappings=userPreferences.importMappings||{};userPreferences.importMappings.members=map;await saveUserPreferences();applyMemberImportMapping(map)}
 function applyMemberImportMapping(map){const rows=window.__memberImportRawRows||[];const defs=memberImportFieldDefs();const remapped=rows.map(row=>{const o={};for(const f of defs){const h=map[f.key];if(h)o[f.label]=row[h]??""}return o});closeModal();detectMemberImport(remapped);openMemberImportPreview()}
 function detectMemberImport(rows){
@@ -3846,9 +4440,11 @@ function detectMemberImport(rows){
       if(count>1){status="skip";message="MSSV bị trùng trong file";valid=false;}
     }
 
-    const schoolRaw=String(row["Nhóm sinh viên"]??row["Nhom sinh vien"]??"").trim();
+    const universityRaw=String(row["Trường đại học"]??row["Truong dai hoc"]??row["Nhóm sinh viên"]??row["Nhom sinh vien"]??"").trim();
     const divisionsRaw=String(row["Phân ban"]??row["Phan ban"]??"").trim();
-    if(schoolRaw)values.schoolType=normalizeSchoolType(schoolRaw);
+    values.universityRaw=universityRaw;
+    values.universityId=resolveUniversityIdFromImport(universityRaw,values.mssv||"");
+    values.universitySource=universityRaw?"manual":"auto";
     if(divisionsRaw)values.divisionsRaw=divisionsRaw;
     const email=emailField?normEmail(values[emailField.key]):"";
     const phone=phoneField?normPhone(values[phoneField.key]):"";
@@ -3880,23 +4476,35 @@ function openMemberImportPreview(){
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1100px,100%)">
     <div class="modal-head"><div class="scan-preview-title"><div><h2>Dữ liệu đã quét — Danh sách thành viên</h2><p>Kiểm tra toàn bộ dữ liệu trước khi hệ thống nhập vào học kỳ <b>${esc(sem().name||semester)}</b>.</p></div></div><button onclick="closeModal()">×</button></div>
     <div class="import-summary"><div><span>Tổng dòng</span><strong>${rows.length}</strong></div><div><span>Thêm mới / cập nhật</span><strong>${add} / ${update}</strong></div><div><span>Bỏ qua do lỗi</span><strong>${skip}</strong></div></div>
-    <div class="attendance-preview"><table><thead><tr><th>#</th>${state.memberFields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th>Nhóm SV</th><th>Phân ban</th><th>Trạng thái</th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td>${r.index}</td>${state.memberFields.map(f=>`<td>${esc(r.values[f.key]||"")}</td>`).join("")}<td>${esc(r.values.schoolType?MEMBER_SCHOOL_TYPES.find(x=>x.value===r.values.schoolType)?.label||r.values.schoolType:"")}</td><td>${esc(r.values.divisionsRaw||"")}</td><td><span class="scan-status ${r.status}">${esc(r.message)}</span></td></tr>`).join("")}
+    <div class="attendance-preview"><table><thead><tr><th>#</th>${state.memberFields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th>Trường ĐH</th><th>Phân ban</th><th>Trạng thái</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${r.index}</td>${state.memberFields.map(f=>`<td>${esc(r.values[f.key]||"")}</td>`).join("")}<td>${esc(universityLabelById(r.values.universityId||UNKNOWN_UNIVERSITY_ID))}${r.values.universitySource==="auto"?" • tự nhận diện":""}</td><td>${esc(r.values.divisionsRaw||"")}</td><td><span class="scan-status ${r.status}">${esc(r.message)}</span></td></tr>`).join("")}
     </tbody></table></div>
     <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="applyMemberImport()">Xác nhận nhập ${canImport} dòng</button></div>
   </div></div>`;
   $("#modalWrap").classList.remove("hidden");
 }
-async function resolveDivisionIdsFromImport(raw){const names=String(raw||"").split(/[;,|]/).map(x=>x.trim()).filter(Boolean),ids=[];for(const name of names){let d=state.divisions.find(x=>normalizeText(x.name)===normalizeText(name));if(!d&&canEditClub()){d={id:divisionIdFromName(name),name};state.divisions.push(d)}if(d&&!ids.includes(d.id))ids.push(d.id)}return ids}
+function resolveUniversityIdFromImport(raw,mssv=""){
+  const value=String(raw||"").trim();
+  if(value){
+    const direct=universities().find(u=>normalizeText(u.name)===normalizeText(value)||normalizeText(u.id)===normalizeText(value));
+    if(direct)return direct.id;
+    const legacy=legacyUniversityIdFromSchoolType(value,mssv);
+    if(legacy!==UNKNOWN_UNIVERSITY_ID)return legacy;
+  }
+  return inferUniversityIdFromMssv(mssv);
+}
+function resolveDivisionIdsFromImport(raw){const names=String(raw||"").split(/[;,|]/).map(x=>x.trim()).filter(Boolean),ids=[];for(const name of names){let d=state.divisions.find(x=>normalizeText(x.name)===normalizeText(name));if(!d&&canEditClub()){d={id:divisionIdFromName(name),name};state.divisions.push(d)}if(d&&!ids.includes(d.id))ids.push(d.id)}return ids}
 async function applyMemberImport(){
   if(!canEditModule("members"))return;
   let added=0,updated=0,skipped=0;const docs=[],importedIds=[];
   for(const r of memberImportPreviewRows){
     if(!r.valid){skipped++;continue}
     let m=r.existingId?structuredClone(findMember(r.existingId)):null;
-    if(!m){m={id:uid(),semester,data:{},scores:{},fundPaid:false,schoolType:"fptu",divisions:[]};added++}else updated++;
+    if(!m){m={id:uid(),semester,data:{},scores:{},fundPaid:false,schoolType:"unknown",universityId:"",universitySource:"auto",divisions:[]};added++}else updated++;
     for(const f of state.memberFields){const value=r.values[f.key];if(value===undefined)continue;if(f.system)m[f.key]=value;else m.data[f.key]=value}
-    if(r.values.schoolType)m.schoolType=r.values.schoolType;
+    m.universityId=r.values.universityId||inferUniversityIdFromMssv(m.mssv);
+    m.universitySource=r.values.universitySource||"auto";
+    m.schoolType=legacySchoolTypeForUniversity(m.universityId);
     if(r.values.divisionsRaw)m.divisions=resolveDivisionIdsFromImport(r.values.divisionsRaw);
     m.displayOrder=importedIds.length+1;
     ensureMemberScores(m);docs.push(m);importedIds.push(m.id);
@@ -3916,7 +4524,7 @@ $("#excelInput").onchange=async e=>{const file=e.target.files[0];if(!file)return
 
 
 /* ===== Member filters / tags / timeline / import mapping ===== */
-function memberMatchesFilter(m){const s=scoreMember(m),f=activeMemberFilter;if(f.fund==="paid"&&!m.fundPaid)return false;if(f.fund==="unpaid"&&m.fundPaid)return false;if(f.minScore!==""&&s.total<Number(f.minScore))return false;if(f.maxScore!==""&&s.total>Number(f.maxScore))return false;if(f.department&&!normalizeText(m.data?.department).includes(normalizeText(f.department)))return false;if(f.status&&!normalizeText(memberStatus(m)).includes(normalizeText(f.status)))return false;if(f.tag&&!(m.tags||[]).some(t=>normalizeText(t).includes(normalizeText(f.tag))))return false;if(f.schoolType&&memberSchoolType(m)!==f.schoolType)return false;if(f.division&&!memberDivisionIds(m).includes(f.division))return false;return true}
+function memberMatchesFilter(m){const s=scoreMember(m),f=activeMemberFilter;if(f.fund==="paid"&&!m.fundPaid)return false;if(f.fund==="unpaid"&&m.fundPaid)return false;if(f.minScore!==""&&s.total<Number(f.minScore))return false;if(f.maxScore!==""&&s.total>Number(f.maxScore))return false;if(f.department&&!normalizeText(m.data?.department).includes(normalizeText(f.department)))return false;if(f.status&&!normalizeText(memberStatus(m)).includes(normalizeText(f.status)))return false;if(f.tag&&!(m.tags||[]).some(t=>normalizeText(t).includes(normalizeText(f.tag))))return false;if(f.schoolType&&memberUniversityId(m)!==f.schoolType)return false;if(f.division&&!memberDivisionIds(m).includes(f.division))return false;return true}
 function filteredMembersForList(){const q=normalizeText($("#searchList")?.value||"");return members().filter(m=>{const hay=normalizeText([m.name,m.mssv,(m.tags||[]).join(" "),memberSchoolLabel(m),memberDivisionNames(m).join(" ")].join(" "));return (!q||hay.includes(q))&&memberMatchesFilter(m)})}
 function renderMemberList(){
   const fields=state.memberFields,list=filteredMembersForList(),visibleIds=list.map(m=>m.id),all=visibleIds.length>0&&visibleIds.every(id=>selectedMemberIds.has(id));
@@ -3927,16 +4535,16 @@ function renderMemberList(){
   if(activeMemberFilter.department)chips.push(`Ban cũ: ${activeMemberFilter.department}`);
   if(activeMemberFilter.status)chips.push(`Trạng thái: ${activeMemberFilter.status}`);
   if(activeMemberFilter.tag)chips.push(`Tag: ${activeMemberFilter.tag}`);
-  if(activeMemberFilter.schoolType)chips.push(MEMBER_SCHOOL_TYPES.find(x=>x.value===activeMemberFilter.schoolType)?.label||activeMemberFilter.schoolType);
+  if(activeMemberFilter.schoolType)chips.push(`Trường: ${universityLabelById(activeMemberFilter.schoolType)}`);
   if(activeMemberFilter.division)chips.push(`Phân ban: ${divisionById(activeMemberFilter.division)?.name||activeMemberFilter.division}`);
   let row=$("#memberFilterChips");if(!row){row=document.createElement("div");row.id="memberFilterChips";row.className="filter-chip-row";$("#memberList .table-card").before(row)}row.innerHTML=chips.map(x=>`<span class="filter-chip">${esc(x)}</span>`).join("");
-  $("#memberListHead").innerHTML=`<tr><th><input class="member-check edit-only" id="selectAllMembers" type="checkbox" ${all?"checked":""} ${canEditModule("members")?"":"disabled"} onchange="toggleSelectAllMembers(this.checked)"></th><th>STT</th>${fields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th>Nhóm SV</th><th>Phân ban</th><th>Tag</th><th></th></tr>`;
+  $("#memberListHead").innerHTML=`<tr><th><input class="member-check edit-only" id="selectAllMembers" type="checkbox" ${all?"checked":""} ${canEditModule("members")?"":"disabled"} onchange="toggleSelectAllMembers(this.checked)"></th><th>STT</th>${fields.map(f=>`<th>${esc(f.label)}</th>`).join("")}<th>Trường ĐH</th><th>Phân ban</th><th>Tag</th><th></th></tr>`;
   $("#memberListBody").innerHTML=list.map((m,i)=>`<tr><td><input class="member-check edit-only" type="checkbox" ${selectedMemberIds.has(m.id)?"checked":""} ${canEditModule("members")?"":"disabled"} onchange="toggleMemberSelection('${m.id}',this.checked)"></td><td>${i+1}</td>${fields.map(f=>`<td>${esc(f.key==="status"?memberStatus(m):(f.system?m[f.key]:m.data?.[f.key]||""))}</td>`).join("")}<td><span class="school-pill ${memberSchoolClass(m)}">${esc(memberSchoolLabel(m))}</span></td><td>${memberDivisionNames(m).map(n=>`<span class="division-pill">${esc(n)}</span>`).join("")||"—"}</td><td>${(m.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join("")||"—"}</td><td>${canEditModule("members")?`<button class="secondary" onclick="editMember('${m.id}')">Sửa</button>`:""}</td></tr>`).join("");
   $("#memberListEmpty").classList.toggle("hidden",list.length>0);renderMemberBulkBar();
 }
 function openMemberFilter(){
   const departments=[...new Set(members().map(m=>m.data?.department).filter(Boolean))],statuses=[...new Set([...MEMBER_STATUS_OPTIONS,...members().map(m=>memberStatus(m)).filter(Boolean)])],tags=[...new Set(members().flatMap(m=>m.tags||[]))];
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>Bộ lọc thành viên</h2><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Đóng quỹ<select id="fltFund"><option value="all">Tất cả</option><option value="paid" ${activeMemberFilter.fund==="paid"?"selected":""}>Đã đóng</option><option value="unpaid" ${activeMemberFilter.fund==="unpaid"?"selected":""}>Chưa đóng</option></select></label><label>Nhóm sinh viên<select id="fltSchoolType"><option value="">Tất cả</option>${MEMBER_SCHOOL_TYPES.map(x=>`<option value="${x.value}" ${activeMemberFilter.schoolType===x.value?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label><label>Phân ban<select id="fltDivision"><option value="">Tất cả</option>${(state.divisions||[]).map(d=>`<option value="${esc(d.id)}" ${activeMemberFilter.division===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></label><label>Ban / Bộ phận cũ<select id="fltDepartment"><option value="">Tất cả</option>${departments.map(x=>`<option ${x===activeMemberFilter.department?"selected":""}>${esc(x)}</option>`).join("")}</select></label><label>Điểm từ<input id="fltMin" type="number" value="${esc(activeMemberFilter.minScore)}"></label><label>Điểm đến<input id="fltMax" type="number" value="${esc(activeMemberFilter.maxScore)}"></label><label>Trạng thái<select id="fltStatus"><option value="">Tất cả</option>${statuses.map(x=>`<option ${x===activeMemberFilter.status?"selected":""}>${esc(x)}</option>`).join("")}</select></label><label>Tag<select id="fltTag"><option value="">Tất cả</option>${tags.map(x=>`<option ${x===activeMemberFilter.tag?"selected":""}>${esc(x)}</option>`).join("")}</select></label></div><div class="modal-actions"><button class="ghost" onclick="clearMemberFilter()">Xóa lọc</button><button class="secondary" onclick="saveCurrentMemberFilter()">Lưu bộ lọc</button><button class="primary" onclick="applyMemberFilterModal()">Áp dụng</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>Bộ lọc thành viên</h2><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Đóng quỹ<select id="fltFund"><option value="all">Tất cả</option><option value="paid" ${activeMemberFilter.fund==="paid"?"selected":""}>Đã đóng</option><option value="unpaid" ${activeMemberFilter.fund==="unpaid"?"selected":""}>Chưa đóng</option></select></label><label>Trường đại học<select id="fltSchoolType"><option value="">Tất cả</option>${universities().map(u=>`<option value="${esc(u.id)}" ${activeMemberFilter.schoolType===u.id?"selected":""}>${esc(u.name)}</option>`).join("")}<option value="${UNKNOWN_UNIVERSITY_ID}" ${activeMemberFilter.schoolType===UNKNOWN_UNIVERSITY_ID?"selected":""}>Chưa xác định</option></select></label><label>Phân ban<select id="fltDivision"><option value="">Tất cả</option>${(state.divisions||[]).map(d=>`<option value="${esc(d.id)}" ${activeMemberFilter.division===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></label><label>Ban / Bộ phận cũ<select id="fltDepartment"><option value="">Tất cả</option>${departments.map(x=>`<option ${x===activeMemberFilter.department?"selected":""}>${esc(x)}</option>`).join("")}</select></label><label>Điểm từ<input id="fltMin" type="number" value="${esc(activeMemberFilter.minScore)}"></label><label>Điểm đến<input id="fltMax" type="number" value="${esc(activeMemberFilter.maxScore)}"></label><label>Trạng thái<select id="fltStatus"><option value="">Tất cả</option>${statuses.map(x=>`<option ${x===activeMemberFilter.status?"selected":""}>${esc(x)}</option>`).join("")}</select></label><label>Tag<select id="fltTag"><option value="">Tất cả</option>${tags.map(x=>`<option ${x===activeMemberFilter.tag?"selected":""}>${esc(x)}</option>`).join("")}</select></label></div><div class="modal-actions"><button class="ghost" onclick="clearMemberFilter()">Xóa lọc</button><button class="secondary" onclick="saveCurrentMemberFilter()">Lưu bộ lọc</button><button class="primary" onclick="applyMemberFilterModal()">Áp dụng</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")
 }
 function applyMemberFilterModal(){activeMemberFilter={fund:$("#fltFund").value,minScore:$("#fltMin").value,maxScore:$("#fltMax").value,department:$("#fltDepartment").value,status:$("#fltStatus").value,tag:$("#fltTag").value,schoolType:$("#fltSchoolType").value,division:$("#fltDivision").value};closeModal();renderMemberList()}
 function clearMemberFilter(){activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:"",schoolType:"",division:""};closeModal();renderMemberList()}
@@ -3947,23 +4555,123 @@ $("#memberFilterBtn").onclick=openMemberFilter;$("#savedFilterSelect").onchange=
 
 /* ===== V62 PHÂN BAN ===== */
 function divisionMembers(id){return members().filter(m=>memberDivisionIds(m).includes(id))}
-function divisionStats(id){const rows=divisionMembers(id),rates=rows.map(m=>scoreMemberForSemester(m,semester).participationRate),avg=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length):0;return {count:rows.length,avgRate:avg,active:rows.filter(m=>!["Rời CLB","Cựu thành viên"].includes(memberStatus(m))).length,fptu:rows.filter(m=>memberSchoolType(m)==="fptu").length,external:rows.filter(m=>memberSchoolType(m)==="external").length}}
+function universityDistribution(rows){
+  const counts={};
+  for(const m of rows){const id=memberUniversityId(m);counts[id]=(counts[id]||0)+1}
+  return counts;
+}
+function universityDistributionLabel(rows){
+  const counts=universityDistribution(rows),parts=[];
+  universities().forEach(u=>{if(counts[u.id])parts.push(`${u.name}: ${counts[u.id]}`)});
+  if(counts[UNKNOWN_UNIVERSITY_ID])parts.push(`Chưa xác định: ${counts[UNKNOWN_UNIVERSITY_ID]}`);
+  return parts.join(" • ")||"Chưa có dữ liệu";
+}
+function divisionStats(id){
+  const rows=divisionMembers(id),rates=rows.map(m=>scoreMemberForSemester(m,semester).participationRate);
+  const avg=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length):0;
+  return {count:rows.length,avgRate:avg,active:rows.filter(m=>!["Rời CLB","Cựu thành viên"].includes(memberStatus(m))).length,byUniversity:universityDistribution(rows)};
+}
 function renderDivisions(){
   const summary=$("#divisionSummary"),cards=$("#divisionCards"),detail=$("#divisionDetail");if(!summary||!cards||!detail)return;
-  const all=members(),fptu=all.filter(m=>memberSchoolType(m)==="fptu").length,external=all.filter(m=>memberSchoolType(m)==="external").length,unknown=all.length-fptu-external;
-  summary.innerHTML=`<div class="division-stat"><span>Thành viên học kỳ</span><strong>${all.length}</strong></div><div class="division-stat"><span>Sinh viên FPTU</span><strong>${fptu}</strong></div><div class="division-stat"><span>Trường khác</span><strong>${external}</strong></div><div class="division-stat"><span>Chưa xác định</span><strong>${unknown}</strong></div>`;
+  ensureDivisionCatalogV64();
+  const all=members(),uniCounts=universityDistribution(all);
+  const unassigned=all.filter(m=>memberDivisionIds(m).length===0).length;
+  summary.innerHTML=`<div class="division-stat"><span>Thành viên học kỳ</span><strong>${all.length}</strong></div>${universities().map(u=>`<div class="division-stat"><span>${esc(u.name)}</span><strong>${uniCounts[u.id]||0}</strong></div>`).join("")}<div class="division-stat"><span>Chưa gán phân ban</span><strong>${unassigned}</strong></div>`;
   const divs=state.divisions||[];
   if(!divs.length){cards.innerHTML=`<div class="empty">Chưa có phân ban.${canEditClub()?" Bấm Quản lý phân ban để tạo mới.":""}</div>`;detail.innerHTML=`<div class="empty">Chưa có dữ liệu phân ban.</div>`;return}
   if(!selectedDivisionId||!divisionById(selectedDivisionId))selectedDivisionId=divs[0].id;
-  cards.innerHTML=divs.map(d=>{const s=divisionStats(d.id);return `<button class="division-card ${selectedDivisionId===d.id?"active":""}" onclick="selectedDivisionId='${d.id}';renderDivisions()"><div><b>${esc(d.name)}</b><small>${s.count} thành viên • hoạt động TB ${s.avgRate}%</small></div><strong>${s.avgRate}%</strong></button>`}).join("");
+  cards.innerHTML=divs.map(d=>{const s=divisionStats(d.id);return `<button class="division-card ${selectedDivisionId===d.id?"active":""}" onclick="selectedDivisionId='${d.id}';renderDivisions()"><div><b>${esc(d.name)}</b><small>${s.count?`${s.count} thành viên • hoạt động TB ${s.avgRate}%`:"Chưa gán thành viên"}</small></div><strong>${s.avgRate}%</strong></button>`}).join("");
   const d=divisionById(selectedDivisionId),rows=divisionMembers(selectedDivisionId),s=divisionStats(selectedDivisionId);
-  detail.innerHTML=`<div class="panel-head"><div><div class="eyebrow">PHÂN BAN</div><h3>${esc(d?.name||"")}</h3><p class="small-help">${rows.length} thành viên trong ${esc(sem().name||semester)}</p></div>${canEditClub()?`<button class="secondary" onclick="renameDivision('${d.id}')">Đổi tên</button>`:""}</div><div class="division-summary-grid"><div class="division-stat"><span>Thành viên</span><strong>${s.count}</strong></div><div class="division-stat"><span>Tỷ lệ hoạt động TB</span><strong>${s.avgRate}%</strong></div><div class="division-stat"><span>Đang hoạt động</span><strong>${s.active}</strong></div><div class="division-stat"><span>FPTU / Trường khác</span><strong>${s.fptu} / ${s.external}</strong></div></div><div class="division-member-table"><table><thead><tr><th>STT</th><th>Họ và tên</th><th>MSSV</th><th>Nhóm SV</th><th>Tham gia</th><th>Tỷ lệ</th><th>Điểm</th>${canEditClub()?"<th></th>":""}</tr></thead><tbody>${rows.map((m,i)=>{const st=scoreMemberForSemester(m,semester);return `<tr><td>${i+1}</td><td><b>${esc(m.name)}</b></td><td>${esc(m.mssv||"—")}</td><td><span class="school-pill ${memberSchoolClass(m)}">${esc(memberSchoolLabel(m))}</span></td><td>${st.participated}/${st.totalActivities}</td><td>${st.participationRate}%</td><td>${st.total}</td>${canEditClub()?`<td><button class="secondary" onclick="editMember('${m.id}')">Sửa</button></td>`:""}</tr>`}).join("")||`<tr><td colspan="8">Chưa có thành viên trong phân ban.</td></tr>`}</tbody></table></div>`;
+  detail.innerHTML=`<div class="panel-head"><div><div class="eyebrow">PHÂN BAN</div><h3>${esc(d?.name||"")}</h3><p class="small-help">${rows.length} thành viên trong ${esc(sem().name||semester)}</p></div>${canEditClub()?`<button class="secondary" onclick="renameDivision('${d.id}')">Đổi tên</button>`:""}</div><div class="division-summary-grid"><div class="division-stat"><span>Thành viên</span><strong>${s.count}</strong></div><div class="division-stat"><span>Tỷ lệ hoạt động TB</span><strong>${s.avgRate}%</strong></div><div class="division-stat"><span>Đang hoạt động</span><strong>${s.active}</strong></div><div class="division-stat"><span>Phân bố trường</span><strong style="font-size:10px">${esc(universityDistributionLabel(rows))}</strong></div></div><div class="division-member-table"><table><thead><tr><th>STT</th><th>Họ và tên</th><th>MSSV</th><th>Trường ĐH</th><th>Tham gia</th><th>Tỷ lệ</th><th>Điểm</th>${canEditClub()?"<th></th>":""}</tr></thead><tbody>${rows.map((m,i)=>{const st=scoreMemberForSemester(m,semester);return `<tr><td>${i+1}</td><td><b>${esc(m.name)}</b></td><td>${esc(m.mssv||"—")}</td><td><span class="university-pill ${universityById(memberUniversityId(m))?.isHome?"home":""}">${esc(memberUniversityLabel(m))}</span></td><td>${st.participated}/${st.totalActivities}</td><td>${st.participationRate}%</td><td>${st.total}</td>${canEditClub()?`<td><button class="secondary" onclick="editMember('${m.id}')">Sửa</button></td>`:""}</tr>`}).join("")||`<tr><td colspan="8">Chưa có thành viên trong phân ban.</td></tr>`}</tbody></table></div>`;
   if($("#manageDivisionsBtn"))$("#manageDivisionsBtn").classList.toggle("hidden",!canEditClub());
 }
-function openDivisionManager(){if(!canEditClub())return;$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Quản lý phân ban</h2><div class="small-help">Phân ban được dùng chung cho các học kỳ; mỗi thành viên có thể thuộc nhiều phân ban.</div></div><button onclick="closeModal()">×</button></div><div id="divisionManagerList">${(state.divisions||[]).map(d=>`<div class="division-manager-row"><b>${esc(d.name)}</b><button class="secondary" onclick="renameDivision('${d.id}')">Đổi tên</button><button class="danger" onclick="deleteDivision('${d.id}')">Xóa</button></div>`).join("")||`<div class="empty">Chưa có phân ban.</div>`}</div><div class="form-grid" style="margin-top:14px"><label class="full">Tên phân ban mới<input id="newDivisionName" maxlength="120" placeholder="Ví dụ: Diễn viên & Biên kịch"></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Đóng</button><button class="primary" onclick="addDivision()">+ Thêm phân ban</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
-async function addDivision(){if(!canEditClub())return;const name=String($("#newDivisionName")?.value||"").trim();if(!name)return alert("Nhập tên phân ban.");if(state.divisions.some(d=>normalizeText(d.name)===normalizeText(name)))return alert("Phân ban này đã tồn tại.");state.divisions.push({id:divisionIdFromName(name),name});const ok=await saveCloudStateNow();if(!ok){state.divisions.pop();return alert("Không lưu được phân ban.")}renderDivisions();openDivisionManager();toast("Đã thêm phân ban")}
-async function renameDivision(id){if(!canEditClub())return;const d=divisionById(id);if(!d)return;const name=prompt("Tên phân ban:",d.name);if(!name||!name.trim())return;const next=name.trim();if(state.divisions.some(x=>x.id!==id&&normalizeText(x.name)===normalizeText(next)))return alert("Tên phân ban đã tồn tại.");const before=d.name;d.name=next;const ok=await saveCloudStateNow();if(!ok){d.name=before;return alert("Không lưu được tên phân ban.")}renderDivisions();if(!$("#modalWrap").classList.contains("hidden"))openDivisionManager();toast("Đã đổi tên phân ban")}
-async function deleteDivision(id){if(!canEditClub())return;const d=divisionById(id);if(!d)return;if(!confirm(`Xóa phân ban "${d.name}"?\n\nThành viên không bị xóa, chỉ gỡ đánh dấu phân ban này.`))return;const affected=(state.members||[]).filter(m=>(m.divisions||[]).includes(id));try{if(affected.length)await commitInChunks(affected.map(m=>b=>b.update(fbDb.collection("members").doc(m.id),{divisions:(m.divisions||[]).filter(x=>x!==id),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid})));for(const m of affected)m.divisions=(m.divisions||[]).filter(x=>x!==id);state.divisions=state.divisions.filter(x=>x.id!==id);if(selectedDivisionId===id)selectedDivisionId="";await saveCloudStateNow();renderAll();openDivisionManager();toast("Đã xóa phân ban")}catch(e){alert("Không xóa được phân ban: "+(e.message||e))}}
+function openDivisionManager(){
+  if(!canEditClub())return;
+  ensureDivisionCatalogV64();
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Quản lý phân ban</h2><div class="small-help">Phân ban dùng chung cho các học kỳ; mỗi thành viên có thể thuộc nhiều phân ban.</div></div><button onclick="closeModal()">×</button></div>
+    <div id="divisionManagerList">${(state.divisions||[]).map(d=>`<div class="division-manager-row"><div><b>${esc(d.name)}</b><div class="small-help">${(state.members||[]).filter(m=>memberDivisionIds(m).includes(d.id)).length} thành viên đã được gán</div></div><button class="secondary" onclick="renameDivision('${d.id}')">Đổi tên</button><button class="danger" onclick="deleteDivision('${d.id}')">Xóa</button></div>`).join("")||`<div class="empty">Chưa có phân ban.</div>`}</div>
+    <div class="form-grid" style="margin-top:14px"><label class="full">Tên phân ban mới<input id="newDivisionName" maxlength="120" autocomplete="off" placeholder="Ví dụ: Diễn viên & Biên kịch"></label></div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Đóng</button><button class="primary" onclick="addDivision()">+ Thêm phân ban</button></div></div></div>`;
+  $("#modalWrap").classList.remove("hidden");
+}
+async function addDivision(){
+  if(!canEditClub())return;
+  const name=sanitizeDivisionName($("#newDivisionName")?.value);
+  if(!name)return alert("Nhập tên phân ban.");
+  if(state.divisions.some(d=>normalizeText(d.name)===normalizeText(name)))return alert("Phân ban này đã tồn tại.");
+  const d={id:divisionIdFromName(name),name,createdAt:new Date().toISOString()};
+  state.divisions.push(d);
+  state.divisionSetupVersion=1;
+  const ok=await saveCloudStateNow();
+  if(!ok){
+    state.divisions=state.divisions.filter(x=>x.id!==d.id);
+    return alert("Không lưu được phân ban lên Firestore.");
+  }
+  persistStateOnly();renderDivisions();openDivisionManager();
+  await logAudit({action:"create-division",module:"members",entityType:"division",entityId:d.id,summary:`Tạo phân ban • ${d.name}`,after:{name:d.name}});
+  toast("Đã thêm phân ban");
+}
+async function renameDivision(id){
+  if(!canEditClub())return;
+  const d=divisionById(id);if(!d)return;
+  const next=sanitizeDivisionName(prompt("Tên phân ban:",d.name));
+  if(!next)return;
+  if(state.divisions.some(x=>x.id!==id&&normalizeText(x.name)===normalizeText(next)))return alert("Tên phân ban đã tồn tại.");
+  const before=d.name;d.name=next;
+  const ok=await saveCloudStateNow();
+  if(!ok){d.name=before;return alert("Không lưu được tên phân ban.")}
+  persistStateOnly();renderDivisions();
+  if(!$("#modalWrap").classList.contains("hidden"))openDivisionManager();
+  await logAudit({action:"rename-division",module:"members",entityType:"division",entityId:id,summary:`Đổi tên phân ban • ${before} → ${next}`,before:{name:before},after:{name:next}});
+  toast("Đã đổi tên phân ban");
+}
+async function deleteDivision(id){
+  if(!canEditClub())return;
+  const d=divisionById(id);if(!d)return;
+  if(!confirm(`Xóa phân ban "${d.name}"?\n\nThành viên không bị xóa, chỉ gỡ đánh dấu phân ban này.`))return;
+
+  const beforeDivisions=structuredClone(state.divisions);
+  const affected=(state.members||[]).filter(m=>(m.divisions||[]).includes(id));
+  const beforeMembers=affected.map(m=>({id:m.id,divisions:[...(m.divisions||[])]}));
+
+  try{
+    if(affected.length){
+      await commitInChunks(affected.map(m=>b=>b.update(
+        fbDb.collection("members").doc(m.id),
+        {divisions:(m.divisions||[]).filter(x=>x!==id),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid}
+      )));
+    }
+    for(const m of affected)m.divisions=(m.divisions||[]).filter(x=>x!==id);
+    state.divisions=state.divisions.filter(x=>x.id!==id);
+    state.divisionSetupVersion=1;
+    if(selectedDivisionId===id)selectedDivisionId="";
+
+    const ok=await saveCloudStateNow();
+    if(!ok)throw new Error("Không lưu được cấu hình phân ban.");
+
+    persistStateOnly();renderAll();openDivisionManager();
+    await logAudit({action:"delete-division",module:"members",entityType:"division",entityId:id,summary:`Xóa phân ban • ${d.name}`,before:{name:d.name,memberCount:affected.length}});
+    toast("Đã xóa phân ban");
+  }catch(e){
+    state.divisions=beforeDivisions;
+    for(const old of beforeMembers){
+      const m=(state.members||[]).find(x=>x.id===old.id);
+      if(m)m.divisions=old.divisions;
+    }
+    // Best-effort server rollback for member assignments.
+    try{
+      if(beforeMembers.length){
+        await commitInChunks(beforeMembers.map(old=>b=>b.set(
+          fbDb.collection("members").doc(old.id),
+          {divisions:old.divisions,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid},
+          {merge:true}
+        )));
+      }
+    }catch(rollbackErr){console.error("division rollback",rollbackErr)}
+    renderAll();openDivisionManager();
+    alert("Không xóa được phân ban: "+(e.message||e));
+  }
+}
 /* info */
 $("#searchInfo").oninput=renderInfo;
 function memberTimeline(m,semKey=semester){
@@ -6918,7 +7626,17 @@ async function purgeTrash(id){if(!confirm("Xóa vĩnh viễn khỏi Thùng rác?
 async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(180).get();approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
 async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return alert("Yêu cầu này không thuộc học kỳ đang chọn.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
-async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="deleteMember"){const m=(await fbDb.collection("members").doc(p.id).get()).data();if(m)await moveToTrash("member",p.id,m,{label:m.name,semester:m.semester});await fbDb.collection("members").doc(p.id).delete()}else if(r.kind==="deleteFinance"){const s=await fbDb.collection("financeTransactions").doc(p.id).get();if(s.exists)await moveToTrash("finance",p.id,s.data(),{label:s.data().description,semester:s.data().semester});await fbDb.collection("financeTransactions").doc(p.id).delete()}else if(r.kind==="bulkAttendance"){const semKey=p.semester||r.semester||semester;if(!ensureActivityColumnUnlocked(p.itemId,semKey))throw new Error("Cột điểm đã bị khóa sau khi yêu cầu được tạo.");await commitInChunks((p.updates||[]).map(u=>b=>b.update(fbDb.collection("members").doc(u.id),{[`scores.${p.itemId}`]:u.val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid})))}else throw new Error("Loại yêu cầu không được hỗ trợ")}
+async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="deleteMember"){const m=(await fbDb.collection("members").doc(p.id).get()).data();if(m)await moveToTrash("member",p.id,m,{label:m.name,semester:m.semester});await fbDb.collection("members").doc(p.id).delete()}else if(r.kind==="deleteFinance"){const s=await fbDb.collection("financeTransactions").doc(p.id).get();if(s.exists)await moveToTrash("finance",p.id,s.data(),{label:s.data().description,semester:s.data().semester});await fbDb.collection("financeTransactions").doc(p.id).delete()}else if(r.kind==="bulkAttendance"){
+    const semKey=p.semester||r.semester||semester;
+    if(!ensureActivityColumnUnlocked(p.itemId,semKey))throw new Error("Cột điểm đã bị khóa sau khi yêu cầu được tạo.");
+    const updates=(p.updates||[]).filter(u=>u&&u.id);
+    await commitInChunks(updates.map(u=>b=>b.update(
+      fbDb.collection("members").doc(u.id),
+      {[`scores.${p.itemId}`]:u.val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid}
+    )));
+    applyAttendanceUpdatesToLocal(p.itemId,updates,semKey);
+    if(canEditClub())scheduleAutoLookupSync(true);
+  }else throw new Error("Loại yêu cầu không được hỗ trợ")}
 
 /* ===== QR Attendance ===== */
 
@@ -6942,6 +7660,15 @@ function exportSelectedActivityReport(){
       <div style="display:flex;gap:8px;margin-bottom:8px"><button class="secondary" type="button" onclick="toggleActivityExportFields(true)">Chọn tất cả</button><button class="ghost" type="button" onclick="toggleActivityExportFields(false)">Bỏ chọn</button></div>
       <div class="export-field-grid">
         ${state.memberFields.map(f=>`<label><input class="activity-export-field" type="checkbox" value="${esc(f.key)}" ${defaults.has(f.key)?"checked":""}> ${esc(f.label)}</label>`).join("")}
+        <label><input class="activity-export-field" type="checkbox" value="__university" checked> Trường đại học</label>
+        <label><input class="activity-export-field" type="checkbox" value="__divisions"> Phân ban</label>
+      </div>
+    </div>
+    <div class="export-filter-box">
+      <h4>Lọc theo trường đại học</h4>
+      <div class="university-export-grid">
+        ${universities().map(u=>`<label><input class="activity-export-university" type="checkbox" value="${esc(u.id)}" checked> ${esc(u.name)}</label>`).join("")}
+        <label><input class="activity-export-university" type="checkbox" value="${UNKNOWN_UNIVERSITY_ID}" checked> Chưa xác định</label>
       </div>
     </div>
     <div class="small-help">File luôn có thêm cột <b>Tham gia</b> và <b>Điểm</b>. Với kiểu Nhập điểm, điểm không thể vượt ${activityMaxPoints(it)}.</div>
@@ -6959,9 +7686,10 @@ function confirmExportSelectedActivityReport(sel){
   const participation=document.querySelector('input[name="activityExportParticipation"]:checked')?.value||"all";
   const selectedKeys=$$(".activity-export-field:checked").map(x=>x.value);
   if(!selectedKeys.length)return alert("Hãy chọn ít nhất một thông tin thành viên.");
-  const fields=selectedKeys.map(k=>state.memberFields.find(f=>f.key===k)).filter(Boolean);
+  const selectedUniversityIds=$$(".activity-export-university:checked").map(x=>x.value);
+  if(!selectedUniversityIds.length)return alert("Hãy chọn ít nhất một trường đại học.");
 
-  let source=members().map(m=>{
+  let source=members().filter(m=>selectedUniversityIds.includes(memberUniversityId(m))).map(m=>{
     const v=m.scores?.[it.id];
     const joined=activityJoined(g,it,v);
     return {m,v,joined};
@@ -6971,7 +7699,10 @@ function confirmExportSelectedActivityReport(sel){
 
   const rows=source.map((x,i)=>{
     const row={"STT":i+1};
-    fields.forEach(f=>row[f.label]=memberFieldValueForExport(x.m,f));
+    selectedKeys.forEach(key=>{
+      const label=key==="__university"?"Trường đại học":key==="__divisions"?"Phân ban":state.memberFields.find(f=>f.key===key)?.label||key;
+      row[label]=memberExportValue(x.m,key);
+    });
     row["Tham gia"]=x.joined?"Có":"Không";
     row["Điểm"]=activityEarnedPoints(g,it,x.v);
     return row;
@@ -7413,9 +8144,124 @@ function renderSettings(){
       </div>
       <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. Với Nhập điểm, hệ thống không cho nhập vượt <b>Điểm tối đa</b>. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
     </div>`).join("");
+  renderUniversitySettings();
   applyZeroClearBehavior();
   bindCurrencyInputs($("#settings"));
 }
+
+function renderUniversitySettings(){
+  const root=$("#universitySettings");if(!root)return;
+  root.innerHTML=`<div class="university-settings-list">
+    ${universities().map(u=>`
+      <div class="university-settings-row" data-university-row="${esc(u.id)}">
+        <label>Tên trường
+          <input class="global-setting-control" type="text" value="${esc(u.name)}" maxlength="120" oninput="updateUniversityDraft('${u.id}','name',this.value)">
+        </label>
+        <label>Dấu hiệu / tiền tố MSSV
+          <input class="global-setting-control" type="text" value="${esc((u.markers||[]).join(", "))}" maxlength="300" placeholder="VD: C, CE, CT" oninput="updateUniversityDraft('${u.id}','markers',this.value)">
+          <span class="university-marker-preview">${(u.markers||[]).length?`Bắt đầu bằng: ${esc((u.markers||[]).join(", "))}`:"Không tự nhận diện bằng MSSV"}</span>
+        </label>
+        <label class="university-home-choice"><input class="global-setting-control" type="radio" name="homeUniversity" value="${esc(u.id)}" ${u.isHome?"checked":""} onchange="setHomeUniversity('${u.id}')"> Trường chính</label>
+        <button class="danger global-setting-control" type="button" title="Xóa trường" onclick="removeUniversitySetting('${u.id}')">×</button>
+      </div>`).join("")}
+  </div>`;
+}
+function updateUniversityDraft(id,key,value){
+  const u=universityById(id);if(!u||!canEditClub())return;
+  if(key==="name")u.name=String(value||"").trim().slice(0,120);
+  if(key==="markers")u.markers=parseUniversityMarkers(value);
+}
+function setHomeUniversity(id){
+  if(!canEditClub())return;
+  state.universities.forEach(u=>u.isHome=u.id===id);
+  renderUniversitySettings();
+}
+function addUniversitySetting(){
+  if(!canEditClub())return;
+  const name=String(prompt("Tên trường đại học mới")||"").trim();
+  if(!name)return;
+  if(universities().some(u=>normalizeText(u.name)===normalizeText(name)))return alert("Tên trường này đã tồn tại.");
+  state.universities.push({id:universityIdFromName(name),name,markers:[],isHome:universities().length===0,createdAt:new Date().toISOString()});
+  renderUniversitySettings();
+}
+async function removeUniversitySetting(id){
+  if(!canEditClub())return;
+  const u=universityById(id);if(!u)return;
+  if(universities().length<=1)return alert("Hệ thống cần ít nhất một trường trong cấu hình.");
+  const affected=members().filter(m=>memberUniversityId(m)===id);
+  const msg=affected.length
+    ? `Có ${affected.length} thành viên đang thuộc "${u.name}". Xóa trường này sẽ chuyển họ sang chế độ tự nhận diện theo MSSV. Tiếp tục?`
+    : `Xóa trường "${u.name}" khỏi cấu hình?`;
+  if(!confirm(msg))return;
+
+  state.universities=state.universities.filter(x=>x.id!==id);
+  if(!state.universities.some(x=>x.isHome)&&state.universities[0])state.universities[0].isHome=true;
+
+  affected.forEach(m=>{
+    m.universitySource="auto";
+    m.universityId=inferUniversityIdFromMssv(m.mssv);
+    m.schoolType=legacySchoolTypeForUniversity(m.universityId);
+  });
+
+  try{
+    if(affected.length){
+      await commitInChunks(affected.map(m=>b=>b.set(fbDb.collection("members").doc(m.id),{
+        universityId:m.universityId,universitySource:"auto",schoolType:m.schoolType,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
+      },{merge:true})));
+    }
+    await saveCloudStateNow();
+    persistStateOnly();renderAll();renderSettings();
+    if(canEditClub())scheduleAutoLookupSync(true);
+    toast("Đã xóa trường khỏi cấu hình");
+  }catch(e){alert("Không xóa được trường: "+(e.message||e))}
+}
+async function saveUniversitySettings(){
+  if(!canEditClub())return;
+  for(const u of universities()){
+    u.name=String(u.name||"").trim();
+    u.markers=parseUniversityMarkers(u.markers);
+    if(!u.name)return alert("Tên trường đại học không được để trống.");
+  }
+  const names=universities().map(u=>normalizeText(u.name));
+  if(new Set(names).size!==names.length)return alert("Tên trường đại học đang bị trùng.");
+  if(!universities().some(u=>u.isHome))state.universities[0].isHome=true;
+
+  const ok=await saveCloudStateNow();
+  if(!ok)return alert("Không lưu được cấu hình trường lên Firestore.");
+  persistStateOnly();renderAll();renderSettings();
+  await logAudit({action:"update-university-settings",module:"settings",entityType:"config",entityId:"universities",summary:`Cập nhật cấu hình ${universities().length} trường đại học`,after:{count:universities().length}});
+  toast("Đã lưu cấu hình trường");
+}
+async function reclassifyUniversitiesByMssv(){
+  if(!canEditClub())return;
+  const autoRows=members().filter(m=>memberUniversitySource(m)!=="manual");
+  if(!autoRows.length)return toast("Không có thành viên tự nhận diện cần cập nhật");
+  if(!confirm(`Nhận diện lại ${autoRows.length} thành viên theo tiền tố MSSV hiện tại? Thành viên được chọn trường thủ công sẽ được giữ nguyên.`))return;
+
+  autoRows.forEach(m=>{
+    m.universitySource="auto";
+    m.universityId=inferUniversityIdFromMssv(m.mssv);
+    m.schoolType=legacySchoolTypeForUniversity(m.universityId);
+  });
+
+  try{
+    await commitInChunks(autoRows.map(m=>b=>b.set(fbDb.collection("members").doc(m.id),{
+      universityId:m.universityId,universitySource:"auto",schoolType:m.schoolType,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""
+    },{merge:true})));
+    persistStateOnly();renderAll();renderSettings();
+    if(canEditClub())scheduleAutoLookupSync(true);
+    await logAudit({action:"reclassify-universities",module:"members",entityType:"member",entityId:"bulk",summary:`Nhận diện lại trường đại học theo MSSV (${autoRows.length} thành viên)`,after:{count:autoRows.length}});
+    toast("Đã nhận diện lại trường theo MSSV");
+  }catch(e){alert("Không cập nhật được trường đại học: "+(e.message||e))}
+}
+function updateMemberUniversityPreview(){
+  const hint=$("#mf_university_hint");if(!hint)return;
+  const id=inferUniversityIdFromMssv($("#mf_mssv")?.value||"");
+  hint.textContent=id===UNKNOWN_UNIVERSITY_ID?"Không nhận diện được trường từ MSSV hiện tại.":`Theo MSSV: ${universityLabelById(id)}.`;
+}
+
 $("#saveSemesterBtn").onclick=async()=>{
   const newCode=$("#setSemesterCode").value.trim()||semester,old=semester;
   sem().code=newCode;
@@ -7612,6 +8458,9 @@ function applyActivityColumnLocksInSettings(){
 function addActivityItem(gi){const g=sem().groups[gi];g.items.push({id:"act_"+uid(),name:"Hoạt động mới",date:"",points:5,mode:g.mode==="number"?"number":"checkbox",locked:false});save();renderSettings()}
 function removeActivityItem(gi,ii){if(confirm("Xóa cột hoạt động này?")){sem().groups[gi].items.splice(ii,1);save();renderSettings()}}
 $("#saveActivitiesBtn").onclick=()=>{save();toast("Đã lưu hoạt động")};
+if($("#addUniversityBtn"))$("#addUniversityBtn").onclick=addUniversitySetting;
+if($("#saveUniversitiesBtn"))$("#saveUniversitiesBtn").onclick=saveUniversitySettings;
+if($("#reclassifyUniversitiesBtn"))$("#reclassifyUniversitiesBtn").onclick=reclassifyUniversitiesByMssv;
 
 function applyZeroClearBehavior(){
   document.querySelectorAll('input.num-clear').forEach(inp=>{
@@ -7630,7 +8479,7 @@ function applyZeroClearBehavior(){
 const __renderSettingsBase=renderSettings;
 function applySettingsSemesterLock(){
   const root=$("#settings");if(!root)return;const locked=semesterLocked();root.classList.toggle("semester-locked-overlay",locked);
-  if(locked){root.querySelectorAll("input,select,textarea,button").forEach(el=>{if(["semesterLockSetting","newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].includes(el.id))return;el.disabled=true})}
+  if(locked){root.querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.classList.contains("global-setting-control"))return;if(["semesterLockSetting","newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].includes(el.id))return;el.disabled=true})}
   else{root.querySelectorAll("input,select,textarea,button").forEach(el=>el.disabled=false)}
   if($("#semesterLockSetting"))$("#semesterLockSetting").disabled=false;
   ["newSemesterBtn","duplicateSemesterBtn","approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"].forEach(id=>{const el=$("#"+id);if(el)el.disabled=false});
@@ -7654,7 +8503,7 @@ for(const id of ["approvalDeleteMember","approvalDeleteFinance","approvalBulkAtt
 function renderAll(){
   renderSemesterSelect();
   if(canViewModule("attendance"))renderQLTV();else clearRestrictedModuleUi("attendance");
-  if(canViewModule("members")){renderMemberList();renderInfo()}else clearRestrictedModuleUi("members");
+  if(canViewModule("members")){renderMemberList();renderInfo();renderDivisions()}else{clearRestrictedModuleUi("members");clearRestrictedModuleUi("divisions");}
   if(canViewModule("finance"))renderFinance();else clearRestrictedModuleUi("finance");
   renderDashboard();
   if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention();

@@ -1,0 +1,18 @@
+V65 ATTENDANCE EXCEL TEST
+
+1. Open Điểm danh hoạt động.
+2. Select an activity.
+3. Upload an Excel containing multiple students.
+4. Preview must report:
+   - Excel row count
+   - matched member count
+   - unmatched count
+   - duplicate row count
+5. Click Áp dụng điểm danh.
+6. Checkbox / score must appear immediately in the current table without clicking Sync.
+7. Press Sync or relogin: the attendance must remain, proving Firestore saved it.
+8. If a member appears twice in Excel, they are applied once.
+9. A person not in the semester member list is not created automatically.
+10. Member lookup sync remains active for Admin.
+
+No Firestore Rules update is required.

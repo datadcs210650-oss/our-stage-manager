@@ -1,0 +1,17 @@
+V64 DIVISION FIX CHECKLIST
+
+After deploying V64:
+1. Login with Admin/Super Admin.
+2. Open Phân ban.
+3. You should immediately see the division catalog.
+4. If older members have Ban / Bộ phận values, V64 migrates them automatically.
+5. Members without any division appear in the “Chưa gán phân ban” count.
+6. Open a member profile/edit modal to assign one or multiple divisions.
+7. Press ↻ Đồng bộ to confirm data survives a fresh Firestore reload.
+8. Logout/login and verify the catalog remains.
+
+Security notes:
+- Division create/rename/delete is Admin/Super Admin only.
+- Member division IDs are validated against the current catalog before write.
+- Delete uses rollback if the clubState save fails.
+- No new persistent cross-account realtime listeners are created.
