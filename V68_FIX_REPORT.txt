@@ -1,0 +1,25 @@
+V68 TEST CHECKLIST
+
+PDF:
+1. Dashboard -> Báo cáo cuối kỳ PDF.
+2. PDF should download even if one event submission collection cannot be counted.
+3. Semester name/date, member count, activity count, finance and ranking should render.
+4. Thu Chi -> PDF should also export.
+
+REALTIME:
+1. Login Admin in browser A.
+2. Login BCN in browser B with Member/Attendance permissions.
+3. Change one allowed score/member field in B.
+4. Browser A should update automatically without pressing Sync.
+5. Change Finance in another authorized account; authorized viewers update automatically.
+6. Switch semester: realtime listeners reconnect only to the selected semester.
+7. Leave tab hidden for over 90 seconds: RT status pauses; returning reconnects.
+
+FIREBASE LOAD CONTROLS:
+- only selected-semester operational queries;
+- debounced render;
+- hidden-tab listener suspension;
+- public lookup sync throttled to minimum 8-second spacing;
+- QR response data remains on-demand.
+
+No Firestore Rules update is required for V68.

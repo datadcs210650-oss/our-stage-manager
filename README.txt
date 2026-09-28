@@ -1,26 +1,62 @@
-OUR STAGE CLUB MANAGER V67 — SELECTED DIVISION FIX
+OUR STAGE CLUB MANAGER V68 — PDF SYNC FIX + ECO REALTIME
 
-BUG FIXED
-When saving a member, the app called renderAll(), which also calls renderDivisions().
-renderDivisions() referenced `selectedDivisionId`, but V64-V66 never declared that variable.
+PDF HỌC KỲ
+Fixed a real bug in the semester-end PDF:
+- the report referenced `cfg` without declaring it;
+- the report also depended on sequential event-response reads.
 
-This caused:
-ReferenceError: selectedDivisionId is not defined
+V68:
+- defines the semester config correctly;
+- refreshes only the CURRENT semester before creating the PDF;
+- Members / Finance / Events refresh independently;
+- event response counts use Promise.allSettled, so one event permission/network error
+  no longer blocks the entire PDF;
+- an empty ranking or transaction table no longer produces an invalid PDF table;
+- PDF export is wrapped in its own error handler;
+- Finance PDF also performs a scoped current-semester refresh.
 
-and the save flow showed:
-“Không lưu được thành viên: selectedDivisionId is not defined”
+REALTIME IS BACK — ECO MODE
+Realtime Admin/BCN synchronization is re-enabled, but designed to limit Firestore load:
 
-IMPORTANT
-The Firestore member write may already have succeeded before this UI ReferenceError occurred.
-V67 fixes the UI/runtime error so saving a member completes normally.
+1. Current semester only
+Listeners use:
+- members where semester == current semester
+- financeTransactions where semester == current semester
+- eventPortals where semester == current semester
 
-V67 CHANGES
-- Declares global `selectedDivisionId = ""` with the other UI state variables.
-- Adds a defensive type/reset guard in renderDivisions().
-- Adds a defensive reset when the authorized app shell is opened.
-- Keeps V66 login recovery, V65 attendance Excel scanning, V64 division recovery,
-  V63 university configuration, and existing security hardening.
+2. Permission-aware
+A BCN only opens listeners for modules they are allowed to view.
 
-FIRESTORE RULES
-No Firestore Rules change is required.
+3. Config is only one document
+clubState/main is one realtime document listener.
+
+4. UI updates are debounced
+Many Firestore changes arriving together are rendered once after about 420 ms.
+
+5. Hidden tabs pause after 90 seconds
+Short tab switches keep listeners to avoid paying another initial snapshot.
+If the tab stays hidden for 90 seconds, operational/config listeners stop.
+They reconnect when the user returns.
+The own-profile listener stays active so a disabled account can still be revoked.
+
+6. QR submissions remain on-demand
+QR check-in response listeners are NOT kept permanently between all accounts.
+The QR panel still has a Refresh action.
+
+7. Public member lookup is throttled
+Realtime bursts are collapsed:
+- normal changes wait ~2.5 seconds;
+- at least 8 seconds between automatic full public-lookup syncs;
+- Firestore writes are committed in batches rather than one network request per member.
+
+MANUAL SYNC
+The ↻ Sync button remains as a fallback.
+Manual refresh now reads only the current semester instead of re-reading all semesters.
+
+SECURITY
+- Existing V59/V67 hardening remains.
+- Realtime queries are permission-aware.
+- No new public collection access is added.
+- No eval/new Function.
+- Firestore Rules are unchanged.
 If hardened V60 Rules are already published, keep them.

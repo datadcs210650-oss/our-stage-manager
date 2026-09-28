@@ -1630,6 +1630,16 @@ img[src$="logo-ui-centered.png"]{
   line-height:1.4;
 }
 
+
+/* ==========================================================
+   V68 ECO REALTIME + PDF SYNC
+   ========================================================== */
+.manual-sync-status{
+  min-width:54px;
+  text-align:center;
+}
+.manual-sync-status[title]{cursor:help}
+
 </style>
 <style>
 /* ==========================================================
@@ -1778,7 +1788,7 @@ img[src$="logo-ui-centered.png"]{
         <span id="semesterLockChip" class="lock-chip hidden">🔒 Đã khóa</span>
         <span class="secure-session-chip" id="secureSessionChip" title="Phiên đăng nhập có giới hạn thời gian">◉ SESSION</span>
         <button class="global-search-btn manual-sync-btn" id="manualSyncBtn" type="button" title="Tải dữ liệu mới nhất từ Firestore và đồng bộ cổng tra cứu">↻ <span>Đồng bộ</span></button>
-        <span class="manual-sync-status" id="manualSyncStatus">MANUAL</span>
+        <span class="manual-sync-status" id="manualSyncStatus">RT ECO</span>
         <button class="admin-chip" id="adminChip">ADMIN ▾</button>
       </div>
     </header>
@@ -1832,9 +1842,9 @@ img[src$="logo-ui-centered.png"]{
       <div class="qr-live-panel">
         <div class="qr-live-head">
           <div>
-            <div class="eyebrow">TẢI DỮ LIỆU KHI CẦN</div>
+            <div class="eyebrow">REAL-TIME TIẾT KIỆM</div>
             <h3>QR điểm danh & lượt gửi</h3>
-            <p>Không giữ listener real-time giữa các tài khoản. Bấm Làm mới để tải lượt gửi mới nhất và giảm số lượt đọc Firestore.</p>
+            <p>Dữ liệu quản trị chính được đồng bộ real-time theo đúng học kỳ đang mở. Riêng lượt gửi QR vẫn tải khi cần để tránh phát sinh quá nhiều listener Firestore.</p>
           </div>
           <div class="qr-live-head-actions"><button class="secondary" type="button" onclick="watchAttendancePortals(true)">↻ Làm mới</button>
             <span id="attendancePendingBadge" class="status-badge">0 chờ duyệt</span>
@@ -2504,6 +2514,9 @@ const CLOUD_STATE_DOC="main";
 const REALTIME_MARKER_DOC="realtimeSyncV19";
 let realtimeCollectionsReady=false;
 let memberRealtimeUnsub=null,financeRealtimeUnsub=null,eventRealtimeUnsub=null,profileRealtimeUnsub=null;
+let realtimeRenderTimer=null,realtimeHiddenStopTimer=null,realtimeBoundSemester="",realtimeListenersActive=false,realtimeVisibilityBound=false;
+let realtimeFirstSnapshot={members:true,finance:true,events:true,config:true};
+let lookupLastAutoSyncAt=0,lookupAutoSyncInFlight=false,lookupAutoSyncPending=false;
 
 function role(){return currentProfile?.role||""}
 function canEditClub(){return role()==="admin"||role()==="superadmin"}
@@ -2632,16 +2645,57 @@ function watchOwnProfileRealtime(){
       fbAuth.signOut();
       return;
     }
+    const beforeSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{}});
     currentProfile={id:snap.id,...snap.data()};
+    const afterSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{}});
     $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
     renderAll();
     applyRoleAccess();
+    if(beforeSig&&beforeSig!==afterSig){
+      Promise.resolve().then(()=>watchRealtimeCollections({force:true})).catch(e=>console.warn("permission realtime restart",e));
+    }
   },e=>console.warn("profile realtime",e));
 }
 
 function watchCloudStateRealtime(){
   if(cloudStateUnsub){try{cloudStateUnsub()}catch{}cloudStateUnsub=null}
-  // V62: no persistent config listener between Admin/BCN accounts.
+  if(!currentFirebaseUser||document.visibilityState==="hidden")return;
+
+  realtimeFirstSnapshot.config=true;
+  cloudStateUnsub=fbDb.collection(CLOUD_STATE_COLLECTION).doc(CLOUD_STATE_DOC).onSnapshot(snap=>{
+    if(!snap.exists||!snap.data()?.state)return;
+
+    // Ignore local pending writes. Local UI already has the newest config.
+    if(snap.metadata?.hasPendingWrites)return;
+
+    const first=realtimeFirstSnapshot.config;
+    realtimeFirstSnapshot.config=false;
+    if(first)return;
+
+    const operational={
+      members:state.members||[],
+      transactions:state.transactions||[],
+      events:state.events||[]
+    };
+    const incoming=snap.data().state;
+    state=incoming;
+    normalizeState();
+    state.members=operational.members;
+    state.transactions=operational.transactions;
+    state.events=operational.events;
+
+    if(!state.semesters?.[semester]){
+      semester=resolveSemesterForLogin(new Date());
+      realtimeBoundSemester="";
+      Promise.resolve().then(()=>watchRealtimeCollections({force:true})).catch(e=>console.warn("realtime semester restart",e));
+    }
+
+    persistStateOnly();
+    scheduleRealtimeRender("config");
+  },e=>{
+    console.warn("clubState realtime",e?.code||e,e?.message||"");
+    updateEcoRealtimeStatus("RT LỖI");
+  });
 }
 
 function memberDocPayload(m){
@@ -2670,13 +2724,20 @@ async function ensureRealtimeCollectionsV19(){
     realtimeCollectionsReady=true;await saveCloudStateNow();return true;
   }catch(e){console.error("ensureRealtimeCollectionsV19",e);return false}
 }
-async function loadRealtimeCollectionsOnce(){
+async function loadRealtimeCollectionsOnce({currentSemesterOnly=false}={}){
   let hadError=false;
+  const replaceSemesterSlice=(list,rows)=>currentSemesterOnly
+    ? [...(list||[]).filter(x=>x.semester!==semester),...rows]
+    : rows;
 
   if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
     try{
-      const s=await fbDb.collection("members").get();
-      state.members=s.docs.map(d=>({id:d.id,...d.data()}));
+      const q=currentSemesterOnly
+        ? fbDb.collection("members").where("semester","==",semester)
+        : fbDb.collection("members");
+      const s=await q.get();
+      const memberRows=s.docs.map(d=>({id:d.id,...d.data()}));
+      state.members=replaceSemesterSlice(state.members,memberRows);
       state.members.forEach(m=>{
         if(!m.universitySource)m.universitySource=m.universityId?"manual":"auto";
         if(!m.universityId||!universityById(m.universityId))m.universityId=memberUniversityId(m);
@@ -2714,8 +2775,12 @@ async function loadRealtimeCollectionsOnce(){
 
   if(canEditClub()||hasViewPermission("viewFinance")){
     try{
-      const s=await fbDb.collection("financeTransactions").get();
-      state.transactions=s.docs.map(d=>({id:d.id,...d.data()}));
+      const q=currentSemesterOnly
+        ? fbDb.collection("financeTransactions").where("semester","==",semester)
+        : fbDb.collection("financeTransactions");
+      const s=await q.get();
+      const txRows=s.docs.map(d=>({id:d.id,...d.data()}));
+      state.transactions=replaceSemesterSlice(state.transactions,txRows);
     }catch(e){
       hadError=true;
       console.warn("finance one-time load failed",e?.code||e,e?.message||"");
@@ -2725,8 +2790,12 @@ async function loadRealtimeCollectionsOnce(){
 
   if(canEditClub()||hasViewPermission("viewEvents")){
     try{
-      const s=await fbDb.collection("eventPortals").get();
-      state.events=s.docs.map(d=>lightEventRecord(d.id,d.data()));
+      const q=currentSemesterOnly
+        ? fbDb.collection("eventPortals").where("semester","==",semester)
+        : fbDb.collection("eventPortals");
+      const s=await q.get();
+      const eventRows=s.docs.map(d=>lightEventRecord(d.id,d.data()));
+      state.events=replaceSemesterSlice(state.events,eventRows);
     }catch(e){
       hadError=true;
       console.warn("events one-time load failed",e?.code||e,e?.message||"");
@@ -2745,12 +2814,154 @@ function renderRealtimeData(){
   if(canViewModule("events")&&$("#events")&&!$("#events").classList.contains("hidden"))renderEvents();else if(!canViewModule("events"))clearRestrictedModuleUi("events");
   applyRoleAccess();
 }
-async function watchRealtimeCollections(){
+function updateEcoRealtimeStatus(text="RT ECO"){
+  const el=$("#manualSyncStatus");if(!el)return;
+  el.textContent=text;
+  el.title="Real-time tiết kiệm: chỉ nghe dữ liệu của học kỳ hiện tại, gộp cập nhật giao diện và tạm dừng khi tab bị ẩn lâu.";
+}
+function stopOperationalRealtimeListeners(){
+  for(const key of ["memberRealtimeUnsub","financeRealtimeUnsub","eventRealtimeUnsub"]){
+    const fn=window[key];
+    if(typeof fn==="function"){try{fn()}catch{}}
+    window[key]=null;
+  }
+  // The lexical variables are not window properties in every browser.
   if(memberRealtimeUnsub){try{memberRealtimeUnsub()}catch{}memberRealtimeUnsub=null}
   if(financeRealtimeUnsub){try{financeRealtimeUnsub()}catch{}financeRealtimeUnsub=null}
   if(eventRealtimeUnsub){try{eventRealtimeUnsub()}catch{}eventRealtimeUnsub=null}
-  // V62: one-time refresh only. No persistent member/finance/event listeners.
-  if(currentFirebaseUser){await loadRealtimeCollectionsOnce();renderRealtimeData()}
+  realtimeListenersActive=false;
+}
+function stopEcoRealtime({keepProfile=true}={}){
+  stopOperationalRealtimeListeners();
+  if(cloudStateUnsub){try{cloudStateUnsub()}catch{}cloudStateUnsub=null}
+  if(!keepProfile&&profileRealtimeUnsub){try{profileRealtimeUnsub()}catch{}profileRealtimeUnsub=null}
+  realtimeBoundSemester="";
+  updateEcoRealtimeStatus(document.visibilityState==="hidden"?"RT TẠM DỪNG":"RT OFF");
+}
+function scheduleRealtimeRender(reason=""){
+  clearTimeout(realtimeRenderTimer);
+  realtimeRenderTimer=setTimeout(()=>{
+    realtimeRenderTimer=null;
+    renderRealtimeData();
+    if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboard();
+    if($("#attention")&&!$("#attention").classList.contains("hidden"))renderAttention();
+    updateEcoRealtimeStatus("RT ECO");
+  },420);
+}
+function replaceRealtimeSemesterSlice(kind,snap){
+  const semKey=realtimeBoundSemester||semester;
+  if(kind==="members"){
+    const map=new Map((state.members||[]).filter(x=>x.semester===semKey).map(x=>[x.id,x]));
+    for(const c of snap.docChanges()){
+      if(c.type==="removed")map.delete(c.doc.id);
+      else{
+        const m={id:c.doc.id,...c.doc.data()};
+        if(!m.universitySource)m.universitySource=m.universityId?"manual":"auto";
+        if(!m.universityId||!universityById(m.universityId))m.universityId=memberUniversityId(m);
+        m.schoolType=legacySchoolTypeForUniversity(m.universityId);
+        map.set(m.id,m);
+      }
+    }
+    state.members=[...(state.members||[]).filter(x=>x.semester!==semKey),...map.values()];
+    ensureDivisionCatalogV64();
+  }else if(kind==="finance"){
+    const map=new Map((state.transactions||[]).filter(x=>x.semester===semKey).map(x=>[x.id,x]));
+    for(const c of snap.docChanges()){
+      if(c.type==="removed")map.delete(c.doc.id);
+      else map.set(c.doc.id,{id:c.doc.id,...c.doc.data()});
+    }
+    state.transactions=[...(state.transactions||[]).filter(x=>x.semester!==semKey),...map.values()];
+  }else if(kind==="events"){
+    const map=new Map((state.events||[]).filter(x=>x.semester===semKey).map(x=>[x.id,x]));
+    for(const c of snap.docChanges()){
+      if(c.type==="removed")map.delete(c.doc.id);
+      else map.set(c.doc.id,lightEventRecord(c.doc.id,c.doc.data()));
+    }
+    state.events=[...(state.events||[]).filter(x=>x.semester!==semKey),...map.values()];
+  }
+}
+function realtimeSnapshotHandler(kind,snap){
+  const first=realtimeFirstSnapshot[kind];
+  realtimeFirstSnapshot[kind]=false;
+  replaceRealtimeSemesterSlice(kind,snap);
+  persistStateOnly();
+  scheduleRealtimeRender(kind);
+
+  // Local writes already schedule lookup sync themselves. Only remote member/finance
+  // changes should wake the public lookup synchronizer.
+  if(!first&&canEditClub()&&lookupConfig()?.enabled){
+    const hasRemoteChange=snap.docChanges().some(c=>!c.doc.metadata?.hasPendingWrites);
+    if(hasRemoteChange&&(kind==="members"||(kind==="finance"&&lookupConfig().showFinance))){
+      scheduleAutoLookupSync(false);
+    }
+  }
+}
+function realtimeErrorHandler(scope,e){
+  console.warn(`${scope} realtime`,e?.code||e,e?.message||"");
+  updateEcoRealtimeStatus("RT LỖI");
+}
+async function watchRealtimeCollections({force=false}={}){
+  if(!currentFirebaseUser)return;
+  if(document.visibilityState==="hidden")return;
+  if(!force&&realtimeListenersActive&&realtimeBoundSemester===semester)return;
+
+  stopOperationalRealtimeListeners();
+  realtimeBoundSemester=semester;
+  realtimeListenersActive=true;
+  realtimeFirstSnapshot.members=true;
+  realtimeFirstSnapshot.finance=true;
+  realtimeFirstSnapshot.events=true;
+  updateEcoRealtimeStatus("RT KẾT NỐI");
+
+  if(canEditClub()||hasViewPermission("viewMembers")||hasViewPermission("viewAttendance")||hasViewPermission("viewFinance")){
+    memberRealtimeUnsub=fbDb.collection("members")
+      .where("semester","==",semester)
+      .onSnapshot(
+        snap=>realtimeSnapshotHandler("members",snap),
+        e=>realtimeErrorHandler("members",e)
+      );
+  }
+
+  if(canEditClub()||hasViewPermission("viewFinance")){
+    financeRealtimeUnsub=fbDb.collection("financeTransactions")
+      .where("semester","==",semester)
+      .onSnapshot(
+        snap=>realtimeSnapshotHandler("finance",snap),
+        e=>realtimeErrorHandler("finance",e)
+      );
+  }
+
+  if(canEditClub()||hasViewPermission("viewEvents")){
+    eventRealtimeUnsub=fbDb.collection("eventPortals")
+      .where("semester","==",semester)
+      .onSnapshot(
+        snap=>realtimeSnapshotHandler("events",snap),
+        e=>realtimeErrorHandler("events",e)
+      );
+  }
+
+  watchCloudStateRealtime();
+  updateEcoRealtimeStatus("RT ECO");
+}
+function bindEcoRealtimeLifecycle(){
+  if(realtimeVisibilityBound)return;
+  realtimeVisibilityBound=true;
+
+  document.addEventListener("visibilitychange",()=>{
+    clearTimeout(realtimeHiddenStopTimer);
+    if(document.visibilityState==="hidden"){
+      // Short tab switches do not force a new initial snapshot. A long-hidden tab
+      // stops operational listeners to reduce billed reads.
+      realtimeHiddenStopTimer=setTimeout(()=>{
+        if(document.visibilityState==="hidden")stopEcoRealtime({keepProfile:true});
+      },90000);
+    }else{
+      Promise.resolve().then(()=>watchRealtimeCollections({force:!realtimeListenersActive||realtimeBoundSemester!==semester}))
+        .catch(e=>console.warn("resume eco realtime",e));
+    }
+  });
+
+  window.addEventListener("beforeunload",()=>stopEcoRealtime({keepProfile:false}),{once:true});
 }
 async function upsertMemberRealtime(m){await fbDb.collection("members").doc(m.id).set(memberDocPayload(m),{merge:true})}
 async function deleteMemberRealtime(id){await fbDb.collection("members").doc(id).delete()}
@@ -3353,6 +3564,8 @@ async function bootstrapAuthorizedSession(user){
 
   await runLoginStep("thông báo / QR / nhật ký",()=>watchSuiteCollections(),{warn:false});
   try{watchOwnProfileRealtime()}catch(e){console.warn("own profile realtime",e)}
+  await runLoginStep("real-time tiết kiệm",()=>watchRealtimeCollections({force:true}),{warn:false});
+  bindEcoRealtimeLifecycle();
   if(canEditClub()){
     Promise.resolve().then(()=>migratePublicLookupPrivacyV46()).catch(e=>console.warn("lookup privacy migration",e));
     Promise.resolve().then(()=>migratePublicFinanceProofV59()).catch(e=>console.warn("finance privacy migration",e));
@@ -3513,10 +3726,11 @@ async function refreshAdminData(showMessage=true){
   try{
     await loadCloudState();
     if(!state.semesters?.[semester])semester=resolveSemesterForLogin(new Date());
-    await loadRealtimeCollectionsOnce();
+    await loadRealtimeCollectionsOnce({currentSemesterOnly:true});
     ensureDivisionCatalogV64();
     await watchSuiteCollections();
     renderAll();
+    await watchRealtimeCollections({force:true});
     if(canViewModule("members"))renderDivisions();
     if(canEditClub()&&lookupConfig()?.enabled)await syncLookupSemester({silent:true});
     const stamp=new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});if($("#manualSyncStatus"))$("#manualSyncStatus").textContent=`SYNC ${stamp}`;
@@ -3662,14 +3876,14 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
   updateWorkspaceWindowMeta();applyRoleAccess();
 });
-$("#semester").onchange=e=>{
+$("#semester").onchange=async e=>{
   semester=e.target.value;
   selectedInfoId=null;
   selectedDivisionId="";
   selectedMemberIds.clear();
   renderAll();
-  refreshAdminData(false);
   updateWorkspaceWindowMeta();
+  await refreshAdminData(false);
 };
 
 
@@ -5080,15 +5294,131 @@ function renderSemesterCompareResult(){
   const a=semesterSnapshot($("#cmpA")?.value||semester),b=semesterSnapshot($("#cmpB")?.value||semester),rows=[["Thành viên",a.members,b.members],["Đang hoạt động",a.active,b.active],["Đã đóng quỹ",a.paid,b.paid],["Số hoạt động",a.activities,b.activities],["Điểm TB",a.avgScore,b.avgScore],["Tỷ lệ tham gia TB",a.avgRate+"%",b.avgRate+"%"],["Sự kiện",a.events,b.events],["Tổng thu",money(a.income),money(b.income)],["Tổng chi",money(a.expense),money(b.expense)],["Số dư",money(a.balance),money(b.balance)]];
   $("#semesterCompareResult").innerHTML=`<table class="compare-table"><thead><tr><th>Chỉ số</th><th>${esc(a.name)}</th><th>${esc(b.name)}</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td><b>${esc(r[1])}</b></td><td><b>${esc(r[2])}</b></td></tr>`).join("")}</tbody></table>`;
 }
+async function refreshCurrentSemesterForPdf(){
+  const warnings=[];
+  const replaceSlice=(list,rows)=>[...(list||[]).filter(x=>x.semester!==semester),...rows];
+
+  const jobs=[];
+  if(canEditClub()||canViewModule("members")||canViewModule("attendance")||canViewModule("finance")){
+    jobs.push(
+      fbDb.collection("members").where("semester","==",semester).get()
+        .then(s=>{
+          const rows=s.docs.map(d=>({id:d.id,...d.data()}));
+          state.members=replaceSlice(state.members,rows);
+        })
+        .catch(e=>warnings.push(`thành viên: ${e?.code||e?.message||e}`))
+    );
+  }
+  if(canEditClub()||canViewModule("finance")){
+    jobs.push(
+      fbDb.collection("financeTransactions").where("semester","==",semester).get()
+        .then(s=>{state.transactions=replaceSlice(state.transactions,s.docs.map(d=>({id:d.id,...d.data()})))})
+        .catch(e=>warnings.push(`thu chi: ${e?.code||e?.message||e}`))
+    );
+  }
+  if(canEditClub()||canViewModule("events")){
+    jobs.push(
+      fbDb.collection("eventPortals").where("semester","==",semester).get()
+        .then(s=>{state.events=replaceSlice(state.events,s.docs.map(d=>lightEventRecord(d.id,d.data())))})
+        .catch(e=>warnings.push(`sự kiện: ${e?.code||e?.message||e}`))
+    );
+  }
+
+  await Promise.allSettled(jobs);
+  persistStateOnly();
+  return warnings;
+}
+async function semesterEventResponseCountSafe(){
+  if(!canViewModule("events"))return {count:null,warnings:[]};
+  const evs=(state.events||[]).filter(e=>e.semester===semester);
+  if(!evs.length)return {count:0,warnings:[]};
+
+  const results=await Promise.allSettled(
+    evs.map(ev=>fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get())
+  );
+  let count=0;
+  const warnings=[];
+  results.forEach((r,i)=>{
+    if(r.status==="fulfilled")count+=r.value.size;
+    else warnings.push(evs[i]?.title||evs[i]?.id||`Sự kiện ${i+1}`);
+  });
+  return {count,warnings};
+}
 async function downloadSemesterEndReportPDF(){
-  if(!ensurePdfMake())return;const snap=semesterSnapshot(semester),ranking=semesterMemberRanking(semester).slice(0,10),issues=healthIssues();let responseCount=0;
-  for(const ev of (state.events||[]).filter(e=>e.semester===semester)){try{const s=await fbDb.collection("eventPortals").doc(ev.id).collection("submissions").get();responseCount+=s.size}catch{}}
-  const doc={...pdfBaseDoc(`Báo cáo cuối kỳ - ${cfg.name||semester}`),content:[...pdfHeader(`BÁO CÁO CUỐI KỲ — ${snap.name}`,`Xuất lúc ${new Date().toLocaleString("vi-VN")}`),
-    {text:"Tổng quan",style:"h2"},{table:{widths:["*","*","*"],body:[["Thành viên","Hoạt động","Sự kiện"],[String(snap.members),String(snap.activities),`${snap.events} (${responseCount} phản hồi)`],["Đã đóng quỹ","Tỷ lệ tham gia TB","Điểm TB"],[`${snap.paid}/${snap.members}`,`${snap.avgRate}%`,String(snap.avgScore)]]},layout:"lightHorizontalLines"},
-    {text:"Tài chính",style:"h2"},{table:{widths:["*","*"],body:[["Số dư đầu kỳ",money(state.semesters[semester]?.openingBalance||0)],["Tổng thu",money(snap.income)],["Tổng chi",money(snap.expense)],["Số dư cuối",money(snap.balance)]]},layout:"lightHorizontalLines"},
-    {text:"Top thành viên hoạt động",style:"h2"},{table:{headerRows:1,widths:[35,"*",65,65],body:[["Hạng","Thành viên","Tham gia","Điểm"],...ranking.map(r=>[String(r.rank),`${r.member.name} (${r.member.mssv||""})`,`${r.stats.participated}/${r.stats.totalActivities}`,String(r.stats.total)])]},layout:"lightHorizontalLines"},
-    {text:"Cảnh báo dữ liệu",style:"h2"},{ul:issues.filter(x=>x.level!=="good").map(x=>x.title).slice(0,20).length?issues.filter(x=>x.level!=="good").map(x=>x.title).slice(0,20):["Không có cảnh báo dữ liệu đáng chú ý."]}
-  ]};pdfMake.createPdf(doc).download(`Bao_cao_cuoi_ky_${pdfSafeFileName(semester)}.pdf`);
+  if(!ensurePdfMake())return;
+
+  const btn=[...document.querySelectorAll("button")].find(b=>b.getAttribute("onclick")==="downloadSemesterEndReportPDF()");
+  const oldText=btn?.textContent||"";
+  if(btn){btn.disabled=true;btn.textContent="Đang tạo PDF…"}
+
+  try{
+    // One scoped fresh read prevents stale/manual-sync data from breaking the report.
+    const syncWarnings=await refreshCurrentSemesterForPdf();
+    const cfg=state.semesters?.[semester]||{};
+    const snap=semesterSnapshot(semester);
+    const ranking=semesterMemberRanking(semester).slice(0,10);
+    const issues=healthIssues();
+    const response=await semesterEventResponseCountSafe();
+
+    const eventText=response.count===null
+      ? String(snap.events)
+      : `${snap.events} (${response.count} phản hồi)`;
+
+    const warningTexts=[
+      ...issues.filter(x=>x.level!=="good").map(x=>x.title).slice(0,20),
+      ...syncWarnings.map(x=>`Không tải mới được ${x}`),
+      ...(response.warnings.length?[`Không đếm được phản hồi của ${response.warnings.length} sự kiện; PDF vẫn dùng các dữ liệu còn lại.`]:[])
+    ];
+    if(!warningTexts.length)warningTexts.push("Không có cảnh báo dữ liệu đáng chú ý.");
+
+    const rankingBody=[["Hạng","Thành viên","Tham gia","Điểm"]];
+    if(ranking.length){
+      rankingBody.push(...ranking.map(r=>[
+        String(r.rank),
+        `${r.member.name||""} (${r.member.mssv||""})`,
+        `${r.stats.participated}/${r.stats.totalActivities}`,
+        String(r.stats.total)
+      ]));
+    }else{
+      rankingBody.push(["—","Chưa có dữ liệu thành viên","—","—"]);
+    }
+
+    const doc={
+      ...pdfBaseDoc(`Báo cáo cuối kỳ - ${cfg.name||semester}`),
+      content:[
+        ...pdfHeader(
+          `BÁO CÁO CUỐI KỲ — ${snap.name}`,
+          `${cfg.startDate||""}${cfg.startDate||cfg.endDate?" → ":""}${cfg.endDate||""} • Xuất lúc ${new Date().toLocaleString("vi-VN")}`
+        ),
+        {text:"Tổng quan",style:"h2"},
+        {table:{widths:["*","*","*"],body:[
+          ["Thành viên","Hoạt động","Sự kiện"],
+          [String(snap.members),String(snap.activities),eventText],
+          ["Đã đóng quỹ","Tỷ lệ tham gia TB","Điểm TB"],
+          [`${snap.paid}/${snap.members}`,`${snap.avgRate}%`,String(snap.avgScore)]
+        ]},layout:"lightHorizontalLines"},
+        {text:"Tài chính",style:"h2"},
+        {table:{widths:["*","*"],body:[
+          ["Số dư đầu kỳ",money(cfg.openingBalance||0)],
+          ["Tổng thu",money(snap.income)],
+          ["Tổng chi",money(snap.expense)],
+          ["Số dư cuối",money(snap.balance)]
+        ]},layout:"lightHorizontalLines"},
+        {text:"Top thành viên hoạt động",style:"h2"},
+        {table:{headerRows:1,widths:[35,"*",65,65],body:rankingBody},layout:"lightHorizontalLines"},
+        {text:"Cảnh báo dữ liệu",style:"h2"},
+        {ul:warningTexts}
+      ]
+    };
+
+    pdfMake.createPdf(doc).download(`Bao_cao_cuoi_ky_${pdfSafeFileName(semester)}.pdf`);
+    toast("Đã tạo báo cáo cuối kỳ PDF");
+  }catch(e){
+    console.error("semester PDF",e);
+    alert("Không xuất được PDF học kỳ: "+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText||"Báo cáo cuối kỳ PDF"}
+  }
 }
 
 function renderDashboard(){
@@ -5208,7 +5538,34 @@ function renderFinance(){
 }
 
 function financeSummaryFor(semKey=semester){const cfg=state.semesters?.[semKey]||{},ms=(state.members||[]).filter(m=>m.semester===semKey),tr=(state.transactions||[]).filter(t=>t.semester===semKey),paid=ms.filter(m=>m.fundPaid).length,fund=paid*Number(cfg.fee||0),manualIncome=tr.filter(t=>t.type==="income").reduce((a,t)=>a+Number(t.amount||0),0),expense=tr.filter(t=>t.type==="expense").reduce((a,t)=>a+Number(t.amount||0),0),income=fund+manualIncome,balance=Number(cfg.openingBalance||0)+income-expense;return {cfg,ms,tr,paid,fund,manualIncome,income,expense,balance}}
-function downloadFinanceReportPDF(){if(!ensurePdfMake())return;const x=financeSummaryFor(),tx=[...x.tr].sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));const body=[["Ngày","Loại","Nội dung","Số tiền"],...tx.map(t=>[t.date||"—",t.type==="income"?"Thu":"Chi",t.description||"",money(t.amount)])];const doc={...pdfBaseDoc(`Báo cáo tài chính - ${x.cfg.name||semester}`),content:[...pdfHeader(`BÁO CÁO TÀI CHÍNH — ${x.cfg.name||semester}`,`${x.cfg.startDate||""} → ${x.cfg.endDate||""}`),{text:"Tổng hợp",style:"h2"},{table:{widths:["*","*"],body:[["Số dư đầu kỳ",money(x.cfg.openingBalance||0)],["Thu quỹ thành viên",money(x.fund)],["Thu khác",money(x.manualIncome)],["Tổng thu",money(x.income)],["Tổng chi",money(x.expense)],["Số dư cuối",money(x.balance)],["Đã đóng quỹ",`${x.paid}/${x.ms.length}`]]},layout:"lightHorizontalLines"},{text:"Chi tiết giao dịch",style:"h2"},{table:{headerRows:1,widths:[65,42,"*",75],body},layout:"lightHorizontalLines"}]};pdfMake.createPdf(doc).download(`Bao_cao_tai_chinh_${pdfSafeFileName(semester)}.pdf`)}
+async function downloadFinanceReportPDF(){
+  if(!ensurePdfMake())return;
+  try{
+    await refreshCurrentSemesterForPdf();
+    const x=financeSummaryFor(),tx=[...x.tr].sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+    const body=[["Ngày","Loại","Nội dung","Số tiền"],...tx.map(t=>[t.date||"—",t.type==="income"?"Thu":"Chi",t.description||"",money(t.amount)])];
+    if(body.length===1)body.push(["—","—","Chưa có giao dịch","—"]);
+    const doc={...pdfBaseDoc(`Báo cáo tài chính - ${x.cfg.name||semester}`),content:[
+      ...pdfHeader(`BÁO CÁO TÀI CHÍNH — ${x.cfg.name||semester}`,`${x.cfg.startDate||""} → ${x.cfg.endDate||""}`),
+      {text:"Tổng hợp",style:"h2"},
+      {table:{widths:["*","*"],body:[
+        ["Số dư đầu kỳ",money(x.cfg.openingBalance||0)],
+        ["Thu quỹ thành viên",money(x.fund)],
+        ["Thu khác",money(x.manualIncome)],
+        ["Tổng thu",money(x.income)],
+        ["Tổng chi",money(x.expense)],
+        ["Số dư cuối",money(x.balance)],
+        ["Đã đóng quỹ",`${x.paid}/${x.ms.length}`]
+      ]},layout:"lightHorizontalLines"},
+      {text:"Chi tiết giao dịch",style:"h2"},
+      {table:{headerRows:1,widths:[65,42,"*",75],body},layout:"lightHorizontalLines"}
+    ]};
+    pdfMake.createPdf(doc).download(`Bao_cao_tai_chinh_${pdfSafeFileName(semester)}.pdf`);
+  }catch(e){
+    console.error("finance PDF",e);
+    alert("Không xuất được PDF tài chính: "+(e?.message||e));
+  }
+}
 $("#financePdfBtn").onclick=downloadFinanceReportPDF;
 
 $$("[data-addtx]").forEach(b=>b.onclick=()=>{if(canEditModule("finance"))openTx({id:"",semester,type:b.dataset.addtx,description:"",amount:0,date:"",proof:""})});
@@ -7328,19 +7685,17 @@ async function syncLookupSemester({silent=false}={}){
     const existing=await collectionRef.get();
     const newKeys=new Set(valid.map(m=>normalizeMssvKey(m.mssv)));
 
-    // Xóa hồ sơ không còn trong kỳ.
+    // Gộp delete/set theo batch để giảm round-trip mạng.
+    const lookupOps=[];
     for(const d of existing.docs){
-      if(!newKeys.has(d.id))await d.ref.delete();
+      if(!newKeys.has(d.id))lookupOps.push(batch=>batch.delete(d.ref));
     }
-
-    // Ghi toàn bộ hồ sơ hiện tại.
     for(const m of valid){
       const key=normalizeMssvKey(m.mssv);
-      await collectionRef.doc(key).set(
-        await buildLookupRecord(m,cfg),
-        {merge:false}
-      );
+      const record=await buildLookupRecord(m,cfg);
+      lookupOps.push(batch=>batch.set(collectionRef.doc(key),record,{merge:false}));
     }
+    if(lookupOps.length)await commitInChunks(lookupOps);
 
     // Metadata của đúng học kỳ.
     const metaPayload={
@@ -7409,12 +7764,41 @@ async function syncLookupSemester({silent=false}={}){
     return false;
   }
 }
+async function runAutoLookupSyncThrottled(){
+  const cfg=lookupConfig();
+  if(!cfg.enabled||!currentProfile||!["admin","superadmin"].includes(currentProfile.role))return false;
+  if(lookupAutoSyncInFlight){lookupAutoSyncPending=true;return false}
+
+  const minGap=8000;
+  const wait=Math.max(0,minGap-(Date.now()-lookupLastAutoSyncAt));
+  if(wait>0){
+    clearTimeout(lookupSyncTimer);
+    lookupSyncTimer=setTimeout(()=>runAutoLookupSyncThrottled(),wait);
+    return false;
+  }
+
+  lookupAutoSyncInFlight=true;
+  try{
+    const ok=await syncLookupSemester({silent:true});
+    if(ok)lookupLastAutoSyncAt=Date.now();
+    return ok;
+  }finally{
+    lookupAutoSyncInFlight=false;
+    if(lookupAutoSyncPending){
+      lookupAutoSyncPending=false;
+      scheduleAutoLookupSync(false);
+    }
+  }
+}
 function scheduleAutoLookupSync(immediate=false){
   clearTimeout(lookupSyncTimer);
   const cfg=lookupConfig();
   if(!cfg.enabled)return;
   if(!currentProfile||!["admin","superadmin"].includes(currentProfile.role))return;
-  lookupSyncTimer=setTimeout(()=>syncLookupSemester({silent:true}),immediate?80:650);
+
+  // Collapse bursts of realtime changes into one public lookup sync.
+  // Normal changes wait 2.5 s; explicit "immediate" paths wait 250 ms.
+  lookupSyncTimer=setTimeout(()=>runAutoLookupSyncThrottled(),immediate?250:2500);
 }
 
 $("#createPortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
