@@ -2303,7 +2303,7 @@ function lookupConfig(){
   return cfg;
 }
 
-let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
+let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,selectedDivisionId="",currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:"",schoolType:"",division:""};
 let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[];
@@ -3315,6 +3315,7 @@ async function runLoginStep(label,fn,{warn=true}={}){
 let loginBootstrapWarnings=[];
 
 function forceShowAuthorizedShell(){
+  if(typeof selectedDivisionId!=="string")selectedDivisionId="";
   document.body.classList.remove("auth-login");
   document.body.classList.add("auth-admin");
   $("#loginScreen")?.classList.add("hidden");
@@ -4719,6 +4720,7 @@ function divisionStats(id){
 }
 function renderDivisions(){
   const summary=$("#divisionSummary"),cards=$("#divisionCards"),detail=$("#divisionDetail");if(!summary||!cards||!detail)return;
+  if(typeof selectedDivisionId!=="string")selectedDivisionId="";
   ensureDivisionCatalogV64();
   const all=members(),uniCounts=universityDistribution(all);
   const unassigned=all.filter(m=>memberDivisionIds(m).length===0).length;

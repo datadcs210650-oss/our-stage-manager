@@ -1,56 +1,26 @@
-OUR STAGE CLUB MANAGER V66 — LOGIN ACCESS RECOVERY
+OUR STAGE CLUB MANAGER V67 — SELECTED DIVISION FIX
 
-FIXED
-The login flow no longer treats every post-login JavaScript / migration / collection-load
-failure as “Không thể kiểm tra quyền truy cập”.
+BUG FIXED
+When saving a member, the app called renderAll(), which also calls renderDivisions().
+renderDivisions() referenced `selectedDivisionId`, but V64-V66 never declared that variable.
 
-ROOT CAUSE IN V65
-validateAccess() wrapped ALL of these in one try/catch:
-- read users/{uid}
-- load clubState
-- initialize collections
-- load preferences
-- load members/finance/events
-- legacy member/division migration
-- render UI
-- suite/QR loaders
+This caused:
+ReferenceError: selectedDivisionId is not defined
 
-Therefore a migration or UI/data error after a successful authentication could throw and
-the app would incorrectly report an access-check error and sign the user out.
+and the save flow showed:
+“Không lưu được thành viên: selectedDivisionId is not defined”
 
-V66
-Authorization is now decided only by:
-1. Firebase Authentication user exists.
-2. users/{UID} document can be read.
-3. active === true.
-4. role is superadmin / admin / bcn.
+IMPORTANT
+The Firestore member write may already have succeeded before this UI ReferenceError occurred.
+V67 fixes the UI/runtime error so saving a member completes normally.
 
-After that, data/bootstrap operations are isolated:
-- A failed member migration cannot sign the user out.
-- A locked old semester cannot make the legacy migration block login.
-- Members / Finance / Events load independently.
-- A render error cannot sign an authorized user out.
-- The UI can open and shows a warning asking Admin to press Sync if a noncritical dataset fails.
-- Profile read has a short retry for transient Firestore/network failures.
-- Password login now uses password-specific Firebase error messages instead of Google error text.
+V67 CHANGES
+- Declares global `selectedDivisionId = ""` with the other UI state variables.
+- Adds a defensive type/reset guard in renderDivisions().
+- Adds a defensive reset when the authorized app shell is opened.
+- Keeps V66 login recovery, V65 attendance Excel scanning, V64 division recovery,
+  V63 university configuration, and existing security hardening.
 
-SECURITY
-This does NOT bypass authentication or Firestore authorization.
-A missing/disabled/invalid-role users/{UID} profile is still denied.
-Permission-denied when reading the user's own profile is still denied.
-
-FIRESTORE PROFILE REQUIRED
-users/{Firebase Auth UID}:
-- active: true
-- role: "superadmin", "admin", or "bcn"
-- permissions: map (for BCN)
-
-If the account still cannot enter after V66, the new error text identifies whether:
-- users/{UID} is missing,
-- active is not true,
-- role is invalid,
-- Firestore Rules deny the self-profile read.
-
-RULES
-V66 does not change Firestore Rules.
-If you published hardened V60 Rules, keep them.
+FIRESTORE RULES
+No Firestore Rules change is required.
+If hardened V60 Rules are already published, keep them.
