@@ -1,62 +1,58 @@
-OUR STAGE CLUB MANAGER V68 — PDF SYNC FIX + ECO REALTIME
+OUR STAGE CLUB MANAGER V69 — FAST QR + TRASH BULK + REOPEN QR
 
-PDF HỌC KỲ
-Fixed a real bug in the semester-end PDF:
-- the report referenced `cfg` without declaring it;
-- the report also depended on sequential event-response reads.
+1. QR CREATION SPEED
+Root cause of the visible ~5 second delay:
+the previous create flow waited for / competed with several extra tasks after Firestore write:
+- audit log write;
+- reloading the attendance portal list;
+- loading check-ins for many previous QR portals;
+- reading the newly-created QR document again before rendering it.
 
-V68:
-- defines the semester config correctly;
-- refreshes only the CURRENT semester before creating the PDF;
-- Members / Finance / Events refresh independently;
-- event response counts use Promise.allSettled, so one event permission/network error
-  no longer blocks the entire PDF;
-- an empty ranking or transaction table no longer produces an invalid PDF table;
-- PDF export is wrapped in its own error handler;
-- Finance PDF also performs a scoped current-semester refresh.
+V69:
+- reacts immediately with a “Đang tạo QR…” state;
+- performs only the required Firestore create before showing the real QR;
+- renders the QR directly from the already-confirmed local data;
+- does NOT re-read the same QR document;
+- audit logging runs in the background;
+- portal reconciliation runs later in the background;
+- QR panel renders first, then only the newest 5 portal check-in counts are hydrated.
 
-REALTIME IS BACK — ECO MODE
-Realtime Admin/BCN synchronization is re-enabled, but designed to limit Firestore load:
+2. REOPEN QR
+A closed or expired QR can be reopened while keeping:
+- the SAME QR image;
+- the SAME token/link;
+- previous check-in history.
 
-1. Current semester only
-Listeners use:
-- members where semester == current semester
-- financeTransactions where semester == current semester
-- eventPortals where semester == current semester
+Admin chooses a new start/end time.
+The public QR page already listens to the portal document and becomes usable again automatically.
 
-2. Permission-aware
-A BCN only opens listeners for modules they are allowed to view.
+Important:
+One MSSV is still limited to one submission per QR token.
+Reopening the same QR does not let the same MSSV submit a second time.
 
-3. Config is only one document
-clubState/main is one realtime document listener.
+3. TRASH BIN BULK DELETE
+Added:
+- row checkboxes;
+- Select all;
+- selected count;
+- Clear selection;
+- “Xóa vĩnh viễn đã chọn”.
 
-4. UI updates are debounced
-Many Firestore changes arriving together are rendered once after about 420 ms.
+Bulk permanent deletion uses Firestore batches and asks for confirmation.
 
-5. Hidden tabs pause after 90 seconds
-Short tab switches keep listeners to avoid paying another initial snapshot.
-If the tab stays hidden for 90 seconds, operational/config listeners stop.
-They reconnect when the user returns.
-The own-profile listener stays active so a disabled account can still be revoked.
+4. FIRESTORE RULES
+V69 INCLUDES firestore_rules_v69.rules because reopening the same QR requires a server-side
+Rule change. The rules also make the already-existing QR time editor valid server-side.
 
-6. QR submissions remain on-demand
-QR check-in response listeners are NOT kept permanently between all accounts.
-The QR panel still has a Refresh action.
+Publish:
+Firebase Console -> Firestore Database -> Rules -> replace current Rules with
+firestore_rules_v69.rules -> Publish.
 
-7. Public member lookup is throttled
-Realtime bursts are collapsed:
-- normal changes wait ~2.5 seconds;
-- at least 8 seconds between automatic full public-lookup syncs;
-- Firestore writes are committed in batches rather than one network request per member.
-
-MANUAL SYNC
-The ↻ Sync button remains as a fallback.
-Manual refresh now reads only the current semester instead of re-reading all semesters.
-
-SECURITY
-- Existing V59/V67 hardening remains.
-- Realtime queries are permission-aware.
-- No new public collection access is added.
-- No eval/new Function.
-- Firestore Rules are unchanged.
-If hardened V60 Rules are already published, keep them.
+5. SECURITY
+- Reopen/edit QR still requires editAttendance permission.
+- QR semester cannot be changed.
+- Semester lock is enforced.
+- Reopen requires valid timestamp range, server timestamp and authenticated UID.
+- Public users gain no new read/write permissions.
+- Trash bulk delete remains Admin/Super Admin only through existing rules.
+- Existing V59/V68 security headers and dependency hardening are preserved.

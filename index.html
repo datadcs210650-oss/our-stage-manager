@@ -1640,6 +1640,41 @@ img[src$="logo-ui-centered.png"]{
 }
 .manual-sync-status[title]{cursor:help}
 
+
+/* ==========================================================
+   V69 FAST QR / TRASH BULK
+   ========================================================== */
+.qr-create-progress{
+  min-height:150px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  padding:22px;
+  border:1px solid #e0e5e8;
+  border-radius:14px;
+  background:#fafbfc;
+}
+.qr-create-spinner{
+  width:34px;height:34px;border-radius:50%;
+  border:4px solid #eadfe3;border-top-color:#9e3555;
+  animation:v69QrSpin .75s linear infinite;
+}
+@keyframes v69QrSpin{to{transform:rotate(360deg)}}
+.trash-bulk-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:0 0 12px;padding:10px 12px;border:1px solid #e2e6e9;
+  border-radius:12px;background:#fff;
+}
+.trash-bulk-bar label{display:flex;align-items:center;gap:7px;font-size:9px;font-weight:850}
+.trash-bulk-bar span{margin-right:auto;font-size:9px}
+.trash-item{display:grid!important;grid-template-columns:30px minmax(0,1fr) auto!important;align-items:center!important}
+.trash-select-cell{display:flex;align-items:center;justify-content:center}
+@media(max-width:680px){
+  .trash-item{grid-template-columns:28px minmax(0,1fr)!important}
+  .trash-actions{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+}
+
 </style>
 <style>
 /* ==========================================================
@@ -1846,9 +1881,9 @@ img[src$="logo-ui-centered.png"]{
             <h3>QR điểm danh & lượt gửi</h3>
             <p>Dữ liệu quản trị chính được đồng bộ real-time theo đúng học kỳ đang mở. Riêng lượt gửi QR vẫn tải khi cần để tránh phát sinh quá nhiều listener Firestore.</p>
           </div>
-          <div class="qr-live-head-actions"><button class="secondary" type="button" onclick="watchAttendancePortals(true)">↻ Làm mới</button>
+          <div class="qr-live-head-actions">
             <span id="attendancePendingBadge" class="status-badge">0 chờ duyệt</span>
-            <button class="secondary" onclick="watchAttendancePortals(true)">Làm mới</button>
+            <button class="secondary" type="button" onclick="watchAttendancePortals(true)">↻ Làm mới</button>
           </div>
         </div>
         <div id="attendancePortalLiveList" class="qr-portal-list"><div class="empty">Đang đồng bộ QR điểm danh…</div></div>
@@ -2105,6 +2140,12 @@ img[src$="logo-ui-centered.png"]{
 
     <section id="trash" class="hidden">
       <div class="section-title"><div><div class="eyebrow">AN TOÀN DỮ LIỆU</div><h2>Thùng rác</h2><p class="small-help">Dữ liệu đã xóa có thể khôi phục trước khi xóa vĩnh viễn. Mốc đề xuất: 30 ngày.</p></div><button class="secondary" onclick="loadTrashBin()">Làm mới</button></div>
+      <div id="trashBulkBar" class="trash-bulk-bar hidden">
+        <label><input id="trashSelectAll" type="checkbox" onchange="toggleAllTrashSelection(this.checked)"> Chọn tất cả</label>
+        <span>Đã chọn <strong id="trashSelectedCount">0</strong></span>
+        <button class="secondary" type="button" onclick="clearTrashSelection()">Bỏ chọn</button>
+        <button class="danger" type="button" onclick="purgeSelectedTrash()">Xóa vĩnh viễn đã chọn</button>
+      </div>
       <div id="trashList" class="trash-list"></div>
     </section>
 
@@ -2316,7 +2357,7 @@ function lookupConfig(){
 let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,selectedDivisionId="",currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:"",schoolType:"",division:""};
-let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[];
+let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[],selectedTrashIds=new Set();
 let notificationUnsub=null,approvalUnsub=null,auditUnsub=null,trashUnsub=null;
 let attendancePortalsUnsub=null,attendancePortalRows=[],attendanceCheckinRowsByPortal={},attendanceCheckinUnsubs=new Map();
 let qrCurrentPortal=null,checkinUnsub=null;
@@ -8147,14 +8188,120 @@ async function loadImportHistory(){try{const s=await fbDb.collection("importHist
 function renderImportHistory(){const root=$("#importHistoryList");if(!root)return;root.innerHTML=(importHistoryRows||[]).map(x=>`<div class="audit-item"><div><h4>${esc(x.type||"Import")} — ${esc(x.fileName||"Không rõ file")}</h4><p>${dateTime(x.createdAt)} • ${esc(x.actorName||"")} • Tổng ${x.total||0} • Thêm ${x.added||0} • Cập nhật ${x.updated||0} • Bỏ qua ${x.skipped||0}</p><p>${esc(x.details||"")}</p></div></div>`).join("")||`<div class="empty">Chưa có lịch sử import.</div>`}
 function showAuditTab(tab){$("#auditPanel").classList.toggle("hidden",tab!=="audit");$("#importHistoryPanel").classList.toggle("hidden",tab!=="imports");$("#auditTabBtn").classList.toggle("active",tab==="audit");$("#importTabBtn").classList.toggle("active",tab==="imports")}
 async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(!confirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore"){if(!ensureActivityColumnUnlocked(u.itemId,a.semester||semester))return;await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});}else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return alert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){alert("Không hoàn tác được: "+(e.message||e))}}
-async function loadTrashBin(){if(!canEditClub())return;try{const s=await fbDb.collection("trashBin").where("semester","==",semester).limit(200).get();trashRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");renderTrashBin()}catch(e){console.warn(e)}}
-function renderTrashBin(){const root=$("#trashList");if(!root)return;root.innerHTML=(trashRows||[]).map(t=>`<div class="trash-item"><div class="trash-item-main"><h4>${esc(trashTypeLabel(t.type))}: ${esc(t.meta?.label||t.data?.name||t.data?.description||t.sourceId||"")}</h4><p>Xóa bởi ${esc(t.deletedByName||"")} • ${dateTime(t.deletedAt)} • Hết hạn ${dateTime(t.expiresAt)}</p></div><div class="trash-actions"><button class="secondary" onclick="restoreTrash('${t.id}')">Khôi phục</button><button class="danger" onclick="purgeTrash('${t.id}')">Xóa vĩnh viễn</button></div></div>`).join("")||`<div class="empty">Thùng rác trống.</div>`}
+async function loadTrashBin(){
+  if(!canEditClub())return;
+  try{
+    const s=await fbDb.collection("trashBin").where("semester","==",semester).limit(200).get();
+    trashRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"deletedAt");
+    selectedTrashIds.clear();
+    renderTrashBin();
+  }catch(e){console.warn(e)}
+}
+function updateTrashBulkBar(){
+  const bar=$("#trashBulkBar"),count=$("#trashSelectedCount"),all=$("#trashSelectAll");
+  if(!bar)return;
+  const valid=new Set((trashRows||[]).map(t=>t.id));
+  selectedTrashIds=new Set([...selectedTrashIds].filter(id=>valid.has(id)));
+  if(count)count.textContent=String(selectedTrashIds.size);
+  bar.classList.toggle("hidden",!(trashRows||[]).length);
+  if(all){
+    all.checked=trashRows.length>0&&selectedTrashIds.size===trashRows.length;
+    all.indeterminate=selectedTrashIds.size>0&&selectedTrashIds.size<trashRows.length;
+  }
+}
+function toggleTrashSelection(id,checked){
+  if(checked)selectedTrashIds.add(id);else selectedTrashIds.delete(id);
+  updateTrashBulkBar();
+}
+function toggleAllTrashSelection(checked){
+  selectedTrashIds.clear();
+  if(checked)(trashRows||[]).forEach(t=>selectedTrashIds.add(t.id));
+  renderTrashBin();
+}
+function clearTrashSelection(){
+  selectedTrashIds.clear();
+  renderTrashBin();
+}
+function renderTrashBin(){
+  const root=$("#trashList");if(!root)return;
+  root.innerHTML=(trashRows||[]).map(t=>`<div class="trash-item">
+    <label class="trash-select-cell"><input type="checkbox" class="trash-row-check" ${selectedTrashIds.has(t.id)?"checked":""} onchange="toggleTrashSelection('${esc(t.id)}',this.checked)"></label>
+    <div class="trash-item-main">
+      <h4>${esc(trashTypeLabel(t.type))}: ${esc(t.meta?.label||t.data?.name||t.data?.description||t.sourceId||"")}</h4>
+      <p>Xóa bởi ${esc(t.deletedByName||"")} • ${dateTime(t.deletedAt)} • Hết hạn ${dateTime(t.expiresAt)}</p>
+    </div>
+    <div class="trash-actions">
+      <button class="secondary" onclick="restoreTrash('${t.id}')">Khôi phục</button>
+      <button class="danger" onclick="purgeTrash('${t.id}')">Xóa vĩnh viễn</button>
+    </div>
+  </div>`).join("")||`<div class="empty">Thùng rác trống.</div>`;
+  updateTrashBulkBar();
+}
 function trashTypeLabel(t){return ({member:"Thành viên",finance:"Giao dịch",event:"Sự kiện",eventSubmission:"Phản hồi sự kiện"})[t]||t}
-async function restoreTrash(id){const t=trashRows.find(x=>x.id===id);if(!t)return;if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");if(!confirm("Khôi phục dữ liệu này?"))return;try{if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});else if(t.type==="eventSubmission"){
-  await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});
-  const ev=eventFor(t.meta.eventId);if(ev?.specialType==="continuation"){const key=continuationSubmissionMssv(ev,{id:t.sourceId,...t.data});if(key)await reconcileContinuationMember(ev,key,{silent:true})}
-}else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");await fbDb.collection("trashBin").doc(id).delete();await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});toast("Đã khôi phục")}catch(e){alert("Không khôi phục được: "+(e.message||e))}}
-async function purgeTrash(id){if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;try{await fbDb.collection("trashBin").doc(id).delete();toast("Đã xóa vĩnh viễn")}catch(e){alert(e.message||e)}}
+async function restoreTrash(id){
+  const t=trashRows.find(x=>x.id===id);if(!t)return;
+  if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");
+  if(!confirm("Khôi phục dữ liệu này?"))return;
+  try{
+    if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});
+    else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});
+    else if(t.type==="event")await fbDb.collection("eventPortals").doc(t.sourceId).set(t.data,{merge:false});
+    else if(t.type==="eventSubmission"){
+      await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});
+      const ev=eventFor(t.meta.eventId);
+      if(ev?.specialType==="continuation"){
+        const key=continuationSubmissionMssv(ev,{id:t.sourceId,...t.data});
+        if(key)await reconcileContinuationMember(ev,key,{silent:true});
+      }
+    }else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");
+
+    await fbDb.collection("trashBin").doc(id).delete();
+    trashRows=trashRows.filter(x=>x.id!==id);
+    selectedTrashIds.delete(id);
+    renderTrashBin();
+
+    await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});
+    toast("Đã khôi phục");
+  }catch(e){alert("Không khôi phục được: "+(e.message||e))}
+}
+async function purgeTrash(id){
+  if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;
+  try{
+    await fbDb.collection("trashBin").doc(id).delete();
+    trashRows=trashRows.filter(x=>x.id!==id);
+    selectedTrashIds.delete(id);
+    renderTrashBin();
+    toast("Đã xóa vĩnh viễn");
+  }catch(e){alert(e.message||e)}
+}
+async function purgeSelectedTrash(){
+  if(!canEditClub())return;
+  const ids=[...selectedTrashIds].filter(id=>trashRows.some(t=>t.id===id));
+  if(!ids.length)return alert("Hãy chọn ít nhất một mục trong Thùng rác.");
+  if(!confirm(`Xóa vĩnh viễn ${ids.length} mục đã chọn?\n\nThao tác này không thể hoàn tác.`))return;
+
+  try{
+    await commitInChunks(ids.map(id=>batch=>batch.delete(fbDb.collection("trashBin").doc(id))));
+    const deletedRows=trashRows.filter(t=>ids.includes(t.id));
+    trashRows=trashRows.filter(t=>!ids.includes(t.id));
+    selectedTrashIds.clear();
+    renderTrashBin();
+
+    Promise.resolve().then(()=>logAudit({
+      action:"bulk-purge-trash",
+      module:"trash",
+      entityType:"trash",
+      entityId:"bulk",
+      summary:`Xóa vĩnh viễn ${ids.length} mục khỏi Thùng rác`,
+      before:{count:ids.length,types:[...new Set(deletedRows.map(x=>x.type))]}
+    })).catch(e=>console.warn("trash bulk audit",e));
+
+    toast(`Đã xóa vĩnh viễn ${ids.length} mục`);
+  }catch(e){
+    console.error("purgeSelectedTrash",e);
+    alert("Không xóa được các mục đã chọn: "+(e.message||e));
+  }
+}
 async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(180).get();approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
 async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return alert("Yêu cầu này không thuộc học kỳ đang chọn.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
@@ -8274,13 +8421,33 @@ function attendancePortalLink(token,semKey=""){
 function attendancePortalStatus(p){const now=Date.now(),start=p.startAt?.toMillis?.()||0,end=p.endAt?.toMillis?.()||0;if(p.open!==true)return {label:"Đã đóng",className:"rejected"};if(start&&now<start)return {label:"Chưa bắt đầu",className:""};if(end&&now>end)return {label:"Hết hạn",className:"rejected"};return {label:"Đang mở",className:"approved"}}
 function stopAttendancePortalWatchers(){try{attendancePortalsUnsub&&attendancePortalsUnsub()}catch{}attendancePortalsUnsub=null;for(const [,fn] of attendanceCheckinUnsubs){try{fn&&fn()}catch{}}attendanceCheckinUnsubs.clear();attendancePortalRows=[];attendanceCheckinRowsByPortal={}}
 async function syncAttendanceCheckinWatchers(rows){
-  attendanceCheckinRowsByPortal={};attendanceCheckinUnsubs.clear();
-  await Promise.all((rows||[]).slice(0,15).map(async p=>{const token=p.token||p.id;try{const s=await fbDb.collection("attendancePortals").doc(token).collection("checkins").get();attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0))}catch(e){console.warn("checkins once",token,e)}}));
+  const targets=(rows||[]).slice(0,5);
+  if(!targets.length)return;
+  await Promise.all(targets.map(async p=>{
+    const token=p.token||p.id;
+    try{
+      const s=await fbDb.collection("attendancePortals").doc(token).collection("checkins").get();
+      attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    }catch(e){console.warn("checkins once",token,e)}
+  }));
+  renderAttendancePortalPanel();
 }
 async function watchAttendancePortals(force=false){
   if(force)stopAttendancePortalWatchers();
   if(!currentFirebaseUser||!hasViewPermission("viewAttendance")){renderAttendancePortalPanel();return}
-  try{const s=await fbDb.collection("attendancePortals").where("semester","==",semester).limit(100).get();attendancePortalRows=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));await syncAttendanceCheckinWatchers(attendancePortalRows);renderAttendancePortalPanel()}catch(e){console.error("attendance portals once",e);const root=$("#attendancePortalLiveList");if(root)root.innerHTML=`<div class="empty">Không tải được QR điểm danh: ${esc(e.message||e)}</div>`}
+  try{
+    const s=await fbDb.collection("attendancePortals").where("semester","==",semester).limit(100).get();
+    attendancePortalRows=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+
+    // Render portal cards immediately. Check-in counts are hydrated in the background
+    // for only the newest 5 portals to keep Firestore reads and UI latency low.
+    renderAttendancePortalPanel();
+    Promise.resolve().then(()=>syncAttendanceCheckinWatchers(attendancePortalRows)).catch(e=>console.warn("QR count preload",e));
+  }catch(e){
+    console.error("attendance portals once",e);
+    const root=$("#attendancePortalLiveList");
+    if(root)root.innerHTML=`<div class="empty">Không tải được QR điểm danh: ${esc(e.message||e)}</div>`;
+  }
 }
 function renderAttendancePortalPanel(){
   const root=$("#attendancePortalLiveList"),badge=$("#attendancePendingBadge");if(!root)return;
@@ -8288,18 +8455,90 @@ function renderAttendancePortalPanel(){
   for(const p of rows)totalPending+=(attendanceCheckinRowsByPortal[p.token||p.id]||[]).filter(x=>x.status==="pending").length;
   if(badge)badge.textContent=`${totalPending} chờ duyệt`;
   if(!rows.length){root.innerHTML=`<div class="empty">Chưa có QR điểm danh nào trong học kỳ này.</div>`;return}
-  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button><button class="secondary" onclick="downloadAttendanceQr('${esc(token)}')">Tải QR</button>${canEdit?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${esc(token)}')">Sửa thời gian</button>`:""}${canEdit&&p.open===true?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");  if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboardCommandCenter();
+  root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button><button class="secondary" onclick="downloadAttendanceQr('${esc(token)}')">Tải QR</button>${canEdit?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${esc(token)}')">Sửa thời gian</button>`:""}${canEdit&&(p.open!==true||attendancePortalStatus(p).label==="Hết hạn")?`<button class="primary" onclick="openReopenAttendancePortal('${esc(token)}')">Mở lại QR</button>`:""}${canEdit&&p.open===true&&attendancePortalStatus(p).label!=="Hết hạn"?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");  if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboardCommandCenter();
 }
 function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;if(!ensureActivityColumnUnlocked(it.id))return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
-async function createAttendancePortal(gi,ii){if(!canEditModule("attendance"))return ensureSemesterEditable();const g=sem().groups[gi],it=g?.items[ii];if(!it)return;if(!ensureActivityColumnUnlocked(it.id))return;const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");const token=crypto.randomUUID?crypto.randomUUID():uid()+uid(),data={token,semester,semesterCode:semester,semesterName:sem().name||semester,groupId:g.id,itemId:it.id,itemName:it.name,groupName:g.name,points:Number(it.points||0),mode:activityMode(g,it),startAt:firebase.firestore.Timestamp.fromDate(start),endAt:firebase.firestore.Timestamp.fromDate(end),instruction:$("#qrInstruction").value.trim(),open:true,createdBy:currentFirebaseUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};try{await fbDb.collection("attendancePortals").doc(token).set(data);qrCurrentPortal={...data,token};toast("Đã tạo QR điểm danh");await logAudit({action:"create-qr",module:"attendance",summary:`Tạo QR điểm danh • ${it.name}`});watchAttendancePortals(true);showAttendancePortal(token)}catch(e){alert("Không tạo được QR: "+(e.message||e))}}
+function showQrCreateProgress(itemName){
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(560px,100%)">
+    <div class="modal-head"><div><h2>Đang tạo QR điểm danh…</h2><div class="small-help">${esc(itemName||"Hoạt động")}</div></div></div>
+    <div class="qr-create-progress">
+      <div class="qr-create-spinner" aria-hidden="true"></div>
+      <div><b>Đang lưu mã QR lên hệ thống</b><div class="small-help">Cửa sổ QR sẽ hiện ngay khi Firestore xác nhận.</div></div>
+    </div>
+  </div></div>`;
+  $("#modalWrap").classList.remove("hidden");
+}
+function upsertLocalAttendancePortal(portal){
+  const token=portal.token||portal.id;
+  const rows=(attendancePortalRows||[]).filter(p=>(p.token||p.id)!==token);
+  attendancePortalRows=[portal,...rows].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  if(!attendanceCheckinRowsByPortal[token])attendanceCheckinRowsByPortal[token]=[];
+  renderAttendancePortalPanel();
+}
+async function createAttendancePortal(gi,ii){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+  const g=sem().groups[gi],it=g?.items[ii];
+  if(!it)return;
+  if(!ensureActivityColumnUnlocked(it.id))return;
 
-function dateTimeLocalValue(ts){
+  const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);
+  if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");
+
+  const instruction=$("#qrInstruction").value.trim();
+  const token=crypto.randomUUID?crypto.randomUUID():uid()+uid();
+  const ref=fbDb.collection("attendancePortals").doc(token);
+  const createdAtLocal=firebase.firestore.Timestamp.now();
+  const writeData={
+    token,
+    semester,
+    semesterCode:semester,
+    semesterName:sem().name||semester,
+    groupId:g.id,
+    itemId:it.id,
+    itemName:it.name,
+    groupName:g.name,
+    points:Number(it.points||0),
+    mode:activityMode(g,it),
+    startAt:firebase.firestore.Timestamp.fromDate(start),
+    endAt:firebase.firestore.Timestamp.fromDate(end),
+    instruction,
+    open:true,
+    createdBy:currentFirebaseUser.uid,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  // Immediate visual feedback: the old flow waited for audit + portal list + extra GET.
+  showQrCreateProgress(it.name);
+
   try{
-    const d=ts?.toDate?ts.toDate():new Date(ts);
-    if(Number.isNaN(d.getTime()))return "";
-    const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
-    return local.toISOString().slice(0,16);
-  }catch{return ""}
+    await ref.set(writeData);
+
+    const localPortal={...writeData,id:token,token,createdAt:createdAtLocal};
+    qrCurrentPortal=localPortal;
+    upsertLocalAttendancePortal(localPortal);
+
+    // Show QR directly from local confirmed data; do not GET the same document again.
+    renderAttendancePortalModal(localPortal);
+    toast("Đã tạo QR điểm danh");
+
+    // Noncritical work must not delay the QR appearing.
+    Promise.resolve().then(()=>logAudit({
+      action:"create-qr",
+      module:"attendance",
+      entityType:"attendancePortal",
+      entityId:token,
+      summary:`Tạo QR điểm danh • ${it.name}`
+    })).catch(e=>console.warn("QR audit",e));
+
+    // Quiet background reconciliation, without loading every old check-in.
+    setTimeout(()=>{
+      Promise.resolve().then(()=>watchAttendancePortals(false)).catch(e=>console.warn("QR background refresh",e));
+    },350);
+  }catch(e){
+    console.error("createAttendancePortal",e);
+    closeModal();
+    alert("Không tạo được QR: "+(e.message||e));
+  }
 }
 async function openAttendancePortalTimeEditor(token){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
@@ -8505,50 +8744,90 @@ function updateOpenQrModalStatus(portal){
   const st=attendancePortalStatus(portal);
   $("#qrModalStatus").textContent=st.label;
   $("#qrModalStatus").className=`qr-mini-badge ${st.className||""}`;
-  const closeBtn=$("#qrModalCloseBtn");if(closeBtn)closeBtn.classList.toggle("hidden",portal.open!==true);
+  const canClose=portal.open===true&&st.label!=="Hết hạn";
+  const closeBtn=$("#qrModalCloseBtn");if(closeBtn)closeBtn.classList.toggle("hidden",!canClose);
+  const reopenBtn=$("#qrModalReopenBtn");if(reopenBtn)reopenBtn.classList.toggle("hidden",canClose);
 }
 let qrPortalDocUnsub=null;
+function renderAttendancePortalModal(portal){
+  if(!portal)return;
+  const token=portal.token||portal.id;
+  qrCurrentPortal={...portal,id:portal.id||token,token};
+
+  const semKey=qrCurrentPortal.semester||"";
+  const link=attendancePortalLink(token,semKey);
+  const st=attendancePortalStatus(qrCurrentPortal);
+  const canEdit=canEditModule("attendance");
+  const canClose=qrCurrentPortal.open===true&&st.label!=="Hết hạn";
+
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(900px,100%)">
+    <div class="modal-head">
+      <div>
+        <h2>QR điểm danh • <span id="qrModalStatus" class="qr-mini-badge ${st.className||""}">${esc(st.label)}</span></h2>
+        <div class="small-help">${esc(qrCurrentPortal.itemName||"")} • <span class="qr-semester-badge">${esc(qrCurrentPortal.semesterName||state.semesters?.[semKey]?.name||semKey||"Không rõ kỳ")}</span></div>
+      </div>
+      <button onclick="closeAttendancePortalModal()">×</button>
+    </div>
+    <div class="qr-box">
+      <div class="qr-canvas-wrap"><div id="attendanceQrCanvas" aria-label="Mã QR điểm danh"></div></div>
+      <div class="qr-details">
+        <div class="qr-link-row">
+          <label>Link công khai<input value="${esc(link)}" readonly></label>
+          <button class="secondary" onclick="window.open('${esc(link)}','_blank','noopener,noreferrer')">Mở link</button>
+        </div>
+        <div class="small-help"><b>Học kỳ:</b> ${esc(qrCurrentPortal.semesterName||state.semesters?.[semKey]?.name||semKey||"—")} • <b>Mã kỳ:</b> ${esc(semKey||"—")}</div>
+        <div class="small-help">Hết hạn: ${dateTime(qrCurrentPortal.endAt)}</div>
+        <div>
+          <button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button>
+          <button class="secondary" onclick="downloadAttendanceQr('${token}')">Tải QR PNG</button>
+          ${canEdit?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${token}')">Sửa thời gian</button>`:""}
+          ${canEdit?`<button id="qrModalReopenBtn" class="primary ${canClose?"hidden":""}" onclick="openReopenAttendancePortal('${token}')">Mở lại QR</button>`:""}
+          ${canEdit?`<button id="qrModalCloseBtn" class="danger ${canClose?"":"hidden"}" onclick="closeAttendancePortal('${token}',true)">Đóng QR</button>`:""}
+          ${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${token}',true)">Xóa QR</button>`:""}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <h3>Lượt gửi</h3>
+          <button class="secondary" onclick="watchAttendanceCheckins('${token}')">↻ Làm mới</button>
+        </div>
+        <div id="checkinList">${attendanceCheckinRowsByPortal[token]?.length?"" : "Đang tải…"}</div>
+      </div>
+    </div>
+  </div></div>`;
+
+  $("#modalWrap").classList.remove("hidden");
+  renderAttendanceQr(link);
+  if(attendanceCheckinRowsByPortal[token]?.length)renderAttendanceCheckinList(token);
+  Promise.resolve().then(()=>watchAttendanceCheckins(token)).catch(e=>console.warn("checkin modal refresh",e));
+
+  if(qrPortalDocUnsub){try{qrPortalDocUnsub()}catch{}qrPortalDocUnsub=null}
+  updateOpenQrModalStatus(qrCurrentPortal);
+}
 async function showAttendancePortal(token){
   try{
+    const cached=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token);
+    if(cached){
+      // Instant open from already-loaded data.
+      renderAttendancePortalModal(cached);
+
+      // Background freshness check, no blocking spinner.
+      Promise.resolve().then(async()=>{
+        try{
+          const s=await fbDb.collection("attendancePortals").doc(token).get();
+          if(!s.exists)return;
+          const fresh={id:s.id,...s.data(),token};
+          upsertLocalAttendancePortal(fresh);
+          if(qrCurrentPortal?.token===token){
+            qrCurrentPortal=fresh;
+            updateOpenQrModalStatus(fresh);
+          }
+        }catch(e){console.warn("QR background get",e)}
+      });
+      return;
+    }
+
     const s=await fbDb.collection("attendancePortals").doc(token).get();
     if(!s.exists)return alert("QR không còn tồn tại.");
-    qrCurrentPortal={id:s.id,...s.data(),token};
-    const semKey=qrCurrentPortal.semester||"",link=attendancePortalLink(token,semKey),st=attendancePortalStatus(qrCurrentPortal);
-    $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(900px,100%)">
-      <div class="modal-head">
-        <div>
-          <h2>QR điểm danh • <span id="qrModalStatus" class="qr-mini-badge ${st.className||""}">${esc(st.label)}</span></h2>
-          <div class="small-help">${esc(qrCurrentPortal.itemName||"")} • <span class="qr-semester-badge">${esc(qrCurrentPortal.semesterName||state.semesters?.[semKey]?.name||semKey||"Không rõ kỳ")}</span></div>
-        </div>
-        <button onclick="closeAttendancePortalModal()">×</button>
-      </div>
-      <div class="qr-box">
-        <div class="qr-canvas-wrap"><div id="attendanceQrCanvas" aria-label="Mã QR điểm danh"></div></div>
-        <div class="qr-details">
-          <div class="qr-link-row">
-            <label>Link công khai<input value="${esc(link)}" readonly></label>
-            <button class="secondary" onclick="window.open('${esc(link)}','_blank','noopener,noreferrer')">Mở link</button>
-          </div>
-          <div class="small-help"><b>Học kỳ:</b> ${esc(qrCurrentPortal.semesterName||state.semesters?.[semKey]?.name||semKey||"—")} • <b>Mã kỳ:</b> ${esc(semKey||"—")}</div>
-          <div class="small-help">Hết hạn: ${dateTime(qrCurrentPortal.endAt)}</div>
-          <div>
-            <button class="secondary" onclick="copyText('${esc(link)}')">Sao chép link</button>
-            <button class="secondary" onclick="downloadAttendanceQr('${token}')">Tải QR PNG</button>
-            ${canEditModule("attendance")?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${token}')">Sửa thời gian</button>`:""}
-            ${canEditModule("attendance")&&qrCurrentPortal.open===true?`<button id="qrModalCloseBtn" class="danger" onclick="closeAttendancePortal('${token}',true)">Đóng QR</button>`:""}
-            ${canEditModule("attendance")?`<button class="danger" onclick="deleteAttendancePortal('${token}',true)">Xóa QR</button>`:""}
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3>Lượt gửi</h3><button class="secondary" onclick="watchAttendanceCheckins('${token}')">↻ Làm mới</button></div>
-          <div id="checkinList">Đang tải…</div>
-        </div>
-      </div>
-    </div></div>`;
-    $("#modalWrap").classList.remove("hidden");
-    renderAttendanceQr(link);
-    watchAttendanceCheckins(token);
-
-    if(qrPortalDocUnsub){try{qrPortalDocUnsub()}catch{}qrPortalDocUnsub=null}
-    updateOpenQrModalStatus(qrCurrentPortal);
+    renderAttendancePortalModal({id:s.id,...s.data(),token});
   }catch(e){
     console.error(e);
     alert("Không mở được QR: "+(e.message||e));
@@ -8565,18 +8844,144 @@ async function watchAttendanceCheckins(token){
   try{const s=await fbDb.collection("attendancePortals").doc(token).collection("checkins").get();attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));renderAttendanceCheckinList(token);renderAttendancePortalPanel()}catch(e){console.error("checkin once",e);const root=$("#checkinList");if(root)root.innerHTML=`<div class="empty">Không tải được lượt gửi: ${esc(e.message||e)}</div>`}
 }
 async function approveCheckin(token,id,approve){if(!canEditModule("attendance"))return ensureSemesterEditable();const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id),s=await ref.get();if(!s.exists)return;const r=s.data(),portalSnap=await fbDb.collection("attendancePortals").doc(token).get();if(!portalSnap.exists)return alert("QR không tồn tại.");const portal=portalSnap.data();if(semesterLocked(portal.semester))return alert("Học kỳ của QR này đang bị khóa. Hãy mở khóa trong Thiết lập trước.");if(approve&&!ensureActivityColumnUnlocked(portal.itemId,portal.semester))return;if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeText(x.mssv)===normalizeText(r.mssv));if(!m)return alert("Không tìm thấy MSSV trong học kỳ này.");const value=portal.mode==="checkbox"?true:Number(portal.points||0);await fbDb.collection("members").doc(m.id).update({[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});await ref.update({status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});await logAudit({action:"qr-attendance",module:"attendance",summary:`Duyệt QR điểm danh ${m.name} • ${portal.itemName}`,entityId:m.id});toast("Đã duyệt và cộng điểm")}else{await ref.update({status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});toast("Đã từ chối lượt điểm danh")}}
+function localDateTimeInputValue(date){
+  const d=date instanceof Date?date:new Date(date);
+  const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,16);
+}
+async function openReopenAttendancePortal(token){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+
+  let portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token)
+    || (qrCurrentPortal?.token===token?qrCurrentPortal:null);
+
+  if(!portal){
+    try{
+      const snap=await fbDb.collection("attendancePortals").doc(token).get();
+      if(!snap.exists)return alert("QR không còn tồn tại.");
+      portal={id:snap.id,...snap.data(),token};
+    }catch(e){
+      return alert("Không tải được QR: "+(e.message||e));
+    }
+  }
+
+  if(portal.semester!==semester)return alert("QR này thuộc học kỳ khác.");
+  if(semesterLocked(portal.semester))return alert("Học kỳ đang bị khóa.");
+
+  const now=new Date();
+  const end=new Date(now.getTime()+2*60*60*1000);
+
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(620px,100%)">
+    <div class="modal-head">
+      <div><h2>Mở lại QR điểm danh</h2><div class="small-help">${esc(portal.itemName||"Điểm danh")} • giữ nguyên mã QR và link hiện tại</div></div>
+      <button onclick="closeModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <label>Bắt đầu lại<input id="reopenQrStart" type="datetime-local" value="${localDateTimeInputValue(now)}"></label>
+      <label>Kết thúc<input id="reopenQrEnd" type="datetime-local" value="${localDateTimeInputValue(end)}"></label>
+    </div>
+    <div class="qr-time-editor-note">
+      Mã QR cũ và link cũ được giữ nguyên. Các lượt gửi trước đây cũng được giữ lại.
+      MSSV đã từng gửi với QR này vẫn không thể gửi lần hai vì hệ thống giữ quy tắc một MSSV / một QR.
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="closeModal()">Hủy</button>
+      <button class="primary" onclick="reopenAttendancePortal('${esc(token)}')">Mở lại QR</button>
+    </div>
+  </div></div>`;
+  $("#modalWrap").classList.remove("hidden");
+}
+async function reopenAttendancePortal(token){
+  if(!canEditModule("attendance"))return ensureSemesterEditable();
+
+  const start=new Date($("#reopenQrStart")?.value||"");
+  const end=new Date($("#reopenQrEnd")?.value||"");
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return alert("Vui lòng nhập đầy đủ thời gian.");
+  if(end<=start)return alert("Thời gian kết thúc phải sau thời gian bắt đầu.");
+
+  const portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token)
+    || (qrCurrentPortal?.token===token?qrCurrentPortal:null);
+  if(portal?.semester&&portal.semester!==semester)return alert("QR này không thuộc học kỳ đang chọn.");
+  if(portal?.semester&&semesterLocked(portal.semester))return alert("Học kỳ đang bị khóa.");
+
+  const ref=fbDb.collection("attendancePortals").doc(token);
+  try{
+    const update={
+      open:true,
+      startAt:firebase.firestore.Timestamp.fromDate(start),
+      endAt:firebase.firestore.Timestamp.fromDate(end),
+      reopenedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      reopenedBy:currentFirebaseUser?.uid||"",
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentFirebaseUser?.uid||""
+    };
+    await ref.update(update);
+
+    const local={
+      ...(portal||{}),
+      token,
+      id:portal?.id||token,
+      open:true,
+      startAt:firebase.firestore.Timestamp.fromDate(start),
+      endAt:firebase.firestore.Timestamp.fromDate(end),
+      reopenedAt:firebase.firestore.Timestamp.now(),
+      reopenedBy:currentFirebaseUser?.uid||"",
+      updatedAt:firebase.firestore.Timestamp.now(),
+      updatedBy:currentFirebaseUser?.uid||""
+    };
+    upsertLocalAttendancePortal(local);
+
+    closeModal();
+    renderAttendancePortalModal(local);
+    toast("Đã mở lại QR — mã và link cũ tiếp tục sử dụng");
+
+    Promise.resolve().then(()=>logAudit({
+      action:"reopen-qr",
+      module:"attendance",
+      entityType:"attendancePortal",
+      entityId:token,
+      summary:`Mở lại QR điểm danh • ${local.itemName||"Điểm danh"}`,
+      after:{startAt:start.toLocaleString("vi-VN"),endAt:end.toLocaleString("vi-VN")}
+    })).catch(e=>console.warn("reopen QR audit",e));
+  }catch(e){
+    console.error("reopenAttendancePortal",e);
+    if(e?.code==="permission-denied"){
+      alert("Không mở lại được QR vì Firestore Rules hiện tại chưa cho phép thao tác này. Hãy Publish file firestore_rules_v69.rules đi kèm V69.");
+    }else{
+      alert("Không mở lại được QR: "+(e.message||e));
+    }
+  }
+}
+
 async function closeAttendancePortal(token,closeModalAfter=true){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
   if(!confirm("Đóng QR điểm danh này? Link và mã QR sẽ mất hiệu lực ngay lập tức."))return;
   try{
     await fbDb.collection("attendancePortals").doc(token).update({
-      open:false,closedAt:firebase.firestore.FieldValue.serverTimestamp(),closedBy:currentFirebaseUser?.uid||""
+      open:false,
+      closedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      closedBy:currentFirebaseUser?.uid||""
     });
-    if(qrCurrentPortal?.token===token)qrCurrentPortal.open=false;
+
+    const portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token);
+    if(portal){portal.open=false;portal.closedAt=firebase.firestore.Timestamp.now();portal.closedBy=currentFirebaseUser?.uid||""}
+    if(qrCurrentPortal?.token===token){qrCurrentPortal.open=false;updateOpenQrModalStatus(qrCurrentPortal)}
+    renderAttendancePortalPanel();
+
     toast("Đã đóng QR — mã QR đã hết hiệu lực");
     if(closeModalAfter)closeAttendancePortalModal();
-    watchAttendancePortals(true);
-  }catch(e){console.error(e);alert("Không đóng được QR: "+(e.message||e))}
+
+    Promise.resolve().then(()=>logAudit({
+      action:"close-qr",
+      module:"attendance",
+      entityType:"attendancePortal",
+      entityId:token,
+      summary:`Đóng QR điểm danh • ${portal?.itemName||"Điểm danh"}`
+    })).catch(e=>console.warn("close QR audit",e));
+  }catch(e){
+    console.error(e);
+    alert("Không đóng được QR: "+(e.message||e));
+  }
 }
 async function deleteAttendancePortal(token,closeModalAfter=true){
   if(!canEditModule("attendance"))return ensureSemesterEditable();

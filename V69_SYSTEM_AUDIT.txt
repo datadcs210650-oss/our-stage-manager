@@ -1,0 +1,41 @@
+OUR STAGE CLUB MANAGER V69 — SYSTEM REVIEW
+
+PERFORMANCE
+PASS — QR create no longer awaits audit logging.
+PASS — QR create no longer re-GETs the new QR before rendering.
+PASS — QR create no longer blocks on reading check-ins from old QR portals.
+PASS — QR list renders before background count hydration.
+PASS — only newest 5 QR portals preload check-in counts.
+PASS — V68 Eco Realtime remains in place for core semester data.
+
+TRASH
+PASS — bulk selection.
+PASS — bulk permanent delete with explicit confirmation.
+PASS — local list updates without a second full read.
+PASS — Firestore batch deletion.
+
+QR REOPEN
+PASS — same token/link retained.
+PASS — old submissions retained.
+PASS — existing one-MSSV-per-QR behavior retained.
+PASS — closed and expired QR can be reopened.
+PASS — public QR page reacts through its existing realtime document listener.
+
+SECURITY
+PASS — no eval().
+PASS — no new Function().
+PASS — no public permission expansion.
+PASS — reopen/edit requires editAttendance.
+PASS — semester immutability and semester lock remain enforced in Rules.
+PASS — reopen start/end are validated by client AND Rules.
+PASS — server timestamps / authenticated UID required by Rules.
+PASS — CSP/HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy preserved.
+PASS — SheetJS hardened version preserved.
+PASS — Firebase SDK hardened version preserved.
+
+IMPORTANT DEPLOYMENT
+The QR reopen feature REQUIRES publishing firestore_rules_v69.rules.
+If only the website code is deployed and Rules V60 remain active, Firebase will reject reopen/time-edit updates.
+
+No system can be guaranteed “unhackable”. V69 preserves defense-in-depth, but Firebase Rules,
+account security, App Check, dependency updates and access reviews should continue to be maintained.
