@@ -1,0 +1,21 @@
+V72 EVENT EDITOR CHECK
+
+Fixed runtime:
+- dateTimeLocalValue is now defined.
+- Event open/close datetime inputs can render.
+- QR time editor can render.
+- V71 event field editor can now actually open.
+
+TEST:
+1. Admin -> Cổng sự kiện.
+2. Open an existing event.
+3. Change question label.
+4. Change field type.
+5. Change Required / options.
+6. Add a field.
+7. Move a field.
+8. Save.
+9. Reopen and verify the changes persist.
+10. Public event portal should show the new fields.
+
+No Firestore Rules update is required.

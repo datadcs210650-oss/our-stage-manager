@@ -1,33 +1,39 @@
-OUR STAGE CLUB MANAGER V72 — EVENT EDIT / SYNC RECOVERY
+OUR STAGE CLUB MANAGER V72 — EVENT DATETIME RUNTIME FIX
 
-FIXED
-The Event Portal Edit button could surface the global toast:
-“Có lỗi đồng bộ dữ liệu. Vui lòng thử lại.”
-and the editor could appear unusable even when the event itself still existed.
+BUG FIXED
+The Event Portal editor could crash immediately with:
+
+dateTimeLocalValue is not defined
+
+This prevented Admin from opening and editing event fields even though the field editor
+itself had already been fixed in V71.
+
+ROOT CAUSE
+V71 referenced dateTimeLocalValue() in:
+- Event open time
+- Event close time
+- QR time editor
+
+but that helper function was missing. There was a differently named helper
+localDateTimeInputValue() later in the file, so the runtime stopped before the event
+field editor could be used.
 
 V72 CHANGES
-- All event Edit/Create entry points use safeOpenEventBuilder().
-- The full async open flow is caught locally so it cannot become an unhandled Promise rejection.
-- Editing uses cached event data if a one-time Firestore read temporarily fails.
-- Legacy/malformed field records are normalized one-by-one before rendering.
-- One malformed legacy field can no longer crash the whole event editor.
-- Existing V71 field listeners remain: label/type/required/options/section/content/image edits.
-- Preview/Save still synchronizes the visible controls one final time.
+- Adds one safe dateTimeLocalValue() utility.
+- Handles Firestore Timestamp, JavaScript Date and string values.
+- Invalid or empty dates safely return an empty datetime-local value.
+- localDateTimeInputValue() now delegates to the same helper.
+- Event date values are escaped before rendering.
+- Event field editor normalizes older/malformed field arrays before rendering.
+- Keeps all V71 field editing behavior:
+  label, type, required, options, sections, rich content, images, move up/down, delete.
 
-SAVE BEHAVIOR
-- Event form configuration is written to eventPortals/{eventId} first.
-- Once that write succeeds, the editor reports success immediately.
-- Optional follow-up automation (event score activity / continuation activity) runs in background.
-- A failure in that optional automation no longer makes a successfully saved form look unsaved.
-- Generic save() is not called from event save, avoiding unrelated clubState/lookup sync work from
-  being mistaken for an event-field error.
-- Realtime Events from V68 remains intact and reconciles the event list.
+SECURITY
+No permissions are loosened.
+No Firestore Rules change is required.
+Keep Firestore Rules V69 currently published.
 
-OTHER FEATURES
-V70 Google login, V69 QR/reopen/trash, V68 Eco Realtime, V65 attendance Excel,
-V64 divisions and the existing security hardening are preserved.
-
-FIRESTORE RULES
-No Rules change is required for V72.
-Keep V69 Rules already published.
-Rules are intentionally not included in this ZIP.
+GOOGLE LOGIN
+Unrelated to this fix. V70/V71 behavior remains: a Google account still needs a valid
+users/{UID} profile with active=true and role superadmin/admin/bcn before it can enter
+the admin system.
