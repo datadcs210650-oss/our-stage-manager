@@ -1939,6 +1939,27 @@ button,a,input,select,textarea{touch-action:manipulation}
   }
 }
 
+
+/* ==========================================================
+   V72 — EVENT EDIT/SYNC RECOVERY
+   ========================================================== */
+.event-builder-modal #eventFieldEditor{
+  min-height:72px;
+}
+.event-builder-modal input:not([readonly]),
+.event-builder-modal textarea,
+.event-builder-modal select{
+  pointer-events:auto!important;
+  user-select:text;
+}
+.event-builder-modal .event-field-card{
+  position:relative;
+  z-index:0;
+}
+.event-builder-modal .event-field-card:focus-within{
+  z-index:2;
+}
+
 </style>
 <style>
 /* ==========================================================
@@ -3393,7 +3414,11 @@ window.addEventListener("error",e=>{
 });
 window.addEventListener("unhandledrejection",e=>{
   console.error("OSC async error:",e.reason);
-  if($("#app")&&!$("#app").classList.contains("hidden"))toast("Có lỗi đồng bộ dữ liệu. Vui lòng thử lại.");
+  if($("#app")&&!$("#app").classList.contains("hidden")){
+    const msg=String(e?.reason?.message||e?.reason||"");
+    if(/event|sự kiện|field|form/i.test(msg))toast("Có lỗi thao tác Cổng sự kiện. Hãy mở lại trình chỉnh sửa.");
+    else toast("Một tác vụ nền chưa hoàn tất. Dữ liệu chính vẫn được giữ; có thể bấm ↻ Đồng bộ.");
+  }
 });
 function sem(){return state.semesters[semester]}
 const UNKNOWN_UNIVERSITY_ID="unknown";
@@ -6814,7 +6839,7 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
 }
 
 $("#eventSearch").oninput=renderEvents;
-$("#createEventBtn").onclick=()=>openEventBuilder();
+$("#createEventBtn").onclick=()=>safeOpenEventBuilder();
 
 
 function tsMillis(v){return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(v?new Date(v).getTime():0)||0}
@@ -6857,7 +6882,7 @@ function renderEvents(){
         <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
         <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
         ${canEditModule("events")?`
-          <button class="secondary edit-only" onclick="openEventBuilder('${ev.id}')">Chỉnh sửa</button>
+          <button class="secondary edit-only" onclick="safeOpenEventBuilder('${ev.id}')">Chỉnh sửa</button>
           <button class="secondary edit-only" onclick="repairEventFields('${ev.id}',{force:true})">Đồng bộ trường form</button>
           <button class="${ev.isOpen?"danger":"primary"} edit-only" onclick="toggleEventOpen('${ev.id}')">${ev.isOpen?"Đóng cổng":"Mở cổng"}</button>
           <button class="danger edit-only" onclick="deleteEventPortal('${ev.id}')">Xóa sự kiện</button>
@@ -7091,38 +7116,31 @@ function useEventTemplate(k){
     t=buildContinuationEventTemplate();
   }else t=EVENT_TEMPLATES[k];
   if(!t)return;
-  closeModal();window.__eventTemplate=t;openEventBuilder("");
+  closeModal();window.__eventTemplate=t;safeOpenEventBuilder("");
 }
 $("#eventTemplateBtn").onclick=openEventTemplatePicker;
 $("#continuationEventBtn").onclick=()=>{
   if(!canEditModule("events"))return;
   if(!continuationTargetReady({alertIfMissing:true}))return;
   window.__eventTemplate=buildContinuationEventTemplate();
-  openEventBuilder("");
+  safeOpenEventBuilder("");
 };
-async function openEventBuilder(eventId=""){
-  if(!canEditModule("events"))return;
-  eventBuilderId=eventId;
-  let ev=eventId?eventFor(eventId):null;
-  if(eventId&&ev&&ev.semester!==semester){
-    alert("Sự kiện này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước khi chỉnh sửa.");
-    return;
+async function safeOpenEventBuilder(eventId=""){
+  try{
+    await openEventBuilder(eventId);
+    return true;
+  }catch(e){
+    console.error("safeOpenEventBuilder",e);
+    const msg=e?.code==="permission-denied"
+      ?"Không tải được cấu hình sự kiện do quyền Firestore. Hãy kiểm tra quyền Cổng sự kiện của tài khoản."
+      :(e?.message||"Không thể mở trình chỉnh sửa sự kiện.");
+    alert(msg);
+    return false;
   }
-  if(eventId){
-    try{
-      const snap=await fbDb.collection("eventPortals").doc(eventId).get();
-      if(snap.exists)ev={...(ev||{}),...snap.data()};
-    }catch(e){console.warn("Không tải được cấu hình sự kiện đầy đủ",e)}
-  }
-  const tpl=!eventId?window.__eventTemplate:null;window.__eventTemplate=null;
-  eventBuilderSpecialType=ev?.specialType||tpl?.specialType||"";
-  eventBuilderTargetSemester=ev?.targetSemester||tpl?.targetSemester||(eventBuilderSpecialType==="continuation"?nextMainSemesterCode(ev?.semester||semester):"");
-  const rawBuilderFields=(Array.isArray(ev?.fields)&&ev.fields.length)
-    ? ev.fields
-    : ((Array.isArray(tpl?.fields)&&tpl.fields.length)?tpl.fields:defaultEventFieldsFor(ev||tpl||{}));
-  eventBuilderFields=normalizeEventFields(rawBuilderFields,ev||tpl||{});
-  const eventSemesterKey=ev?.semester||semester;
-  const eventSemesterName=state.semesters[eventSemesterKey]?.name||eventSemesterKey;
+}
+function renderEventBuilderModal(ev=null,tpl=null,eventSemesterKey=semester){
+  const eventSemesterName=state.semesters?.[eventSemesterKey]?.name||eventSemesterKey||semester;
+
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal event-builder-modal">
     <div class="modal-head"><div><h2>${ev?"Chỉnh sửa":"Tạo"} cổng sự kiện</h2><div class="modal-kicker">${esc(eventSemesterName)} • Cổng sự kiện</div></div><button class="modal-close-btn" onclick="closeModal()" aria-label="Đóng">×</button></div>
     <div class="form-grid">
@@ -7146,22 +7164,75 @@ async function openEventBuilder(eventId=""){
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
     </div>
     ${eventBuilderSpecialType==="continuation"?`<div class="companion-note"><b>Form đồng hành kỳ tiếp theo</b><br>Kỳ hiện tại: ${esc(eventSemesterName)} → Kỳ đích: <b>${esc(state.semesters?.[eventBuilderTargetSemester]?.name||nextMainSemesterName(eventSemesterKey))}</b>.<br>Nếu thành viên chọn “Có”, hệ thống sẽ tạo/cập nhật hồ sơ ở kỳ đích và đánh dấu hoạt động Đồng hành kỳ tiếp theo trong bảng Điểm danh.</div>`:""}
-    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h4 style="margin:0">Các trường trong form</h4><button class="secondary" onclick="addEventField()">+ Thêm trường</button></div>
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h4 style="margin:0">Các trường trong form</h4><button class="secondary" type="button" onclick="addEventField()">+ Thêm trường</button></div>
     <div class="event-builder-tools">
-      <div class="small-help">Các trường bên dưới sẽ được lưu trực tiếp vào Firestore và hiển thị ở cổng public. Tối thiểu cần 1 trường trả lời.</div>
+      <div class="small-help">Các trường bên dưới được chỉnh trực tiếp tại đây. Khi bấm Lưu, hệ thống ghi toàn bộ cấu hình form lên Firestore.</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <button class="secondary" type="button" onclick="restoreEventBuilderDefaultFields()">Khôi phục trường mặc định</button>
         <button class="secondary" type="button" onclick="previewEventBuilderForm()">Xem trước form</button>
       </div>
     </div>
     <div id="eventFieldEditor"></div>
-    <div class="free-mode-note"><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Cổng sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file. Với sự kiện đóng quỹ, nên có trường loại MSSV và dùng chế độ Admin duyệt.</div>
-    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveEventBuilder()">Lưu cổng sự kiện</button></div>
+    <div class="free-mode-note"><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Cổng sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file.</div>
+    <div class="modal-actions"><button class="ghost" type="button" onclick="closeModal()">Hủy</button><button class="primary" type="button" onclick="saveEventBuilder()">Lưu cổng sự kiện</button></div>
   </div></div>`;
+
   $("#modalWrap").classList.remove("hidden");
+  syncModalBodyState?.();
   renderEventFieldEditor();
 }
+async function openEventBuilder(eventId=""){
+  if(!canEditModule("events")){
+    alert("Tài khoản hiện không có quyền chỉnh sửa Cổng sự kiện.");
+    return false;
+  }
 
+  eventBuilderId=eventId||"";
+  let ev=eventId?eventFor(eventId):null;
+
+  if(eventId&&ev&&ev.semester!==semester){
+    alert("Sự kiện này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước khi chỉnh sửa.");
+    return false;
+  }
+
+  // Use local data immediately, then enrich it from Firestore when available.
+  // A network/read failure must not make the Edit button unusable.
+  if(eventId){
+    try{
+      const snap=await fbDb.collection("eventPortals").doc(eventId).get();
+      if(snap.exists){
+        ev={...(ev||{}),...snap.data(),id:eventId};
+      }else if(!ev){
+        alert("Sự kiện không còn tồn tại trên Firestore.");
+        return false;
+      }
+    }catch(e){
+      console.warn("Không tải được cấu hình sự kiện đầy đủ; dùng dữ liệu hiện có",e?.code||e,e?.message||"");
+      if(!ev)throw e;
+      toast("Đang dùng dữ liệu sự kiện hiện có vì chưa tải được bản mới nhất.");
+    }
+  }
+
+  const tpl=!eventId?window.__eventTemplate:null;
+  window.__eventTemplate=null;
+
+  eventBuilderSpecialType=ev?.specialType||tpl?.specialType||"";
+  eventBuilderTargetSemester=ev?.targetSemester||tpl?.targetSemester||
+    (eventBuilderSpecialType==="continuation"?nextMainSemesterCode(ev?.semester||semester):"");
+
+  const rawBuilderFields=(Array.isArray(ev?.fields)&&ev.fields.length)
+    ? ev.fields
+    : ((Array.isArray(tpl?.fields)&&tpl.fields.length)
+        ? tpl.fields
+        : defaultEventFieldsFor(ev||tpl||{}));
+
+  eventBuilderFields=normalizeEventFields(rawBuilderFields,ev||tpl||{});
+  if(!Array.isArray(eventBuilderFields))eventBuilderFields=[];
+
+  const eventSemesterKey=ev?.semester||semester;
+  renderEventBuilderModal(ev,tpl,eventSemesterKey);
+  return true;
+}
 async function compressEventImage(file){
   if(!file?.type?.startsWith("image/"))throw new Error("Chỉ cho phép upload file hình ảnh.");
   if(Number(file.size||0)>8*1024*1024)throw new Error("Ảnh gốc quá lớn. Vui lòng chọn ảnh tối đa 8 MB.");
@@ -7275,8 +7346,12 @@ function eventFieldMoveButtons(i){
 }
 function renderEventFieldEditor(){
   const root=$("#eventFieldEditor");if(!root)return;
+  if(!Array.isArray(eventBuilderFields))eventBuilderFields=[];
 
-  root.innerHTML=eventBuilderFields.map((f,i)=>{
+  try{
+  root.innerHTML=eventBuilderFields.map((rawField,i)=>{
+    const f=normalizeEventField(rawField||{});
+    eventBuilderFields[i]=f;
     const move=eventFieldMoveButtons(i);
 
     if(f.type==="section"){
@@ -7383,6 +7458,10 @@ function renderEventFieldEditor(){
   }).join("")||`<div class="event-field-empty-warning">Chưa có trường nào. Bấm <b>+ Thêm trường</b> để tạo câu hỏi.</div>`;
 
   bindEventFieldEditorControls();
+  }catch(e){
+    console.error("renderEventFieldEditor",e);
+    root.innerHTML=`<div class="event-field-empty-warning"><b>Không hiển thị được một số trường cũ.</b><br>${esc(e?.message||e)}<br><button class="secondary" type="button" onclick="restoreEventBuilderDefaultFields()">Khôi phục trường mặc định</button></div>`;
+  }
 }
 function bindEventFieldEditorControls(){
   const root=$("#eventFieldEditor");if(!root)return;
@@ -7761,16 +7840,30 @@ async function saveEventBuilder(){
       updatedAt:new Date().toISOString()
     });
 
-    if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
-    else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
-
     closeModal();
-    save();
+    persistStateOnly();
     renderEvents();
     scheduleRealtimeRender("events");
+
     toast(fullEvent.specialType==="continuation"
       ?"Đã lưu form đồng hành kỳ tiếp theo"
       :(eventPoints>0?`Đã lưu cổng sự kiện • ${eventPoints} điểm`:"Đã lưu cổng sự kiện • Không tính điểm"));
+
+    // These are secondary automations. The form fields have already been saved,
+    // so a failure here must not report "Không lưu được các trường sự kiện".
+    Promise.resolve().then(async()=>{
+      try{
+        if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
+        else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
+      }catch(sideEffectError){
+        console.warn("event post-save automation",sideEffectError?.code||sideEffectError,sideEffectError?.message||"");
+        toast("Form đã lưu. Một tác vụ phụ chưa đồng bộ; hãy bấm Đồng bộ nếu cần.");
+      }
+    });
+
+    // Do not call the generic save() here: event data lives in eventPortals and
+    // the realtime event listener will reconcile it. This also avoids unrelated
+    // cloudState / public-lookup work from surfacing as an event-edit error.
   }catch(e){
     console.error("saveEventBuilder",e);
     const msg=e?.code==="permission-denied"

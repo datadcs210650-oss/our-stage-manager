@@ -1,35 +1,33 @@
-OUR STAGE CLUB MANAGER V71 — EVENT FIELD EDITOR FIX
+OUR STAGE CLUB MANAGER V72 — EVENT EDIT / SYNC RECOVERY
 
 FIXED
-The Event Portal field editor has been rebuilt so existing form fields can be edited
-reliably on desktop and mobile.
+The Event Portal Edit button could surface the global toast:
+“Có lỗi đồng bộ dữ liệu. Vui lòng thử lại.”
+and the editor could appear unusable even when the event itself still existed.
 
-WHAT CHANGED
-- Field editing no longer depends only on inline oninput/onchange handlers.
-- The editor now binds real JavaScript event listeners after each render.
-- Label, type, required, options, section description, rich content and image caption
-  are all written back to eventBuilderFields reliably.
-- Before Preview or Save, the system reads the visible editor controls one final time.
-  This avoids losing the last mobile/IME edit while an input is still focused.
-- Field type changes re-render safely.
-- Fields can be moved Up / Down.
-- Delete field remains available.
-- Image upload/change/remove remains available.
-- Existing event configuration is still loaded from Firestore before editing.
+V72 CHANGES
+- All event Edit/Create entry points use safeOpenEventBuilder().
+- The full async open flow is caught locally so it cannot become an unhandled Promise rejection.
+- Editing uses cached event data if a one-time Firestore read temporarily fails.
+- Legacy/malformed field records are normalized one-by-one before rendering.
+- One malformed legacy field can no longer crash the whole event editor.
+- Existing V71 field listeners remain: label/type/required/options/section/content/image edits.
+- Preview/Save still synchronizes the visible controls one final time.
 
-SAVE SAFETY
-- Firestore is written first.
-- Local state is updated only after Firestore confirms success.
-- Save button shows “Đang lưu…”.
-- Permission-denied now shows a specific Events/semester-lock message instead of looking
-  like the fields simply cannot be edited.
+SAVE BEHAVIOR
+- Event form configuration is written to eventPortals/{eventId} first.
+- Once that write succeeds, the editor reports success immediately.
+- Optional follow-up automation (event score activity / continuation activity) runs in background.
+- A failure in that optional automation no longer makes a successfully saved form look unsaved.
+- Generic save() is not called from event save, avoiding unrelated clubState/lookup sync work from
+  being mistaken for an event-field error.
+- Realtime Events from V68 remains intact and reconciles the event list.
 
-MOBILE
-- Event field cards collapse to one column on small screens.
-- Inputs use 16px text on phones to avoid iOS auto-zoom.
-- All editor inputs explicitly keep pointer events enabled.
+OTHER FEATURES
+V70 Google login, V69 QR/reopen/trash, V68 Eco Realtime, V65 attendance Excel,
+V64 divisions and the existing security hardening are preserved.
 
 FIRESTORE RULES
-No new Rules change is required for V71.
-Keep the V69 Rules already published.
-Rules are intentionally not included in this package.
+No Rules change is required for V72.
+Keep V69 Rules already published.
+Rules are intentionally not included in this ZIP.

@@ -1,0 +1,21 @@
+V72 EVENT EDIT TEST
+
+1. Admin -> Cổng sự kiện.
+2. Click Chỉnh sửa on an existing event.
+3. Change:
+   - question text
+   - field type
+   - required
+   - options
+4. Add/delete/move a field.
+5. Click Lưu cổng sự kiện.
+6. Reopen the same event.
+7. Confirm all fields remain.
+8. Open the public form and confirm the new fields are shown.
+
+If Firestore temporarily cannot refresh the event before editing:
+- V72 uses the already-loaded event configuration instead of blocking the editor.
+
+Expected:
+No generic “Có lỗi đồng bộ dữ liệu” toast should be caused by clicking Chỉnh sửa.
+No Firestore Rules update is required.
