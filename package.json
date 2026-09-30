@@ -1,11 +1,11 @@
 {
-  "name": "our-stage-manager",
+  "name": "our-stage-club-manager",
+  "version": "73.0.0",
   "private": true,
-  "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "dependencies": {
-    "firebase-admin": "14.4.0"
+    "firebase-admin": "^13.0.0"
   }
 }

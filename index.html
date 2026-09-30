@@ -8715,21 +8715,21 @@ function openCreateAccount(){
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal">
     <div class="modal-head"><h2>Tạo / liên kết tài khoản</h2><button onclick="closeModal()">×</button></div>
     <div class="form-grid">
-      <label>Tên hiển thị<input id="accName"></label>
-      <label>Email<input id="accEmail" type="email" autocomplete="off"></label>
-      <label>Mật khẩu<input id="accPass" type="password" placeholder="Tối thiểu 8 ký tự" autocomplete="new-password"></label>
+      <label>Tên hiển thị<input id="accName" maxlength="100"></label>
+      <label>Email<input id="accEmail" type="email" autocomplete="off" maxlength="254"></label>
+      <label>Mật khẩu<input id="accPass" type="password" placeholder="Tối thiểu 8 ký tự" autocomplete="new-password" minlength="8" maxlength="128"></label>
       <label>Vai trò<select id="accRole" onchange="setPermissionInputsDisabled('acc',this.value==='admin')">
         <option value="bcn">BCN — Xem/chỉnh sửa theo quyền</option>
         ${canCreateAdmin?'<option value="admin">Admin — Toàn quyền quản trị</option>':""}
       </select></label>
     </div>
     <div class="permission-admin-note">
-      Tài khoản được tạo trực tiếp bằng Firebase Authentication phụ nên không phụ thuộc Vercel API. Nếu email đã tồn tại trong Firebase Authentication nhưng chưa có hồ sơ quyền, hãy nhập đúng mật khẩu hiện tại của email đó để liên kết vào hệ thống.
+      Tài khoản được tạo và quản lý qua Vercel API + Firebase Admin. Nếu email đã tồn tại trong Firebase Authentication nhưng chưa có hồ sơ quyền, hệ thống sẽ liên kết email đó vào hệ thống mà không cần biết mật khẩu cũ.
     </div>
     <h4>Quyền của BCN</h4>${permissionPresetHTML("acc")}
     <div id="accPermissionNote" class="permission-note">BCN được xem/chỉnh sửa theo quyền đã tick, nhưng không có quyền vào menu Tài khoản BCN hoặc Thiết lập.</div>
     ${accountPermissionHTML("acc",{},false)}
-    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAccount()">Tạo / liên kết tài khoản</button></div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" id="createAccountSubmitBtn" onclick="createAccount()">Tạo / liên kết tài khoản</button></div>
   </div></div>`;
   $("#modalWrap").classList.remove("hidden");
 }
@@ -8738,41 +8738,26 @@ async function createAccount(){
   const email=$("#accEmail").value.trim().toLowerCase(),password=$("#accPass").value,displayName=$("#accName").value.trim(),wantedRole=$("#accRole").value;
   const newRole=(role()==="superadmin"&&wantedRole==="admin")?"admin":"bcn";
   if(!displayName||!email)return alert("Vui lòng nhập tên và email.");
-  if(password.length<8)return alert("Mật khẩu cần ít nhất 8 ký tự.");
+  if(password.length<8||password.length>128)return alert("Mật khẩu phải từ 8 đến 128 ký tự.");
   if((currentFirebaseUser?.email||"").toLowerCase()===email)return alert("Email này là tài khoản đang đăng nhập.");
   const existingProfile=accountRows.find(u=>String(u.email||"").toLowerCase()===email);
   if(existingProfile){alert("Email này đã có trong danh sách tài khoản. Hệ thống sẽ mở phần chỉnh sửa.");return editAccountProfile(existingProfile.id)}
   const permissions=newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("acc");
-
-  let secondary=null,auth2=null,cred=null,createdFresh=false,linkedExisting=false;
+  const btn=$("#createAccountSubmitBtn");
   try{
-    secondary=firebase.initializeApp(firebaseConfig,"accountCreate_"+Date.now()+"_"+Math.random().toString(36).slice(2));
-    auth2=secondary.auth();
-    try{cred=await auth2.createUserWithEmailAndPassword(email,password);createdFresh=true}
-    catch(e){
-      if(e?.code!=="auth/email-already-in-use")throw e;
-      try{cred=await auth2.signInWithEmailAndPassword(email,password);linkedExisting=true}
-      catch(signInError){
-        try{
-          const token=await currentFirebaseUser.getIdToken();
-          const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})},7000);
-          const data=await res.json().catch(()=>({}));
-          if(res.ok){try{await auth2.signOut()}catch{}try{await secondary.delete()}catch{}closeModal();toast("Đã liên kết tài khoản hiện có");await renderAccounts();return}
-        }catch(apiError){console.warn("Vercel account API unavailable",apiError)}
-        throw Object.assign(new Error("Email đã tồn tại trong Firebase Authentication nhưng mật khẩu bạn nhập không đúng với tài khoản đó. Hãy nhập mật khẩu hiện tại để liên kết, hoặc xóa tài khoản mồ côi trong Firebase Authentication rồi tạo lại."),{code:"osc/existing-auth-password"});
-      }
+    if(btn){btn.disabled=true;btn.textContent="Đang tạo…"}
+    const token=await currentFirebaseUser.getIdToken();
+    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})},15000);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      const detail=data.error||`API trả về lỗi ${res.status}`;
+      if(res.status===404)throw new Error("Không tìm thấy /api/account-create trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.\n\n"+detail);
+      throw new Error(detail);
     }
-    const profileSnap=await fbDb.collection("users").doc(cred.user.uid).get();
-    if(profileSnap.exists)throw Object.assign(new Error("Email này đã có hồ sơ quyền trong hệ thống."),{code:"osc/profile-exists"});
-    try{await cred.user.updateProfile({displayName})}catch(e){console.warn("updateProfile",e)}
-    await fbDb.collection("users").doc(cred.user.uid).set({displayName,email,role:newRole,active:true,permissions,linkedExistingAuth:linkedExisting,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser?.uid||"",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:false});
-    await auth2.signOut();await secondary.delete();closeModal();toast(linkedExisting?"Đã liên kết tài khoản hiện có":"Đã tạo tài khoản BCN");await renderAccounts();
+    closeModal();toast(data.linkedExisting?"Đã liên kết tài khoản hiện có":"Đã tạo tài khoản");await renderAccounts();
   }catch(e){
-    if(createdFresh&&cred?.user){try{await cred.user.delete()}catch(rollbackError){console.warn("Auth rollback",rollbackError)}}
-    try{if(auth2)await auth2.signOut()}catch{}try{if(secondary)await secondary.delete()}catch{}
-    const msg=e?.code==="auth/invalid-email"?"Email không hợp lệ.":e?.code==="auth/weak-password"?"Mật khẩu chưa đủ mạnh.":e?.code==="auth/operation-not-allowed"?"Firebase Authentication chưa bật Email/Password.":e?.code==="osc/existing-auth-password"||e?.code==="osc/profile-exists"?e.message:"Không tạo được tài khoản: "+(e?.message||e);
-    alert(msg);
-  }
+    console.error("createAccount",e);alert("Không tạo được tài khoản.\n\n"+(e?.message||e));
+  }finally{if(btn){btn.disabled=false;btn.textContent="Tạo / liên kết tài khoản"}}
 }
 async function editAccountProfile(uid){
   const u=accountRows.find(x=>x.id===uid);if(!u)return;
@@ -8782,52 +8767,101 @@ async function editAccountProfile(uid){
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal">
     <div class="modal-head"><h2>Chỉnh sửa tài khoản & phân quyền</h2><button onclick="closeModal()">×</button></div>
     <div class="form-grid">
-      <label>Tên<input id="editAccName" value="${esc(u.displayName||"")}"></label>
-      <label>Email đăng nhập<input id="editAccEmail" type="email" value="${esc(u.email||"")}"></label>
+      <label>Tên<input id="editAccName" maxlength="100" value="${esc(u.displayName||"")}"></label>
+      <label>Email đăng nhập<input id="editAccEmail" type="email" maxlength="254" value="${esc(u.email||"")}"></label>
       <label>Vai trò<select id="editAccRole" ${canEditRole?"":"disabled"} onchange="setPermissionInputsDisabled('editAcc',this.value==='admin')">
         <option value="bcn" ${u.role==="bcn"?"selected":""}>BCN — Xem/chỉnh sửa theo quyền</option>
         ${canEditRole?`<option value="admin" ${u.role==="admin"?"selected":""}>Admin — Toàn quyền</option>`:""}
       </select></label>
       <label>Trạng thái<select id="editAccActive"><option value="1" ${u.active!==false?"selected":""}>Hoạt động</option><option value="0" ${u.active===false?"selected":""}>Khóa</option></select></label>
     </div>
+    <div class="permission-admin-note">Đổi email sẽ cập nhật đồng thời Firebase Authentication và Firestore nhưng giữ nguyên UID, vai trò, quyền và dữ liệu của tài khoản.</div>
     ${permissionPresetHTML("editAcc")}<div id="editAccPermissionNote" class="permission-note"></div>
     ${accountPermissionHTML("editAcc",p,u.role==="admin")}
-    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveAccountProfile('${uid}')">Lưu phân quyền</button></div>
+    <div class="modal-actions"><button class="secondary" type="button" onclick="openResetAccountPassword('${uid}')">Đặt lại mật khẩu</button><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" id="saveAccountProfileBtn" onclick="saveAccountProfile('${uid}')">Lưu thay đổi</button></div>
   </div></div>`;
   $("#modalWrap").classList.remove("hidden");
   setPermissionInputsDisabled("editAcc",u.role==="admin");
 }
 async function saveAccountProfile(uid){
-  if(!canEditClub())return;const old=accountRows.find(x=>x.id===uid);if(!old)return;let newRole=old.role||"bcn";
+  if(!canEditClub())return;
+  const old=accountRows.find(x=>x.id===uid);if(!old)return;
+  let newRole=old.role||"bcn";
   if(role()==="superadmin")newRole=$("#editAccRole").value;else if(newRole!=="bcn")return alert("Admin chỉ được chỉnh tài khoản BCN.");
   if(old.role==="superadmin")return alert("Không thể thay đổi Super Admin ở đây.");
+  const displayName=$("#editAccName").value.trim();
   const newEmail=$("#editAccEmail").value.trim().toLowerCase();
-  const payload={uid,displayName:$("#editAccName").value.trim(),email:newEmail,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
-  let apiError=null;
+  if(!displayName)return alert("Vui lòng nhập tên hiển thị.");
+  if(!newEmail)return alert("Vui lòng nhập email đăng nhập.");
+  const payload={uid,displayName,email:newEmail,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
+  const btn=$("#saveAccountProfileBtn");
   try{
-    const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/account-update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));
-    if(res.ok){closeModal();toast("Đã cập nhật tài khoản");await renderAccounts();return} apiError=new Error(data.error||`API trả về lỗi ${res.status}`);
-  }catch(e){apiError=e}
-  if(newEmail!==String(old.email||"").toLowerCase())return alert("Máy chủ Vercel API hiện không hoạt động nên chưa thể đổi email đăng nhập.\nHãy giữ email cũ hoặc kiểm tra Environment Variables Firebase Admin trên Vercel.\n\nChi tiết: "+(apiError?.message||"Không xác định"));
+    if(btn){btn.disabled=true;btn.textContent="Đang lưu…"}
+    const token=await currentFirebaseUser.getIdToken();
+    const res=await fetchAccountApi("/api/account-update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)},15000);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      let detail=data.error||`API trả về lỗi ${res.status}`;
+      if(res.status===404)detail="Không tìm thấy /api/account-update trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
+      throw new Error(detail);
+    }
+    closeModal();toast(data.emailChanged?"Đã cập nhật tài khoản và email đăng nhập":"Đã cập nhật tài khoản");
+    if(data.warning)alert(data.warning);
+    await renderAccounts();
+  }catch(e){
+    console.error("saveAccountProfile",e);alert("Không cập nhật được tài khoản.\n\n"+(e?.message||e));
+  }finally{if(btn){btn.disabled=false;btn.textContent="Lưu thay đổi"}}
+}
+function openResetAccountPassword(uid){
+  const u=accountRows.find(x=>x.id===uid);if(!u)return;
+  if(u.role==="superadmin")return alert("Không thể đặt lại mật khẩu Super Admin tại đây.");
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal">
+    <div class="modal-head"><div><h2>Đặt lại mật khẩu</h2><div class="small-help">${esc(u.displayName||u.email||"")} • ${esc(u.email||"")}</div></div><button onclick="closeModal()">×</button></div>
+    <div class="password-grid">
+      <label>Mật khẩu mới<input id="resetAccPass" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Tối thiểu 8 ký tự"></label>
+      <label>Nhập lại mật khẩu<input id="resetAccPass2" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Nhập lại mật khẩu mới"></label>
+      <div class="password-strength-note">Mật khẩu được cập nhật trực tiếp bằng Firebase Admin. Hệ thống không lưu mật khẩu trong Firestore.</div>
+    </div>
+    <div class="modal-actions"><button class="ghost" onclick="editAccountProfile('${uid}')">Quay lại</button><button class="primary" id="resetAccPasswordBtn" onclick="resetAccountPassword('${uid}')">Đặt lại mật khẩu</button></div>
+  </div></div>`;
+  $("#modalWrap").classList.remove("hidden");setTimeout(()=>$("#resetAccPass")?.focus(),0);
+}
+async function resetAccountPassword(uid){
+  if(!canEditClub())return;
+  const pass=$("#resetAccPass")?.value||"",confirmPass=$("#resetAccPass2")?.value||"";
+  if(pass.length<8||pass.length>128)return alert("Mật khẩu mới phải từ 8 đến 128 ký tự.");
+  if(pass!==confirmPass)return alert("Hai lần nhập mật khẩu mới không trùng nhau.");
+  const btn=$("#resetAccPasswordBtn");
   try{
-    await fbDb.collection("users").doc(uid).set({displayName:payload.displayName,email:old.email,role:payload.role,active:payload.active,permissions:payload.permissions,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true});
-    closeModal();toast("Đã cập nhật tài khoản");await renderAccounts();
-  }catch(e){alert("Không cập nhật được tài khoản.\nAPI: "+(apiError?.message||"Không xác định")+"\nFallback: "+(e.message||e))}
+    if(btn){btn.disabled=true;btn.textContent="Đang cập nhật…"}
+    const token=await currentFirebaseUser.getIdToken();
+    const res=await fetchAccountApi("/api/account-password",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({uid,password:pass})},15000);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      let detail=data.error||`API trả về lỗi ${res.status}`;
+      if(res.status===404)detail="Không tìm thấy /api/account-password trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
+      throw new Error(detail);
+    }
+    closeModal();toast("Đã đặt lại mật khẩu");alert("Đã đổi mật khẩu thành công. Các phiên đăng nhập cũ của tài khoản này đã được thu hồi.");
+  }catch(e){console.error("resetAccountPassword",e);alert("Không đặt lại được mật khẩu.\n\n"+(e?.message||e))}
+  finally{if(btn){btn.disabled=false;btn.textContent="Đặt lại mật khẩu"}}
 }
 async function deleteAccountProfile(uid){
   if(!canEditClub())return;const u=accountRows.find(x=>x.id===uid);if(!u)return;
-  if(uid===currentFirebaseUser?.uid)return alert("Không thể tự xóa tài khoản đang đăng nhập.");if(u.role==="superadmin")return alert("Không thể xóa Super Admin.");
-  if(!confirm(`Xóa tài khoản "${u.displayName||u.email}"?\n\nTài khoản sẽ bị gỡ khỏi hệ thống và mất toàn bộ quyền truy cập website.`))return;
-  let apiError=null;
+  if(uid===currentFirebaseUser?.uid)return alert("Không thể tự xóa tài khoản đang đăng nhập.");
+  if(u.role==="superadmin")return alert("Không thể xóa Super Admin.");
+  if(!confirm(`Xóa tài khoản "${u.displayName||u.email}"?\n\nHệ thống sẽ xóa cả hồ sơ quyền Firestore và tài khoản Firebase Authentication.`))return;
   try{
-    const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/account-delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({uid})},12000);const data=await res.json().catch(()=>({}));
-    if(res.ok){toast(data.warning?"Đã thu hồi quyền tài khoản":"Đã xóa tài khoản BCN");if(data.warning)alert(data.warning);await renderAccounts();return}
-    apiError=new Error(data.error||`API trả về lỗi ${res.status}`);
-  }catch(e){apiError=e;console.warn("account-delete API unavailable; using Firestore fallback",e)}
-  try{
-    await fbDb.collection("users").doc(uid).delete();toast("Đã xóa tài khoản khỏi hệ thống");await renderAccounts();
-    alert("Đã xóa quyền truy cập của tài khoản khỏi hệ thống.\n\nVercel API hiện không phản hồi nên bản ghi Firebase Authentication có thể vẫn còn, nhưng tài khoản này không thể vào dữ liệu CLB vì hồ sơ quyền đã bị xóa.\n\nChi tiết API: "+(apiError?.message||"Không xác định"));
-  }catch(fallbackError){alert("Không xóa được tài khoản.\nAPI: "+(apiError?.message||"Không xác định")+"\nFirestore fallback: "+(fallbackError?.message||fallbackError))}
+    const token=await currentFirebaseUser.getIdToken();
+    const res=await fetchAccountApi("/api/account-delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({uid})},15000);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      let detail=data.error||`API trả về lỗi ${res.status}`;
+      if(res.status===404)detail="Không tìm thấy /api/account-delete trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
+      throw new Error(detail);
+    }
+    toast("Đã xóa tài khoản");if(data.warning)alert(data.warning);await renderAccounts();
+  }catch(e){console.error("deleteAccountProfile",e);alert("Không xóa được tài khoản.\n\n"+(e?.message||e))}
 }
 
 
