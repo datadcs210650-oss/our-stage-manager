@@ -7,5 +7,6 @@ window.__FIREBASE_CONFIG__ = {
   projectId: "clb-our",
   storageBucket: "clb-our.firebasestorage.app",
   messagingSenderId: "390807081243",
-  appId: "1:390807081243:web:7e8f45f2783c01bf0403be"
+  appId: "1:390807081243:web:7e8f45f2783c01bf0403be",
+  googleClientId: "390807081243-9i23dm2gpkpmhag3bl5gg71kbe8e4pkd.apps.googleusercontent.com"
 };

@@ -223,6 +223,176 @@ body.v41-free-lookup .brand small{
   }
 }
 </style>
+<style>
+/* ==========================================================
+   V70 — PUBLIC PORTALS: LEFT BRAND + MOBILE
+   ========================================================== */
+html,body{max-width:100%;overflow-x:hidden}
+.v41-public-topbar-inner{
+  width:min(1120px,calc(100% - 28px))!important;
+}
+.v41-public-brand{
+  justify-content:flex-start!important;
+  text-align:left!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+}
+.v41-public-brand>img{
+  margin:0!important;
+  flex:0 0 auto!important;
+}
+.v41-public-brand>div{
+  min-width:0!important;
+  text-align:left!important;
+}
+
+/* Main content identity: logo and OUR STAGE stay together on the LEFT. */
+body.v41-public-shell .page .brand,
+body.v41-public-shell .page .logo-top,
+body.v41-public-shell .wrap>.brand,
+body.v41-public-shell .wrap>.logo-top{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 0 18px!important;
+  gap:12px!important;
+  text-align:left!important;
+}
+body.v41-public-shell .page .brand>img,
+body.v41-public-shell .page .logo-top>img,
+body.v41-public-shell .wrap>.brand>img,
+body.v41-public-shell .wrap>.logo-top>img{
+  margin:0!important;
+  flex:0 0 auto!important;
+  object-fit:contain!important;
+  object-position:50% 50%!important;
+}
+body.v41-public-shell .page .brand>div,
+body.v41-public-shell .page .logo-top>div,
+body.v41-public-shell .wrap>.brand>div,
+body.v41-public-shell .wrap>.logo-top>div{
+  width:auto!important;
+  flex:0 1 auto!important;
+  text-align:left!important;
+}
+
+.v41-public-shell input,
+.v41-public-shell select,
+.v41-public-shell textarea,
+.v41-public-shell button{
+  max-width:100%;
+  touch-action:manipulation;
+}
+.v41-public-shell table{max-width:100%}
+
+@media(max-width:680px){
+  .v41-public-topbar{height:60px!important}
+  .v41-public-topbar-inner{
+    width:calc(100% - 20px)!important;
+    gap:8px!important;
+  }
+  .v41-public-brand{gap:8px!important}
+  .v41-public-brand img{width:38px!important;height:38px!important;border-radius:10px!important}
+  .v41-public-brand b{font-size:10px!important;letter-spacing:1.25px!important}
+  .v41-public-brand small{font-size:6px!important;letter-spacing:1px!important}
+  .v41-public-status{
+    padding:7px!important;
+    flex:0 0 auto!important;
+  }
+  .v41-public-status span{display:none!important}
+
+  body.v41-public-shell{
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  body.v41-public-shell .page,
+  body.v41-public-shell .wrap{
+    width:calc(100% - 20px)!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+
+  body.v41-public-shell .page .brand,
+  body.v41-public-shell .page .logo-top,
+  body.v41-public-shell .wrap>.brand,
+  body.v41-public-shell .wrap>.logo-top{
+    gap:9px!important;
+    margin-bottom:14px!important;
+  }
+  body.v41-public-shell .page .brand>img,
+  body.v41-public-shell .page .logo-top>img,
+  body.v41-public-shell .wrap>.brand>img,
+  body.v41-public-shell .wrap>.logo-top>img{
+    width:52px!important;
+    height:52px!important;
+    padding:4px!important;
+    border-radius:14px!important;
+  }
+  body.v41-public-shell .brand b,
+  body.v41-public-shell .logo-top b,
+  body.v41-public-shell .brand span{
+    font-size:11px!important;
+    letter-spacing:2px!important;
+  }
+  body.v41-public-shell .brand small,
+  body.v41-public-shell .logo-top small{
+    font-size:7px!important;
+    white-space:normal!important;
+  }
+
+  .v41-public-shell .card,
+  .v41-public-shell .hero,
+  .v41-public-shell .result-card,
+  .v41-public-shell .lookup-card{
+    padding:16px!important;
+    border-radius:16px!important;
+  }
+  .v41-public-shell h1{font-size:clamp(24px,8vw,34px)!important;line-height:1.08!important}
+  .v41-public-shell h2{font-size:21px!important}
+  .v41-public-shell p,.v41-public-shell .muted{font-size:13px!important}
+  .v41-public-shell .form-grid,
+  .v41-public-shell .fields,
+  .v41-public-shell .grid{
+    grid-template-columns:1fr!important;
+  }
+  .v41-public-shell input,
+  .v41-public-shell select,
+  .v41-public-shell textarea{
+    width:100%!important;
+    min-width:0!important;
+    font-size:16px!important; /* prevents iOS zoom */
+  }
+  .v41-public-shell button{
+    min-height:44px!important;
+  }
+  .v41-public-shell .actions,
+  .v41-public-shell .button-row{
+    flex-direction:column!important;
+    align-items:stretch!important;
+  }
+  .v41-public-shell .actions button,
+  .v41-public-shell .button-row button{
+    width:100%!important;
+  }
+  .v41-public-shell .table-wrap,
+  .v41-public-shell .lookup-table,
+  .v41-public-shell .finance-table-public{
+    display:block!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .v41-public-footer{
+    width:calc(100% - 20px)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding:18px 0 24px!important;
+  }
+}
+</style>
 </head>
 <body class="v41-public-shell v41-free-lookup"><header class="v41-public-topbar"><div class="v41-public-topbar-inner"><div class="v41-public-brand"><img src="/logo-ui-centered.png" alt="OUR STAGE CLUB"><div><b>OUR STAGE</b><small>PUBLIC PORTAL</small></div></div><div class="v41-public-status"><i></i><span>KẾT NỐI AN TOÀN</span></div></div></header>
 

@@ -1,0 +1,22 @@
+V71 EVENT FIELD EDITOR TEST
+
+1. Admin -> Cổng sự kiện -> choose an existing event -> Chỉnh sửa.
+2. Change the question text.
+3. Change a field type.
+4. Toggle “Bắt buộc”.
+5. For Radio/Checkbox/Select, edit the option list.
+6. Add a new field.
+7. Move fields up/down.
+8. Save.
+9. Reopen the same event and confirm the edits remain.
+10. Open the public event portal and confirm the updated fields display.
+
+Also test on mobile:
+- edit a question;
+- scroll the modal;
+- save while the last input is still focused.
+
+Expected:
+All edits persist in Firestore and remain after reopening.
+
+No Firestore Rules update is required.

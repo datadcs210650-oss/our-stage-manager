@@ -1,0 +1,32 @@
+GOOGLE LOGIN V70 — ONE-TIME CHECK
+
+1. Firebase Console
+Authentication -> Sign-in method:
+Google = Enabled
+
+Authentication -> Settings -> Authorized domains:
+ourstageclubmanager.vercel.app
+
+2. Google Cloud Console
+Google Auth Platform -> Clients
+Open the Web client used by this Firebase project.
+
+Authorized JavaScript origins must include:
+https://ourstageclubmanager.vercel.app
+
+The current public Web Client ID configured in V70:
+390807081243-9i23dm2gpkpmhag3bl5gg71kbe8e4pkd.apps.googleusercontent.com
+
+3. Deploy the full V70 package to GitHub/Vercel.
+
+4. Hard refresh:
+Mac: Command + Shift + R
+Windows: Ctrl + Shift + R
+
+5. Test:
+- Email/Password login
+- Continue with Google
+- Link Google in My Account
+
+V70 uses Google Identity Services first and Firebase popup only as fallback.
+No Google client secret is needed or allowed in front-end code.

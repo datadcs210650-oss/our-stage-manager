@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.12/build/pdfmake.min.js"></script>
@@ -1673,6 +1674,269 @@ img[src$="logo-ui-centered.png"]{
 @media(max-width:680px){
   .trash-item{grid-template-columns:28px minmax(0,1fr)!important}
   .trash-actions{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+}
+
+
+/* ==========================================================
+   V70 — MOBILE ADMIN / TOUCH RESPONSIVE
+   ========================================================== */
+html,body{max-width:100%;overflow-x:hidden}
+button,a,input,select,textarea{touch-action:manipulation}
+.table-card,
+.lookup-table,
+.division-member-table,
+.attendance-preview,
+.finance-table,
+.event-result-table{
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+@media(max-width:760px){
+  .main{padding:0 10px 18px!important}
+  .topbar{
+    margin:0 -10px!important;
+    padding:10px!important;
+    min-height:64px!important;
+    gap:8px!important;
+  }
+  .topbar-title{min-width:0!important}
+  .topbar h1{
+    font-size:17px!important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:52vw;
+  }
+  .topbar .eyebrow{font-size:7px!important}
+  .top-actions{gap:5px!important;flex:0 0 auto}
+  .global-search-btn{width:36px!important;padding:0!important;justify-content:center!important}
+  .workspace-dock{
+    top:64px!important;
+    margin:0 -10px 10px!important;
+    padding:8px 10px!important;
+    overflow-x:auto!important;
+    white-space:nowrap!important;
+    scrollbar-width:none;
+  }
+  .workspace-dock::-webkit-scrollbar{display:none}
+  .workspace-tab{flex:0 0 auto!important}
+  main>section[id]{
+    padding:10px!important;
+    border-radius:14px!important;
+    min-width:0!important;
+  }
+  .workspace-window-bar{
+    margin:-10px -10px 12px!important;
+    border-radius:14px 14px 0 0!important;
+    padding:9px 10px!important;
+  }
+  .section-title{
+    gap:10px!important;
+    align-items:flex-start!important;
+    flex-wrap:wrap!important;
+  }
+  .section-title>div{min-width:0;flex:1 1 220px}
+  .section-title>button,
+  .section-title>.actions{flex:0 1 auto}
+  .dashboard-stats,
+  .command-center-grid,
+  .member-profile-grid,
+  .cards,
+  .division-summary-grid,
+  .import-summary,
+  .finance-summary-grid{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .info-layout,.split,.settings-grid,.portal-settings-grid,.event-result-filters{
+    grid-template-columns:1fr!important;
+  }
+  .attendance-bar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    align-items:stretch!important;
+  }
+  .attendance-bar select,
+  .attendance-bar input,
+  .attendance-bar button{
+    min-width:0!important;
+    width:100%!important;
+  }
+  .portal-link-row,
+  .qr-link-row{
+    flex-direction:column!important;
+    align-items:stretch!important;
+  }
+  .portal-link-row input,.qr-link-row input{width:100%!important}
+  .modal{
+    width:calc(100vw - 18px)!important;
+    max-width:calc(100vw - 18px)!important;
+    max-height:calc(100dvh - 18px)!important;
+    overflow:auto!important;
+    padding:14px!important;
+    border-radius:16px!important;
+  }
+  .overlay{padding:9px!important}
+  .form-grid,.modal .form-grid{
+    grid-template-columns:1fr!important;
+  }
+  .modal-actions{
+    position:sticky;
+    bottom:-14px;
+    z-index:3;
+    margin:14px -14px -14px!important;
+    padding:10px 14px!important;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(10px);
+    border-top:1px solid #eceff1;
+    flex-wrap:wrap!important;
+  }
+  .modal-actions button{flex:1 1 140px;min-height:42px}
+  .qr-box{grid-template-columns:1fr!important}
+  .qr-canvas-wrap{min-height:auto!important}
+  .qr-canvas-wrap canvas,.qr-canvas-wrap img{max-width:min(280px,82vw)!important;height:auto!important}
+  .table-card table,
+  .lookup-table table,
+  .division-member-table table{
+    min-width:780px!important;
+  }
+  .sidebar{
+    width:min(88vw,300px)!important;
+  }
+  .side-menu-scroll{overscroll-behavior:contain}
+}
+@media(max-width:520px){
+  .dashboard-stats,
+  .command-center-grid,
+  .member-profile-grid,
+  .cards,
+  .division-summary-grid,
+  .import-summary,
+  .finance-summary-grid{
+    grid-template-columns:1fr!important;
+  }
+  .topbar h1{max-width:44vw;font-size:16px!important}
+  .notification-btn,.global-search-btn{width:34px!important;height:34px!important}
+  .section-title h2{font-size:22px!important}
+  .panel,.settings-card,.card{padding:12px!important}
+  button{min-height:40px}
+}
+
+
+/* ==========================================================
+   V71 — EVENT FIELD EDITOR FIX
+   ========================================================== */
+.event-field-card{
+  margin:10px 0;
+  padding:12px;
+  border:1px solid #e2e7ea;
+  border-radius:13px;
+  background:#fbfcfd;
+}
+.event-field-card:focus-within{
+  border-color:#c891a2;
+  box-shadow:0 0 0 3px rgba(158,53,85,.08);
+  background:#fff;
+}
+.event-field-card-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+}
+.event-field-card-head>strong{
+  color:#38434b;
+  font-size:10px;
+  letter-spacing:.02em;
+}
+.event-field-card-head>.danger{
+  margin-left:0;
+}
+.event-field-number{
+  width:25px;height:25px;
+  display:grid;place-items:center;
+  border-radius:8px;
+  background:#f3e7eb;
+  color:#7d2741;
+  font-size:9px;
+  font-weight:900;
+  flex:0 0 auto;
+}
+.event-field-move{
+  display:flex;
+  gap:4px;
+  margin-left:auto;
+}
+.event-field-move button{
+  width:31px!important;
+  min-width:31px!important;
+  height:31px!important;
+  min-height:31px!important;
+  padding:0!important;
+}
+.event-field-row-v71{
+  grid-template-columns:minmax(220px,1.4fr) minmax(155px,.7fr) minmax(110px,.45fr) minmax(220px,1fr)!important;
+  align-items:end!important;
+}
+.event-field-row-v71 label{
+  min-width:0;
+  display:grid;
+  gap:5px;
+  color:#56626a;
+  font-size:8px;
+  font-weight:850;
+}
+.event-field-row-v71 input,
+.event-field-row-v71 select,
+.event-field-card textarea{
+  width:100%!important;
+  min-width:0!important;
+  position:relative;
+  z-index:1;
+  pointer-events:auto!important;
+  opacity:1!important;
+}
+.event-required-toggle{
+  display:flex!important;
+  grid-auto-flow:column;
+  justify-content:start;
+  align-items:center!important;
+  align-self:center;
+  padding:10px 8px;
+  border:1px solid #e0e5e8;
+  border-radius:10px;
+  background:#fff;
+}
+.event-required-toggle input{
+  width:auto!important;
+}
+@media(max-width:900px){
+  .event-field-row-v71{
+    grid-template-columns:1fr 1fr!important;
+  }
+}
+@media(max-width:620px){
+  .event-field-card{
+    padding:10px;
+  }
+  .event-field-row-v71{
+    grid-template-columns:1fr!important;
+  }
+  .event-field-card-head{
+    flex-wrap:wrap;
+  }
+  .event-field-move{
+    margin-left:auto;
+  }
+  .event-field-row-v71 input,
+  .event-field-row-v71 select,
+  .event-field-card textarea{
+    font-size:16px!important;
+    min-height:44px;
+  }
+  .event-required-toggle{
+    min-height:44px;
+  }
 }
 
 </style>
@@ -3357,6 +3621,82 @@ function googleAuthProvider(){
   provider.setCustomParameters({prompt:"select_account"});
   return provider;
 }
+async function setAuthPersistenceSafe(){
+  try{
+    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    return "session";
+  }catch(sessionError){
+    console.warn("SESSION persistence unavailable",sessionError?.code||sessionError,sessionError?.customData?.originalError||"");
+    try{
+      await fbAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+      return "memory";
+    }catch(memoryError){
+      console.warn("Memory persistence fallback failed",memoryError?.code||memoryError);
+      // Persistence is an optimization/session policy, not a reason to block authentication.
+      return "default";
+    }
+  }
+}
+function googleIdentityReady(){
+  return !!(
+    firebaseConfig.googleClientId &&
+    window.google?.accounts?.oauth2?.initTokenClient
+  );
+}
+function googleOauthToken(){
+  return new Promise((resolve,reject)=>{
+    if(!googleIdentityReady()){
+      reject(Object.assign(new Error("Google Identity Services chưa sẵn sàng."),{code:"osc/gis-unavailable"}));
+      return;
+    }
+
+    let settled=false;
+    const finishError=(code,message)=>{
+      if(settled)return;
+      settled=true;
+      reject(Object.assign(new Error(message||"Không thể mở Google."),{code}));
+    };
+
+    try{
+      const client=google.accounts.oauth2.initTokenClient({
+        client_id:firebaseConfig.googleClientId,
+        scope:"openid email profile",
+        callback:response=>{
+          if(settled)return;
+          if(response?.error){
+            finishError("osc/gis-"+response.error,response.error_description||response.error);
+            return;
+          }
+          if(!response?.access_token){
+            finishError("osc/gis-no-token","Google không trả về access token.");
+            return;
+          }
+          settled=true;
+          resolve(response);
+        },
+        error_callback:error=>{
+          finishError(
+            "osc/gis-"+(error?.type||"popup-error"),
+            error?.message||error?.type||"Google popup không hoàn tất."
+          );
+        }
+      });
+      client.requestAccessToken({prompt:"select_account"});
+    }catch(e){
+      finishError(e?.code||"osc/gis-init-failed",e?.message||"Không khởi tạo được Google Sign-In.");
+    }
+  });
+}
+async function firebaseGoogleCredentialInteractive(){
+  const response=await googleOauthToken();
+  return firebase.auth.GoogleAuthProvider.credential(null,response.access_token);
+}
+function googleInternalErrorDetail(e){
+  const original=e?.customData?.originalError;
+  if(!original)return "";
+  if(typeof original==="string")return original.slice(0,220);
+  return String(original?.message||original?.name||"").slice(0,220);
+}
 function providerIds(user=fbAuth.currentUser){return (user?.providerData||[]).map(x=>x?.providerId).filter(Boolean)}
 function hasAuthProvider(providerId,user=fbAuth.currentUser){return providerIds(user).includes(providerId)}
 function normalizeAuthEmail(v){return String(v||"").trim().toLowerCase()}
@@ -3381,7 +3721,7 @@ function googleAuthErrorMessage(e){
     "auth/web-storage-unsupported":"Trình duyệt đang chặn bộ nhớ cần thiết cho Firebase Authentication.",
     "auth/operation-not-supported-in-this-environment":"Môi trường trình duyệt hiện tại không hỗ trợ cửa sổ đăng nhập Google.",
     "auth/configuration-not-found":"Cấu hình Google Authentication của dự án Firebase chưa hoàn tất.",
-    "auth/internal-error":"Firebase/Google trả về lỗi nội bộ trong quá trình xác thực.",
+    "auth/internal-error":"Firebase Authentication gặp lỗi nội bộ. V70 sẽ tự thử luồng Google khác; nếu vẫn lỗi, hãy kiểm tra Authorized domains / JavaScript origins.",
     "auth/account-exists-with-different-credential":"Email này đã tồn tại bằng một phương thức đăng nhập khác.",
     "auth/credential-already-in-use":"Tài khoản Google này đang được liên kết với một Firebase User khác."
   };
@@ -3414,56 +3754,172 @@ async function signInWithGoogle(){
   const configError=runtimeFirebaseConfigError?.()||"";
   if(configError){setLoginError(configError);return}
   if(googlePopupBusy)return;
-  googlePopupBusy=true;authFlowHold=true;
-  const btn=$("#googleLoginBtn");setLoginError("");
+
+  googlePopupBusy=true;
+  authFlowHold=true;
+  const btn=$("#googleLoginBtn");
+  setLoginError("");
+
+  let attemptedCredential=null;
+
   try{
-    if(btn){btn.disabled=true;btn.querySelector("span:last-child").textContent="Đang mở Google…"}
-    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-    const result=await fbAuth.signInWithPopup(googleAuthProvider()),user=result?.user;
+    if(btn){
+      btn.disabled=true;
+      const text=btn.querySelector("span:last-child");
+      if(text)text.textContent="Đang mở Google…";
+    }
+
+    await setAuthPersistenceSafe();
+
+    let result=null;
+
+    // Primary V70 path: Google's official Identity Services -> Firebase credential.
+    // This avoids the Firebase auth-helper popup/storage path that was producing
+    // auth/internal-error on the deployed Vercel site.
+    if(googleIdentityReady()){
+      attemptedCredential=await firebaseGoogleCredentialInteractive();
+      result=await fbAuth.signInWithCredential(attemptedCredential);
+    }else{
+      console.warn("GIS not ready; using Firebase popup fallback");
+      result=await fbAuth.signInWithPopup(googleAuthProvider());
+      attemptedCredential=googleCredentialFromResult(result);
+    }
+
+    const user=result?.user;
     if(!user)throw Object.assign(new Error("Google không trả về tài khoản người dùng."),{code:"auth/internal-error"});
-    const pendingCred=googleCredentialFromResult(result),profileCheck=await googleSignedInUserHasProfile(user);
+
+    const profileCheck=await googleSignedInUserHasProfile(user);
+    if(profileCheck.error)throw profileCheck.error;
+
     if(profileCheck.exists){
-      clearPendingGoogleLink();authFlowHold=false;
-      const ok=await validateAccess(user);if(!ok){try{await fbAuth.signOut()}catch{}}
+      clearPendingGoogleLink();
+      authFlowHold=false;
+      const ok=await validateAccess(user);
+      if(!ok){try{await fbAuth.signOut()}catch{}}
       return;
     }
-    pendingGoogleCredential=pendingCred;pendingGoogleEmail=normalizeAuthEmail(user.email);pendingGoogleOrphanUid=user.uid;
+
+    pendingGoogleCredential=attemptedCredential||googleCredentialFromResult(result);
+    pendingGoogleEmail=normalizeAuthEmail(user.email);
+    pendingGoogleOrphanUid=user.uid;
+
     try{await fbAuth.signOut()}catch{}
     authFlowHold=false;
+
     if(pendingGoogleEmail&&$("#adminEmail"))$("#adminEmail").value=pendingGoogleEmail;
-    setLoginError("Google đã xác thực nhưng đang gắn với một Firebase User chưa có quyền truy cập. Nếu đây là cùng email tài khoản Email/Mật khẩu của bạn, hãy nhập mật khẩu một lần rồi bấm Đăng nhập. Hệ thống sẽ kiểm tra và hợp nhất an toàn.");
+
+    if(pendingGoogleCredential){
+      setLoginError("Google đã xác thực nhưng UID Google này chưa có hồ sơ quyền. Nếu đây là cùng email tài khoản Email/Mật khẩu hiện tại, hãy nhập mật khẩu một lần để hệ thống liên kết Google vào đúng tài khoản.");
+    }else{
+      setLoginError("Google đã xác thực nhưng tài khoản này chưa có hồ sơ quyền users/{UID}. Admin cần cấp quyền cho UID này.");
+    }
   }catch(e){
-    console.warn("Google sign-in failed",e?.code||e);
+    console.warn("Google sign-in failed",e?.code||e,e?.customData?.originalError||"");
+
     if(e?.code==="auth/account-exists-with-different-credential"){
-      const pendingCred=googleCredentialFromError(e),email=authErrorEmail(e);
-      if(!pendingCred)setLoginError("Firebase báo xung đột tài khoản nhưng không trả về Google credential để liên kết. (auth/account-exists-with-different-credential)");
-      else{
-        pendingGoogleCredential=pendingCred;pendingGoogleEmail=email;pendingGoogleOrphanUid="";
+      const pendingCred=googleCredentialFromError(e)||attemptedCredential;
+      const email=authErrorEmail(e);
+
+      if(!pendingCred){
+        setLoginError("Email này đã có tài khoản bằng phương thức khác nhưng Google credential không được trả về để liên kết.");
+      }else{
+        pendingGoogleCredential=pendingCred;
+        pendingGoogleEmail=email;
+        pendingGoogleOrphanUid="";
         if(email&&$("#adminEmail"))$("#adminEmail").value=email;
-        setLoginError("Email này đã có tài khoản bằng phương thức khác. Hãy nhập mật khẩu tài khoản hiện tại một lần; sau khi xác thực, hệ thống sẽ liên kết Google vào cùng UID.");
+        setLoginError("Email này đã có tài khoản Email/Mật khẩu. Hãy nhập mật khẩu một lần; sau khi xác thực, hệ thống sẽ liên kết Google vào cùng UID.");
       }
-    }else setLoginError(googleAuthErrorMessage(e));
+    }else if(String(e?.code||"").startsWith("osc/gis-")){
+      // GIS failure: try Firebase popup only when the Google popup itself was not
+      // explicitly cancelled by the user.
+      const cancelled=/popup_closed|popup-closed|cancel|access_denied/.test(String(e?.code||"")+" "+String(e?.message||""));
+      if(cancelled){
+        setLoginError("Bạn đã đóng hoặc hủy cửa sổ đăng nhập Google.");
+      }else{
+        try{
+          const fallback=await fbAuth.signInWithPopup(googleAuthProvider());
+          const user=fallback?.user;
+          if(!user)throw Object.assign(new Error("Google không trả về tài khoản."),{code:"auth/internal-error"});
+
+          const profileCheck=await googleSignedInUserHasProfile(user);
+          if(profileCheck.error)throw profileCheck.error;
+
+          if(profileCheck.exists){
+            clearPendingGoogleLink();
+            authFlowHold=false;
+            const ok=await validateAccess(user);
+            if(!ok){try{await fbAuth.signOut()}catch{}}
+          }else{
+            pendingGoogleCredential=googleCredentialFromResult(fallback);
+            pendingGoogleEmail=normalizeAuthEmail(user.email);
+            pendingGoogleOrphanUid=user.uid;
+            try{await fbAuth.signOut()}catch{}
+            if(pendingGoogleEmail&&$("#adminEmail"))$("#adminEmail").value=pendingGoogleEmail;
+            setLoginError("Google đã xác thực nhưng UID này chưa được cấp quyền. Nếu cùng email tài khoản hiện tại, nhập mật khẩu một lần để liên kết.");
+          }
+        }catch(fallbackError){
+          const detail=googleInternalErrorDetail(fallbackError);
+          setLoginError(`${googleAuthErrorMessage(fallbackError)}${detail?` • ${detail}`:""}`);
+        }
+      }
+    }else{
+      const detail=googleInternalErrorDetail(e);
+      setLoginError(`${googleAuthErrorMessage(e)}${detail?` • ${detail}`:""}`);
+    }
+
     authFlowHold=false;
   }finally{
     googlePopupBusy=false;
-    if(btn){btn.disabled=false;btn.querySelector("span:last-child").textContent="Tiếp tục với Google"}
+    if(btn){
+      btn.disabled=false;
+      const text=btn.querySelector("span:last-child");
+      if(text)text.textContent="Tiếp tục với Google";
+    }
   }
 }
 async function linkGoogleToCurrentAccount(){
-  const user=fbAuth.currentUser;if(!user)return;const btn=$("#linkGoogleProviderBtn");
+  const user=fbAuth.currentUser;
+  if(!user)return;
+  const btn=$("#linkGoogleProviderBtn");
+
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang liên kết…"}
-    await user.linkWithPopup(googleAuthProvider());await user.reload();renderMyAccount();toast("Đã liên kết tài khoản Google");
+
+    await setAuthPersistenceSafe();
+
+    let credential=null;
+    if(googleIdentityReady()){
+      credential=await firebaseGoogleCredentialInteractive();
+      await user.linkWithCredential(credential);
+    }else{
+      await user.linkWithPopup(googleAuthProvider());
+    }
+
+    await user.reload();
+    renderMyAccount();
+    toast("Đã liên kết tài khoản Google");
   }catch(e){
     console.error("linkGoogleToCurrentAccount",e);
+
     if(e?.code==="auth/credential-already-in-use"){
       const pendingCred=googleCredentialFromError(e);
-      if(pendingCred){pendingGoogleCredential=pendingCred;pendingGoogleEmail=normalizeAuthEmail(user.email);pendingGoogleOrphanUid=""}
-      alert("Google này đang được gắn với một Firebase User khác.\n\nĐăng xuất rồi bấm “Tiếp tục với Google”. Nếu hệ thống yêu cầu, nhập mật khẩu tài khoản hiện tại một lần để V50 kiểm tra và sửa xung đột.");
+      if(pendingCred){
+        pendingGoogleCredential=pendingCred;
+        pendingGoogleEmail=normalizeAuthEmail(user.email);
+        pendingGoogleOrphanUid="";
+      }
+      alert("Google này đang được gắn với một Firebase User khác. Đăng xuất rồi bấm “Tiếp tục với Google”; nếu hệ thống yêu cầu, nhập mật khẩu tài khoản chính một lần để liên kết an toàn.");
     }else{
-      const msg=e?.code==="auth/provider-already-linked"?"Tài khoản Google đã được liên kết.":e?.code==="auth/requires-recent-login"?"Hãy đăng xuất, đăng nhập lại rồi thử liên kết Google.":googleAuthErrorMessage(e);alert(msg);
+      const msg=e?.code==="auth/provider-already-linked"
+        ?"Tài khoản Google đã được liên kết."
+        :e?.code==="auth/requires-recent-login"
+          ?"Hãy đăng xuất, đăng nhập lại rồi thử liên kết Google."
+          :googleAuthErrorMessage(e);
+      alert(msg);
     }
-  }finally{if(btn){btn.disabled=false;btn.textContent="Liên kết Google"}}
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Liên kết Google"}
+  }
 }
 
 function setLoginError(t){
@@ -3678,7 +4134,7 @@ $("#loginForm").onsubmit=async e=>{
   try{
     if(btn){btn.disabled=true;const s=btn.querySelector("span");if(s)s.textContent="Đang đăng nhập…"}
     if(loginFailCount>=3){const wait=Math.min(8000,1000*Math.pow(2,loginFailCount-3));await new Promise(r=>setTimeout(r,wait))}
-    await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    await setAuthPersistenceSafe();
     let passwordCredential=await fbAuth.signInWithEmailAndPassword(email,password);loginFailCount=0;
     const signedEmail=normalizeAuthEmail(passwordCredential.user?.email);
     if(pendingGoogleCredential){
@@ -6781,56 +7237,212 @@ function updateRichContent(index,value){
   const preview=document.getElementById("rich_preview_"+index);
   if(preview)preview.innerHTML=renderRichText(value);
 }
+function eventFieldByEditorIndex(index){
+  const i=Number(index);
+  return Number.isInteger(i)&&i>=0&&i<eventBuilderFields.length?eventBuilderFields[i]:null;
+}
+function updateEventBuilderField(index,key,value){
+  const f=eventFieldByEditorIndex(index);if(!f)return;
+  if(key==="required")f.required=!!value;
+  else if(key==="options")f.options=String(value||"").split(",").map(x=>x.trim()).filter(Boolean);
+  else f[key]=String(value??"");
+}
+function changeEventBuilderFieldType(index,type){
+  const f=eventFieldByEditorIndex(index);if(!f)return;
+  f.type=eventFieldTypeAlias(type||"text");
+  if(!optionType(f.type))f.options=[];
+  if(f.type==="content"&&!f.content)f.content="";
+  if(f.type==="image"&&!f.imageData)f.imageData="";
+  renderEventFieldEditor();
+}
+function deleteEventBuilderField(index){
+  const i=Number(index);
+  if(!Number.isInteger(i)||i<0||i>=eventBuilderFields.length)return;
+  eventBuilderFields.splice(i,1);
+  renderEventFieldEditor();
+}
+function moveEventBuilderField(index,direction){
+  const i=Number(index),j=i+Number(direction);
+  if(!Number.isInteger(i)||!Number.isInteger(j)||i<0||j<0||i>=eventBuilderFields.length||j>=eventBuilderFields.length)return;
+  [eventBuilderFields[i],eventBuilderFields[j]]=[eventBuilderFields[j],eventBuilderFields[i]];
+  renderEventFieldEditor();
+}
+function eventFieldMoveButtons(i){
+  return `<div class="event-field-move">
+    <button type="button" class="secondary" data-event-action="move-up" data-index="${i}" ${i===0?"disabled":""} title="Đưa lên">↑</button>
+    <button type="button" class="secondary" data-event-action="move-down" data-index="${i}" ${i===eventBuilderFields.length-1?"disabled":""} title="Đưa xuống">↓</button>
+  </div>`;
+}
 function renderEventFieldEditor(){
   const root=$("#eventFieldEditor");if(!root)return;
+
   root.innerHTML=eventBuilderFields.map((f,i)=>{
+    const move=eventFieldMoveButtons(i);
+
     if(f.type==="section"){
-      return `<div class="event-section-editor"><div class="event-field-row" style="grid-template-columns:1fr .8fr 48px"><input value="${esc(f.label||"Phần mới")}" placeholder="Tiêu đề phần" oninput="eventBuilderFields[${i}].label=this.value"><select onchange="eventBuilderFields[${i}].type=this.value;renderEventFieldEditor()">${eventFieldTypeOptions(f.type)}</select><button class="danger" onclick="eventBuilderFields.splice(${i},1);renderEventFieldEditor()">×</button></div><textarea style="width:100%;min-height:72px" placeholder="Mô tả phần (không bắt buộc)" oninput="eventBuilderFields[${i}].description=this.value">${esc(f.description||"")}</textarea></div>`;
+      return `<div class="event-section-editor event-field-card" data-event-field="${i}">
+        <div class="event-field-card-head">
+          <span class="event-field-number">${i+1}</span>
+          <strong>Phần / Section</strong>
+          ${move}
+          <button type="button" class="danger" data-event-action="delete" data-index="${i}">×</button>
+        </div>
+        <div class="event-field-row event-field-row-v71">
+          <label>Tiêu đề phần
+            <input data-event-index="${i}" data-event-key="label" value="${esc(f.label||"Phần mới")}" placeholder="Tiêu đề phần">
+          </label>
+          <label>Loại trường
+            <select data-event-index="${i}" data-event-key="type">${eventFieldTypeOptions(f.type)}</select>
+          </label>
+        </div>
+        <label>Mô tả phần
+          <textarea data-event-index="${i}" data-event-key="description" style="width:100%;min-height:72px" placeholder="Mô tả phần (không bắt buộc)">${esc(f.description||"")}</textarea>
+        </label>
+      </div>`;
     }
+
     if(f.type==="content"){
-      return `<div class="rich-editor">
-        <div class="event-field-row" style="grid-template-columns:1fr .8fr 48px">
-          <input value="${esc(f.label||"Ghi chú")}" placeholder="Tên khối nội dung" oninput="eventBuilderFields[${i}].label=this.value">
-          <select onchange="eventBuilderFields[${i}].type=this.value;renderEventFieldEditor()">${eventFieldTypeOptions(f.type)}</select>
-          <button class="danger" onclick="eventBuilderFields.splice(${i},1);renderEventFieldEditor()">×</button>
+      return `<div class="rich-editor event-field-card" data-event-field="${i}">
+        <div class="event-field-card-head">
+          <span class="event-field-number">${i+1}</span>
+          <strong>Văn bản / ghi chú</strong>
+          ${move}
+          <button type="button" class="danger" data-event-action="delete" data-index="${i}">×</button>
+        </div>
+        <div class="event-field-row event-field-row-v71">
+          <label>Tên khối nội dung
+            <input data-event-index="${i}" data-event-key="label" value="${esc(f.label||"Ghi chú")}" placeholder="Tên khối nội dung">
+          </label>
+          <label>Loại trường
+            <select data-event-index="${i}" data-event-key="type">${eventFieldTypeOptions(f.type)}</select>
+          </label>
         </div>
         <div class="rich-toolbar">
-          <button type="button" onclick="applyRichFormat(${i},'bold')"><b>B</b></button>
-          <button type="button" onclick="applyRichFormat(${i},'italic')"><i>I</i></button>
-          <button type="button" onclick="applyRichFormat(${i},'newline')">↵ Xuống dòng</button>
+          <button type="button" data-event-action="rich-bold" data-index="${i}"><b>B</b></button>
+          <button type="button" data-event-action="rich-italic" data-index="${i}"><i>I</i></button>
+          <button type="button" data-event-action="rich-newline" data-index="${i}">↵ Xuống dòng</button>
         </div>
-        <textarea id="rich_content_${i}" placeholder="Nhập nội dung ghi chú. Dùng nút B/I hoặc xuống dòng như văn bản…" oninput="updateRichContent(${i},this.value)">${esc(f.content||"")}</textarea>
+        <textarea id="rich_content_${i}" data-event-index="${i}" data-event-key="content" placeholder="Nhập nội dung ghi chú. Dùng nút B/I hoặc xuống dòng như văn bản…">${esc(f.content||"")}</textarea>
         <div id="rich_preview_${i}" class="rich-preview">${renderRichText(f.content||"")||'<span class="small-help">Xem trước nội dung sẽ hiển thị ở đây.</span>'}</div>
       </div>`;
     }
+
     if(f.type==="image"){
-      return `<div class="image-field-editor">
-        <div class="event-field-row">
-          <input value="${esc(f.label||"")}" placeholder="Tiêu đề phía trên ảnh" oninput="eventBuilderFields[${i}].label=this.value">
-          <select onchange="eventBuilderFields[${i}].type=this.value;renderEventFieldEditor()">${eventFieldTypeOptions(f.type)}</select>
-          <span class="small-help">Không cần trả lời</span>
-          <input value="${esc(f.caption||"")}" placeholder="Chú thích ảnh" oninput="eventBuilderFields[${i}].caption=this.value">
-          <button class="danger" onclick="eventBuilderFields.splice(${i},1);renderEventFieldEditor()">×</button>
+      return `<div class="image-field-editor event-field-card" data-event-field="${i}">
+        <div class="event-field-card-head">
+          <span class="event-field-number">${i+1}</span>
+          <strong>Hình ảnh / QR</strong>
+          ${move}
+          <button type="button" class="danger" data-event-action="delete" data-index="${i}">×</button>
+        </div>
+        <div class="event-field-row event-field-row-v71">
+          <label>Tiêu đề
+            <input data-event-index="${i}" data-event-key="label" value="${esc(f.label||"")}" placeholder="Tiêu đề phía trên ảnh">
+          </label>
+          <label>Loại trường
+            <select data-event-index="${i}" data-event-key="type">${eventFieldTypeOptions(f.type)}</select>
+          </label>
+          <label>Chú thích ảnh
+            <input data-event-index="${i}" data-event-key="caption" value="${esc(f.caption||"")}" placeholder="Chú thích ảnh">
+          </label>
         </div>
         <div class="image-field-preview">
           <div>
-            <input class="file-input" id="eventImg_${i}" type="file" accept="image/*" onchange="chooseEventQuestionImage(${i},this)">
-            <button class="secondary" onclick="document.getElementById('eventImg_${i}').click()">${f.imageData?"Đổi hình ảnh":"Upload hình ảnh"}</button>
-            ${f.imageData?`<button class="danger" onclick="removeEventQuestionImage(${i})">Xóa ảnh</button>`:""}
+            <input class="file-input" id="eventImg_${i}" type="file" accept="image/*" data-event-image-index="${i}">
+            <button class="secondary" type="button" data-event-action="choose-image" data-index="${i}">${f.imageData?"Đổi hình ảnh":"Upload hình ảnh"}</button>
+            ${f.imageData?`<button class="danger" type="button" data-event-action="remove-image" data-index="${i}">Xóa ảnh</button>`:""}
             <div class="small-help">Dùng cho QR ngân hàng, ảnh hướng dẫn, poster hoặc minh họa câu hỏi.</div>
           </div>
           ${f.imageData?`<img src="${f.imageData}" alt="Hình câu hỏi">`:`<div class="small-help">Chưa có hình ảnh.</div>`}
         </div>
       </div>`;
     }
-    return `<div class="event-field-row">
-      <input value="${esc(f.label||"")}" placeholder="Nội dung câu hỏi" oninput="eventBuilderFields[${i}].label=this.value">
-      <select onchange="eventBuilderFields[${i}].type=this.value;renderEventFieldEditor()">${eventFieldTypeOptions(f.type)}</select>
-      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" ${f.required?"checked":""} onchange="eventBuilderFields[${i}].required=this.checked"> Bắt buộc</label>
-      <input class="options-editor" ${optionType(f.type)?"":"disabled"} value="${esc((f.options||[]).join(", "))}" placeholder="${optionType(f.type)?"Nhập các lựa chọn, cách nhau bằng dấu phẩy":"Không cần lựa chọn"}" oninput="eventBuilderFields[${i}].options=this.value.split(',').map(x=>x.trim()).filter(Boolean)">
-      <button class="danger" onclick="eventBuilderFields.splice(${i},1);renderEventFieldEditor()">×</button>
+
+    return `<div class="event-field-card" data-event-field="${i}">
+      <div class="event-field-card-head">
+        <span class="event-field-number">${i+1}</span>
+        <strong>Câu hỏi</strong>
+        ${move}
+        <button type="button" class="danger" data-event-action="delete" data-index="${i}">×</button>
+      </div>
+      <div class="event-field-row event-field-row-v71">
+        <label>Nội dung câu hỏi
+          <input data-event-index="${i}" data-event-key="label" value="${esc(f.label||"")}" placeholder="Nội dung câu hỏi">
+        </label>
+        <label>Loại trường
+          <select data-event-index="${i}" data-event-key="type">${eventFieldTypeOptions(f.type)}</select>
+        </label>
+        <label class="event-required-toggle">
+          <input data-event-index="${i}" data-event-key="required" type="checkbox" ${f.required?"checked":""}> Bắt buộc
+        </label>
+        <label>Lựa chọn
+          <input class="options-editor" data-event-index="${i}" data-event-key="options" ${optionType(f.type)?"":"disabled"} value="${esc((f.options||[]).join(", "))}" placeholder="${optionType(f.type)?"Nhập các lựa chọn, cách nhau bằng dấu phẩy":"Không cần lựa chọn"}">
+        </label>
+      </div>
     </div>`;
-  }).join("");
+  }).join("")||`<div class="event-field-empty-warning">Chưa có trường nào. Bấm <b>+ Thêm trường</b> để tạo câu hỏi.</div>`;
+
+  bindEventFieldEditorControls();
+}
+function bindEventFieldEditorControls(){
+  const root=$("#eventFieldEditor");if(!root)return;
+
+  root.querySelectorAll("[data-event-index][data-event-key]").forEach(el=>{
+    const index=Number(el.dataset.eventIndex),key=el.dataset.eventKey;
+
+    const handler=()=>{
+      if(key==="type"){
+        changeEventBuilderFieldType(index,el.value);
+        return;
+      }
+      if(key==="required"){
+        updateEventBuilderField(index,key,el.checked);
+        return;
+      }
+      updateEventBuilderField(index,key,el.value);
+
+      if(key==="content"){
+        const preview=document.getElementById("rich_preview_"+index);
+        if(preview)preview.innerHTML=renderRichText(el.value);
+      }
+    };
+
+    el.addEventListener(key==="type"||key==="required"?"change":"input",handler);
+    if(key!=="type"&&key!=="required")el.addEventListener("change",handler);
+  });
+
+  root.querySelectorAll("[data-event-action]").forEach(btn=>{
+    btn.addEventListener("click",async e=>{
+      e.preventDefault();
+      const index=Number(btn.dataset.index);
+      const action=btn.dataset.eventAction;
+
+      if(action==="delete")return deleteEventBuilderField(index);
+      if(action==="move-up")return moveEventBuilderField(index,-1);
+      if(action==="move-down")return moveEventBuilderField(index,1);
+      if(action==="rich-bold")return applyRichFormat(index,"bold");
+      if(action==="rich-italic")return applyRichFormat(index,"italic");
+      if(action==="rich-newline")return applyRichFormat(index,"newline");
+      if(action==="remove-image")return removeEventQuestionImage(index);
+      if(action==="choose-image"){
+        document.getElementById("eventImg_"+index)?.click();
+        return;
+      }
+    });
+  });
+
+  root.querySelectorAll("[data-event-image-index]").forEach(input=>{
+    input.addEventListener("change",()=>chooseEventQuestionImage(Number(input.dataset.eventImageIndex),input));
+  });
+}
+function syncEventBuilderEditorFromDom(){
+  const root=$("#eventFieldEditor");if(!root)return;
+  root.querySelectorAll("[data-event-index][data-event-key]").forEach(el=>{
+    const i=Number(el.dataset.eventIndex),key=el.dataset.eventKey;
+    if(!eventFieldByEditorIndex(i))return;
+    if(key==="required")updateEventBuilderField(i,key,el.checked);
+    else if(key!=="type")updateEventBuilderField(i,key,el.value);
+  });
 }
 function addEventField(){
   eventBuilderFields.push(normalizeEventField({label:"Câu hỏi mới",type:"text",required:false,options:[]}));
@@ -6846,6 +7458,7 @@ function restoreEventBuilderDefaultFields(){
   renderEventFieldEditor();
 }
 function previewEventBuilderForm(){
+  syncEventBuilderEditorFromDom();
   const fields=normalizeEventFields(eventBuilderFields,{
     title:$("#eventTitle")?.value||"",
     resultAction:$("#eventResultAction")?.value||"none"
@@ -7062,6 +7675,7 @@ async function processContinuationSubmission(ev,doc){
 
 async function saveEventBuilder(){
   if(!canEditModule("events"))return;
+  syncEventBuilderEditorFromDom();
   const title=$("#eventTitle").value.trim();
   if(!title)return alert("Vui lòng nhập tiêu đề sự kiện.");
 
@@ -7129,20 +7743,43 @@ async function saveEventBuilder(){
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
     fields:fullFields
   };
-  let ev=eventFor(eventId);
-  if(!ev){ev={id:eventId};state.events.push(ev)}
-  Object.assign(ev,{
-    ...fullEvent,
-    fields:lightFields,
-    updatedAt:new Date().toISOString()
-  });
-  await fbDb.collection("eventPortals").doc(eventId).set({
-    ...fullEvent,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  },{merge:false});
-  if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
-  else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
-  closeModal();save();toast(fullEvent.specialType==="continuation"?"Đã lưu form đồng hành kỳ tiếp theo":(eventPoints>0?`Đã lưu cổng sự kiện • ${eventPoints} điểm`:"Đã lưu cổng sự kiện • Không tính điểm"));renderEvents();
+  const saveBtn=[...document.querySelectorAll(".event-builder-modal .modal-actions button")].find(b=>String(b.getAttribute("onclick")||"").includes("saveEventBuilder"));
+  const oldSaveText=saveBtn?.textContent||"";
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent="Đang lưu…"}
+
+  try{
+    await fbDb.collection("eventPortals").doc(eventId).set({
+      ...fullEvent,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:false});
+
+    let ev=eventFor(eventId);
+    if(!ev){ev={id:eventId};state.events.push(ev)}
+    Object.assign(ev,{
+      ...fullEvent,
+      fields:lightFields,
+      updatedAt:new Date().toISOString()
+    });
+
+    if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
+    else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
+
+    closeModal();
+    save();
+    renderEvents();
+    scheduleRealtimeRender("events");
+    toast(fullEvent.specialType==="continuation"
+      ?"Đã lưu form đồng hành kỳ tiếp theo"
+      :(eventPoints>0?`Đã lưu cổng sự kiện • ${eventPoints} điểm`:"Đã lưu cổng sự kiện • Không tính điểm"));
+  }catch(e){
+    console.error("saveEventBuilder",e);
+    const msg=e?.code==="permission-denied"
+      ?"Firestore từ chối quyền chỉnh sửa sự kiện. Hãy kiểm tra quyền Events của tài khoản và học kỳ có đang bị khóa hay không."
+      :(e?.message||e);
+    alert("Không lưu được các trường sự kiện: "+msg);
+  }finally{
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=oldSaveText||"Lưu cổng sự kiện"}
+  }
 }
 async function toggleEventOpen(id){
   if(!canEditModule("events"))return;
