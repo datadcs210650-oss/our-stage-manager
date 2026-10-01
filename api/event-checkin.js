@@ -35,6 +35,10 @@ function actorCanEditAttendance(actor) {
   if (actorIsAdmin(actor)) return true;
   return actor.profile.role === "bcn" && actor.profile.permissions?.viewAttendance === true && actor.profile.permissions?.editAttendance === true;
 }
+function actorCanViewEventCheckins(actor) {
+  if (actorIsAdmin(actor)) return true;
+  return actor.profile.role === "bcn" && actor.profile.permissions?.viewAttendance === true;
+}
 async function loadState(db) {
   const snap = await db.collection("clubState").doc("main").get();
   return snap.exists ? (snap.data()?.state || {}) : {};
@@ -74,7 +78,11 @@ async function findMember(db, semester, mssv) {
   return null;
 }
 function eventMssvField(event) {
-  return (event.fields || []).find(f => f?.systemKey === "mssv") || (event.fields || []).find(f => f?.type === "mssv") || null;
+  const fields = Array.isArray(event?.fields) ? event.fields : [];
+  return fields.find(f => f?.systemKey === "mssv")
+    || fields.find(f => f?.type === "mssv")
+    || fields.find(f => /^(mssv|mã số sinh viên|ma so sinh vien|student id)$/i.test(String(f?.label || "").trim()))
+    || null;
 }
 async function findRegistration(db, event, mssv) {
   const field = eventMssvField(event);
@@ -212,8 +220,18 @@ async function adminScan(req, body) {
   if (member && !registration) {
     // Only Admin/Super Admin may override the registration requirement immediately.
     if (actorIsAdmin(actor)) {
+      const existingRef = db.collection("eventPortals").doc(event.id).collection("qrCheckins").doc(checkinIdFor(member, mssv));
+      const existingSnap = await existingRef.get();
+      const existingStatus = existingSnap.exists ? String(existingSnap.data()?.checkinStatus || "approved") : "";
       if (body.decision !== "approve") {
-        return { ok: true, needsConfirmation: true, mssv, memberName: String(member.name || "Thành viên").slice(0, 160), registered: false };
+        if (existingSnap.exists && existingStatus !== "pending_admin") {
+          return { ok:true, duplicate:true, existingStatus, attendeeType:"member", registered:false, memberName:String(member.name || "Thành viên").slice(0,160), mssv };
+        }
+        return { ok: true, needsConfirmation: true, mssv, memberName: String(member.name || "Thành viên").slice(0, 160), registered: false, existingStatus };
+      }
+      if (existingSnap.exists && existingStatus === "pending_admin") {
+        const decided = await decide(req, { eventId:event.id, checkinId:existingSnap.id, approve:true });
+        return { ok:true, duplicate:false, attendeeType:"member", registered:false, memberName:String(member.name || "Thành viên").slice(0,160), mssv, activityApplied:decided.activityApplied===true, activityAppliedValue:decided.activityAppliedValue, existingStatus:"approved" };
       }
     } else {
       const pending = await writePendingCheckin({
@@ -223,9 +241,11 @@ async function adminScan(req, body) {
         checkedInByName: actor.profile.displayName || actor.decoded.email || "BCN",
         scannerSource: "internal_bcn"
       });
+      const existingStatus = pending.data?.checkinStatus || "pending_admin";
       return {
-        ok: true, duplicate: pending.duplicate, pendingAdmin: true,
-        existingStatus: pending.data?.checkinStatus || "pending_admin",
+        ok: true, duplicate: pending.duplicate,
+        pendingAdmin: !pending.duplicate || existingStatus === "pending_admin",
+        existingStatus,
         attendeeType: "member", registered: false,
         memberName: String(member.name || "Thành viên").slice(0, 160), mssv
       };
@@ -250,6 +270,79 @@ async function adminScan(req, body) {
     activityLocked: !!(member && linkedActivity(state, event)?.item?.locked === true),
     existingStatus: result.duplicateData?.checkinStatus || ""
   };
+}
+
+
+function timestampMillis(value) {
+  try {
+    if (value?.toMillis) return value.toMillis();
+    if (value?.toDate) return value.toDate().getTime();
+    const n = Number(value || 0);
+    return Number.isFinite(n) ? n : 0;
+  } catch { return 0; }
+}
+function publicCheckinRow(doc) {
+  const d = doc.data ? (doc.data() || {}) : (doc || {});
+  return {
+    id: String(doc.id || d.id || "").slice(0, 180),
+    eventId: String(d.eventId || "").slice(0, 180),
+    semester: String(d.semester || "").slice(0, 20),
+    attendeeType: d.attendeeType === "external" ? "external" : "member",
+    memberId: String(d.memberId || "").slice(0, 180),
+    mssv: String(d.mssv || "").slice(0, 30),
+    memberName: String(d.memberName || "").slice(0, 160),
+    method: ["manual_mssv", "public_scanner", "school_qr"].includes(d.method) ? d.method : "school_qr",
+    registrationStatus: d.registrationStatus === "registered" ? "registered" : "unregistered",
+    checkinStatus: ["approved", "pending_admin", "rejected"].includes(d.checkinStatus) ? d.checkinStatus : "approved",
+    checkedInAt: timestampMillis(d.checkedInAt),
+    checkedInByName: String(d.checkedInByName || "").slice(0, 160),
+    scannerSource: String(d.scannerSource || "").slice(0, 60),
+    activityApplied: d.activityApplied === true,
+    activityAppliedValue: d.activityAppliedValue === true ? true : (d.activityAppliedValue === null || d.activityAppliedValue === undefined || d.activityAppliedValue === "" ? null : (Number.isFinite(Number(d.activityAppliedValue)) ? Number(d.activityAppliedValue) : null))
+  };
+}
+async function adminListCheckins(req, body) {
+  const actor = await requireUser(req);
+  if (!actorCanViewEventCheckins(actor)) throw bad("Tài khoản chưa có quyền xem kết quả check-in.", "osc/forbidden");
+  const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
+  await loadEvent(db, eventId);
+  const snap = await db.collection("eventPortals").doc(eventId).collection("qrCheckins").get();
+  const rows = snap.docs.map(publicCheckinRow).sort((a,b) => b.checkedInAt - a.checkedInAt);
+  return { ok:true, eventId, rows };
+}
+async function adminSummary(req, body) {
+  const actor = await requireUser(req);
+  if (!actorCanViewEventCheckins(actor)) throw bad("Tài khoản chưa có quyền xem kết quả check-in.", "osc/forbidden");
+  const db = getDb();
+  const semester = String(body.semester || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+  if (!semester || semester.length > 20) throw bad("Học kỳ không hợp lệ.");
+  let snap;
+  try {
+    snap = await db.collectionGroup("qrCheckins").where("semester", "==", semester).get();
+  } catch (error) {
+    // Fallback avoids making the Admin UI depend on a collection-group index.
+    const events = await db.collection("eventPortals").where("semester", "==", semester).get();
+    const docs = [];
+    for (const ev of events.docs) {
+      const s = await ev.ref.collection("qrCheckins").get();
+      docs.push(...s.docs);
+    }
+    snap = { docs };
+  }
+  const map = new Map();
+  for (const doc of snap.docs) {
+    const d = doc.data() || {};
+    const eventId = String(d.eventId || doc.ref?.parent?.parent?.id || "");
+    if (!eventId) continue;
+    const x = map.get(eventId) || { eventId, total:0, approved:0, pending:0, rejected:0, external:0 };
+    x.total++;
+    if (d.checkinStatus === "pending_admin") x.pending++;
+    else if (d.checkinStatus === "rejected") x.rejected++;
+    else x.approved++;
+    if (d.attendeeType === "external") x.external++;
+    map.set(eventId, x);
+  }
+  return { ok:true, semester, rows:[...map.values()] };
 }
 
 
@@ -345,11 +438,12 @@ async function publicScan(body) {
 
   if (member && !registration) {
     const pending = await writePendingCheckin({ db, event, member, registration, mssv, method: "public_scanner" });
+    const status = pending.data?.checkinStatus || "pending_admin";
     return {
       ok: true,
       duplicate: pending.duplicate,
-      status: pending.data?.checkinStatus || "pending_admin",
-      pendingAdmin: true,
+      status,
+      pendingAdmin: !pending.duplicate || status === "pending_admin",
       mssv
     };
   }
@@ -446,17 +540,19 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:77 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:78 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:77 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:78 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
+    else if (action === "admin-list-checkins") result = await adminListCheckins(req, body);
+    else if (action === "admin-summary") result = await adminSummary(req, body);
     else if (action === "admin-links") result = await adminLinks(req, body);
     else if (action === "admin-create-link") result = await adminCreateLink(req, body);
     else if (action === "admin-revoke-link") result = await adminRevokeLink(req, body);

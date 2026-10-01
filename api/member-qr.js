@@ -164,14 +164,14 @@ async function adminSetCardActive(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"member-qr", version:77 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"member-qr", version:78 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "issue");
     let result;
-    if (action === "health") result = { ok: true, service: "member-qr", version: 77 };
+    if (action === "health") result = { ok: true, service: "member-qr", version: 78 };
     else if (action === "config") result = await publicConfig(body);
     else if (action === "issue") result = await issue(body);
     else if (action === "admin-state") result = await adminState(req, body);

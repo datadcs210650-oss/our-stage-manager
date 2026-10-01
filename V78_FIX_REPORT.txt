@@ -1,0 +1,24 @@
+OUR STAGE CLUB MANAGER V78 — FIX REPORT
+
+FIXED
+- Member QR: download PNG card (QR + MSSV only).
+- Removed hard-coded sample MSSV from Admin and member QR UI.
+- Admin scanner: more reliable camera selection and clearer camera errors.
+- Check-in result sync: moved Admin list to authenticated server API + polling.
+- Pending delegated scans now surface in Admin event summaries and result list.
+- Admin re-scan of existing pending check-in can approve it correctly.
+- Duplicate pending/approved/rejected responses now report the correct status.
+- New delegated scanner links use URL fragments to reduce bearer-token leakage in request logs/referrers.
+- Check-in API output is minimized to operational fields; no contact details.
+- Firestore V78 narrows qrCheckins read access (viewAttendance or editEvents).
+
+STATIC VALIDATION
+- All API/lib JS: node --check PASS.
+- All HTML inline JS: node --check PASS.
+- package.json/vercel.json: JSON parse PASS.
+- No eval()/new Function() found.
+- No service-account private key found in package.
+- No CS210650 sample remains.
+
+RESIDUAL ARCHITECTURE NOTE
+The legacy single-file UI still uses inline scripts/onclick handlers, so the existing CSP requires 'unsafe-inline'. V78 does not expand that allowance. Removing it safely requires a larger external-JS/event-listener refactor and was intentionally not mixed into this stability patch.
