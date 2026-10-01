@@ -2036,6 +2036,13 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 .event-student-qr-summary{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.event-student-qr-summary span{padding:5px 8px;border-radius:999px;background:#f7eef1;color:#6d1930;font-size:9px;font-weight:800}
 @media(max-width:850px){.event-student-qr-shell{grid-template-columns:1fr}.event-student-qr-reader{min-height:250px}.event-student-qr-list{max-height:260px}}
 </style>
+
+<style id="v76-secure-event-checkin-style">
+.event-checkin-audience-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eef4fb;color:#315f8b;border:1px solid #d7e4f1;font-size:9px;font-weight:850}.event-checkin-audience-badge.public{background:#fff3e8;color:#9a5b00;border-color:#f1dab9}
+.event-student-qr-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.event-student-qr-filters select{width:100%;padding:8px 9px;border:1px solid #ded1d5;border-radius:9px;background:#fff;font-size:10px}.event-student-qr-row.pending{background:#fffaf0}.event-student-qr-row.rejected{opacity:.72;background:#fff5f6}.event-student-qr-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}.event-student-qr-tag{display:inline-flex;padding:3px 6px;border-radius:999px;background:#f2f4f5;color:#66727a;font-size:8px;font-weight:850}.event-student-qr-tag.ok{background:#eaf8f0;color:#1b704b}.event-student-qr-tag.warn{background:#fff4d9;color:#8a5b00}.event-student-qr-tag.external{background:#edf1fb;color:#405d9a}.event-student-qr-row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.event-student-qr-row-actions button{font-size:9px;padding:7px 9px}
+.member-qr-admin-grid{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(360px,1.2fr);gap:14px}.member-qr-admin-card{border:1px solid #e3e8eb;border-radius:15px;background:#fff;padding:15px}.member-qr-admin-card h3{margin:0 0 6px}.member-qr-link-row{display:flex;gap:7px;margin-top:10px}.member-qr-link-row input{flex:1;min-width:0}.member-qr-list{max-height:560px;overflow:auto;border-top:1px solid #edf0f2;margin-top:10px}.member-qr-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid #edf0f2}.member-qr-row b{display:block;font-size:11px}.member-qr-row small{display:block;color:#818b92;font-size:9px;margin-top:3px}.member-qr-state{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:8px;font-weight:850;background:#eaf8f0;color:#1b704b}.member-qr-state.off{background:#fff0f2;color:#982d44}.scanner-link-box{display:grid;gap:10px}.scanner-link-current{padding:11px 12px;border:1px solid #e2e7ea;border-radius:11px;background:#f8fafb}.scanner-link-current b{display:block;font-size:11px}.scanner-link-current small{display:block;margin-top:4px;color:#7b868d;font-size:9px;word-break:break-all}.scanner-link-actions{display:flex;gap:7px;flex-wrap:wrap}.v76-privacy-note{padding:10px 12px;border:1px solid #cfe7da;background:#f1fbf5;border-radius:11px;color:#2d684b;font-size:10px;line-height:1.5}
+@media(max-width:850px){.member-qr-admin-grid{grid-template-columns:1fr}.event-student-qr-filters{grid-template-columns:1fr}.member-qr-row{align-items:flex-start;flex-direction:column}.member-qr-link-row{flex-direction:column}}
+</style>
 </head>
 <body class="auth-login">
 
@@ -2120,6 +2127,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button data-tab="divisions">Phân ban</button>
         <button data-tab="finance">Thu Chi CLB</button>
         <button data-tab="events">Cổng sự kiện</button>
+        <button data-tab="memberQr" class="admin-nav">Mã QR thành viên</button>
         <button data-tab="lookupPortal">Tra cứu thành viên</button>
         <button data-tab="freeLookup">Tra cứu tự do</button>
         <button data-tab="myAccount">Tài khoản của tôi</button>
@@ -2423,6 +2431,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <input id="eventSearch" placeholder="Tìm cổng sự kiện trong học kỳ này…">
         <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
         <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
+        <button class="secondary admin-only-action" type="button" onclick="openTab('memberQr')">Mã QR thành viên</button>
         <button class="primary edit-only" id="createEventBtn">+ Tạo cổng sự kiện</button>
       </div>
       <div class="section-note">Mỗi cổng sự kiện thuộc đúng <b>một học kỳ</b>. Khi bạn đổi học kỳ ở menu bên trái, danh sách cổng sự kiện và kết quả hiển thị ở đây cũng tự chuyển sang học kỳ đó.</div>
@@ -2431,6 +2440,16 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
       <div id="eventEmpty" class="empty hidden">Học kỳ này chưa có cổng sự kiện nào.</div>
     </section>
 
+
+
+    <section id="memberQr" class="hidden">
+      <div class="section-title"><div><div class="eyebrow">QR THÀNH VIÊN</div><h2>Mã QR check-in thành viên</h2><p class="small-help">Admin mở cổng để thành viên nhập MSSV và nhận mã QR chỉ chứa MSSV. Mã giữ nguyên cho đến khi Admin vô hiệu hóa.</p></div><button class="secondary" onclick="renderMemberQrAdmin()">↻ Làm mới</button></div>
+      <div class="v76-privacy-note"><b>Quyền riêng tư:</b> QR thành viên chỉ chứa MSSV, không chứa email, số điện thoại hoặc dữ liệu liên hệ. Khi Admin vô hiệu hóa một MSSV, hệ thống check-in sẽ từ chối mọi QR có cùng MSSV cho đến khi được kích hoạt lại.</div>
+      <div class="member-qr-admin-grid" style="margin-top:14px">
+        <div class="member-qr-admin-card"><h3>Cổng cấp QR cho thành viên</h3><p class="small-help">Cổng áp dụng cho học kỳ đang chọn. Thành viên không cần đăng nhập hệ thống quản trị.</p><div id="memberQrPortalState" class="quick-chip">Đang tải…</div><div class="member-qr-link-row"><input id="memberQrPortalLink" readonly><button class="secondary" onclick="copyText(document.getElementById('memberQrPortalLink').value)">Sao chép</button></div><div class="scanner-link-actions" style="margin-top:10px"><button id="memberQrOpenBtn" class="primary" onclick="setMemberQrPortalOpen(true)">Mở cổng</button><button id="memberQrCloseBtn" class="danger" onclick="setMemberQrPortalOpen(false)">Đóng cổng</button><button class="secondary" onclick="window.open(document.getElementById('memberQrPortalLink').value,'_blank','noopener,noreferrer')">Mở trang thành viên</button></div></div>
+        <div class="member-qr-admin-card"><h3>Mã đã cấp</h3><p class="small-help">Có thể vô hiệu hóa hoặc kích hoạt lại QR theo MSSV. QR đã vô hiệu hóa sẽ không được chấp nhận khi check-in.</p><div id="memberQrAdminSummary" class="event-student-qr-summary"></div><div id="memberQrAdminList" class="member-qr-list"><div class="empty">Đang tải…</div></div></div>
+      </div>
+    </section>
 
     <section id="myAccount" class="hidden">
       <div class="self-account-grid">
@@ -2919,7 +2938,7 @@ const TAB_PERMISSION_MODULE={
 };
 function canAccessTab(tab){
   if(["dashboard","attention","myAccount"].includes(tab))return true;
-  if(["freeLookup","approvals","audit","trash","accounts","settings"].includes(tab))return canEditClub();
+  if(["freeLookup","memberQr","approvals","audit","trash","accounts","settings"].includes(tab))return canEditClub();
   const module=TAB_PERMISSION_MODULE[tab];
   return module?canViewModule(module):canEditClub();
 }
@@ -3347,7 +3366,7 @@ function firestorePlain(v){
   if(v===undefined)return null;
   try{return structuredClone(v)}catch{return JSON.parse(JSON.stringify(v,(k,x)=>x?.toDate?x.toDate().toISOString():x))}
 }
-const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Cổng sự kiện",desc:"Form, QR & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
+const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Cổng sự kiện",desc:"Form, QR & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
 function navLabel(tab){return NAV_META[tab]?.label||tab}
 function navIconSvg(tab){const type=NAV_META[tab]?.icon||"grid",c='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"',s={home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 2.5 2.5L16 9"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V7Z"/><path d="M3 7 16 3v4"/><path d="M16 12h5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/><circle cx="12" cy="12" r="10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',shield:'<path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><path d="M9 12h6M12 9v6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.12-1.3l2-1.55-2-3.46-2.43.98a7 7 0 0 0-2.25-1.3L13.85 3h-4l-.35 2.37a7 7 0 0 0-2.25 1.3L4.82 5.69l-2 3.46 2 1.55A7 7 0 0 0 4.7 12c0 .45.04.88.12 1.3l-2 1.55 2 3.46 2.43-.98a7 7 0 0 0 2.25 1.3L9.85 21h4l.35-2.37a7 7 0 0 0 2.25-1.3l2.43.98 2-3.46-2-1.55c.08-.42.12-.85.12-1.3Z"/>'};return `<svg ${c}>${s[type]||s.grid}</svg>`}
 function enhanceSidebarNavigation(){const nav=$(".nav");if(!nav)return;nav.querySelectorAll(".nav-group-label").forEach(x=>x.remove());let last="";[...nav.querySelectorAll("button[data-tab]")].forEach(btn=>{const tab=btn.dataset.tab,m=NAV_META[tab]||{label:tab,desc:"",group:""};if(m.group&&m.group!==last){const l=document.createElement("div");l.className="nav-group-label";l.textContent=m.group;nav.insertBefore(l,btn);last=m.group}btn.title=m.label;btn.innerHTML=`<span class="nav-icon">${navIconSvg(tab)}</span><span class="nav-copy"><b>${esc(m.label)}</b><small>${esc(m.desc)}</small></span><span class="nav-arrow">›</span>`})}
@@ -3382,7 +3401,7 @@ async function saveUserPreferences(){
   if(!currentFirebaseUser)return;
   try{await fbDb.collection("userPreferences").doc(currentFirebaseUser.uid).set({...userPreferences,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})}catch(e){console.warn("save preferences",e)}
 }
-const FAVORITABLE_TABS=["dashboard","attention","manage","memberList","info","finance","events","lookupPortal","freeLookup"];
+const FAVORITABLE_TABS=["dashboard","attention","manage","memberList","info","finance","events","memberQr","lookupPortal","freeLookup"];
 function renderFavoriteNav(){
   const root=$("#favoriteNav");if(!root)return;
   const allowed=new Set($$(".nav button[data-tab]:not(.hidden)").map(b=>b.dataset.tab));
@@ -4444,7 +4463,7 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   target.classList.remove("hidden");requestAnimationFrame(()=>target.classList.add("workspace-window-enter"));
   b.scrollIntoView({block:"nearest",behavior:"smooth"});
   $("#pageTitle").textContent=navLabel(tab);noteWorkspace(tab);closeMobileSidebar();
-  if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
+  if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
   updateWorkspaceWindowMeta();applyRoleAccess();
 });
 $("#semester").onchange=async e=>{
@@ -6956,215 +6975,51 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
 }
 
 
-/* ===== V75 — Event-specific student QR check-in =====
-   Privacy design:
-   - Camera frames are processed in-memory only.
-   - No photo/video frame and no raw QR payload is written to Firestore, logs or localStorage.
-   - Only the normalized MSSV after matching a current-semester member is stored.
+/* ===== V76 — Secure event QR check-in =====
+   Privacy: no camera image/video/frame or raw QR payload is persisted.
+   Check-in writes are performed by the Vercel server API so public scanner links
+   never receive private member/contact collections.
 */
 let eventStudentQrScanner=null,eventStudentQrNativeStream=null,eventStudentQrNativeRaf=0;
 let eventStudentQrEventId="",eventStudentQrCheckinUnsub=null,eventStudentQrCheckinRows=[];
 let eventStudentQrBusy=false,eventStudentQrLastText="",eventStudentQrLastAt=0;
+let eventStudentQrFilter={type:"all",registration:"all",status:"all"};
 
-function eventStudentQrStatus(kind,title,detail=""){
-  const box=$("#eventStudentQrStatus");if(!box)return;
-  box.className=`event-student-qr-status ${kind||""}`;
-  box.innerHTML=`<h4>${esc(title||"Sẵn sàng")}</h4><p>${esc(detail||"")}</p>`;
-}
-function eventStudentQrMembers(ev){return (state.members||[]).filter(m=>m.semester===ev?.semester)}
-function findEventStudentQrMember(ev,mssv){const key=normalizeMssvKey(mssv);return eventStudentQrMembers(ev).find(m=>normalizeMssvKey(m.mssv)===key)||null}
-function extractEventStudentMssv(raw,ev){
-  const text=String(raw??"").trim();
-  if(!text||text.length>500)return "";
-  const candidates=[];
-  const add=v=>{const x=normalizeMssvKey(v);if(x&&x.length>=4&&x.length<=30&&!candidates.includes(x))candidates.push(x)};
-  add(text);
-  try{
-    const u=new URL(text);
-    ["mssv","studentId","student_id","studentid","id"].forEach(k=>{const v=u.searchParams.get(k);if(v)add(v)});
-  }catch{}
-  if(text.startsWith("{")&&text.endsWith("}")){
-    try{const j=JSON.parse(text);[j?.mssv,j?.studentId,j?.student_id,j?.id].forEach(add)}catch{}
-  }
-  (text.toUpperCase().match(/[A-Z]{1,6}[0-9]{4,12}/g)||[]).forEach(add);
-  const matched=candidates.filter(x=>!!findEventStudentQrMember(ev,x));
-  return [...new Set(matched)].length===1?matched[0]:"";
-}
-function eventQrLinkedActivity(ev){return ev?.linkedActivityId?activityItemById(ev.linkedActivityId,ev.semester):null}
-function eventQrActivityAppliedValue(linked){
-  if(!linked)return null;
-  const mode=activityMode(linked.group,linked.item);
-  return mode==="checkbox"?true:activityMaxPoints(linked.item);
-}
+function eventStudentQrStatus(kind,title,detail=""){const box=$("#eventStudentQrStatus");if(!box)return;box.className=`event-student-qr-status ${kind||""}`;box.innerHTML=`<h4>${esc(title||"Sẵn sàng")}</h4><p>${esc(detail||"")}</p>`}
+function extractEventStudentMssv(raw){const text=String(raw??"").trim();if(!text||text.length>500)return"";const candidates=[];const add=v=>{const x=normalizeMssvKey(v);if(x&&x.length>=4&&x.length<=30&&!candidates.includes(x))candidates.push(x)};if(/^[A-Za-z0-9_-]{4,30}$/.test(text))add(text);try{const u=new URL(text);["mssv","studentId","student_id","studentid","id"].forEach(k=>add(u.searchParams.get(k)))}catch{}if(text.startsWith("{")&&text.endsWith("}")){try{const j=JSON.parse(text);[j?.mssv,j?.studentId,j?.student_id,j?.id].forEach(add)}catch{}}(text.toUpperCase().match(/[A-Z]{1,6}[0-9]{4,12}/g)||[]).forEach(add);return candidates[0]||""}
 function eventQrCheckinTimeLabel(v){return v?dateTime(v):"vừa xong"}
+async function eventCheckinApi(body){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},15000);const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||`API trả về lỗi ${res.status}`);return data}
 
-async function commitEventStudentQrCheckin(eventId,mssv,{method="school_qr"}={}){
-  const ev=eventFor(eventId);if(!ev)throw new Error("Không tìm thấy sự kiện.");
-  if(ev.qrCheckinEnabled!==true)throw new Error("QR check-in của sự kiện này đang tắt.");
-  if(semesterLocked(ev.semester))throw new Error("Học kỳ đang bị khóa.");
-  const member=findEventStudentQrMember(ev,mssv);if(!member)throw new Error("Không tìm thấy MSSV trong danh sách thành viên của học kỳ này.");
-  const linked=eventQrLinkedActivity(ev),item=linked?.item||null;
-  const canApply=!!(linked&&item&&item.locked!==true);
-  const appliedValue=canApply?eventQrActivityAppliedValue(linked):null;
-  const checkRef=fbDb.collection("eventPortals").doc(eventId).collection("qrCheckins").doc(member.id);
-  const memberRef=fbDb.collection("members").doc(member.id);
-  let duplicate=false,previousActivityValue=null,previousActivityHadValue=false;
-  await fbDb.runTransaction(async tx=>{
-    const [checkSnap,memberSnap]=await Promise.all([tx.get(checkRef),tx.get(memberRef)]);
-    if(checkSnap.exists){duplicate=true;return}
-    if(!memberSnap.exists)throw new Error("Hồ sơ thành viên không còn tồn tại.");
-    const md=memberSnap.data()||{};
-    if(md.semester!==ev.semester)throw new Error("Thành viên không thuộc học kỳ của sự kiện.");
-    if(normalizeMssvKey(md.mssv)!==normalizeMssvKey(mssv))throw new Error("MSSV không khớp hồ sơ thành viên.");
-    if(canApply){
-      previousActivityHadValue=Object.prototype.hasOwnProperty.call(md.scores||{},item.id);
-      previousActivityValue=previousActivityHadValue?(md.scores||{})[item.id]:null;
-      tx.update(memberRef,{[`scores.${item.id}`]:appliedValue,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});
-    }
-    tx.set(checkRef,{
-      eventId,semester:ev.semester,memberId:member.id,mssv:String(md.mssv||"").trim().slice(0,30),memberName:String(md.name||member.name||"").slice(0,160),
-      method:method==="manual_mssv"?"manual_mssv":"school_qr",checkedInAt:firebase.firestore.FieldValue.serverTimestamp(),checkedInBy:currentFirebaseUser.uid,checkedInByName:currentUserLabel().slice(0,160),
-      linkedActivityId:linked?.item?.id||"",activityApplied:canApply,activityAppliedValue:canApply?appliedValue:null,
-      previousActivityHadValue,previousActivityValue:previousActivityHadValue?previousActivityValue:null
-    },{merge:false});
-  });
-  if(duplicate)return {duplicate:true,member};
-  member.scores=member.scores||{};if(canApply)member.scores[item.id]=appliedValue;
-  await logAudit({action:"event-qr-checkin",module:"attendance",entityType:"member",entityId:member.id,summary:`QR check-in ${ev.title} • ${member.name||member.mssv}`,after:{eventId,memberId:member.id,linkedActivityId:linked?.item?.id||""},semesterKey:ev.semester});
-  if(ev.semester===semester){renderQLTV();renderAttendanceSelector()}
-  return {duplicate:false,member,linked,appliedValue,activityLocked:!!(linked&&item?.locked===true)};
-}
+async function commitEventStudentQrCheckin(eventId,mssv,{method="school_qr",decision=""}={}){return eventCheckinApi({action:"admin-scan",eventId,mssv,method,decision})}
+async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),mssv=extractEventStudentMssv(rawText),now=Date.now();if(!mssv){eventStudentQrStatus("error","Không nhận diện được MSSV","Dữ liệu QR gốc đã được bỏ ngay và không được lưu.");return}if(mssv===eventStudentQrLastText&&now-eventStudentQrLastAt<1800)return;eventStudentQrLastText=mssv;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,mssv,{method});if(result.needsConfirmation){const ok=confirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên cổng sự kiện này.
 
-async function processEventStudentQrPayload(raw,{method="school_qr"}={}){
-  const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;
-  const rawText=String(raw??"").trim();
-  const now=Date.now();if(rawText&&rawText===eventStudentQrLastText&&now-eventStudentQrLastAt<1800)return;
-  eventStudentQrLastText=rawText;eventStudentQrLastAt=now;eventStudentQrBusy=true;
-  try{
-    const mssv=extractEventStudentMssv(rawText,ev);
-    if(!mssv){eventStudentQrStatus("error","Không nhận diện được MSSV","QR không khớp MSSV nào trong danh sách thành viên của học kỳ. Dữ liệu QR gốc đã được bỏ ngay, không lưu lại.");return}
-    const result=await commitEventStudentQrCheckin(ev.id,mssv,{method});
-    if(result.duplicate){eventStudentQrStatus("warn",`${result.member.name||mssv} đã check-in`,`${normalizeMssvKey(result.member.mssv)} đã được ghi nhận trước đó trong chính sự kiện này.`);return}
-    const linkedText=result.linked?result.activityLocked?" Check-in đã lưu; cột hoạt động liên kết đang khóa nên không thay đổi điểm.":(activityMode(result.linked.group,result.linked.item)==="checkbox"?" Đồng thời đã đánh dấu tham gia hoạt động liên kết.":` Đồng thời đã ghi ${result.appliedValue||0} điểm vào hoạt động liên kết.`):" Check-in được lưu riêng cho sự kiện này.";
-    eventStudentQrStatus("success",`✓ ${result.member.name||mssv}`,`${normalizeMssvKey(result.member.mssv)} đã check-in thành công.${linkedText}`);
-  }catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}
-  finally{setTimeout(()=>{eventStudentQrBusy=false},650)}
-}
+Bạn có xác nhận cho phép check-in không?`);if(!ok){eventStudentQrStatus("warn","Chưa ghi nhận check-in",`${result.memberName||mssv} chưa đăng ký và Admin đã chọn không xác nhận.`);return}result=await commitEventStudentQrCheckin(ev.id,mssv,{method,decision:"approve"})}if(result.pendingAdmin){eventStudentQrStatus("warn",`${result.memberName||mssv} đang chờ Admin duyệt`,"Thành viên chưa đăng ký sự kiện. Lượt quét đã được lưu ở trạng thái chờ Admin/Super Admin xác nhận.");return}if(result.duplicate){const st=result.existingStatus||"approved";eventStudentQrStatus("warn",`${result.memberName||mssv} đã có lượt check-in`,st==="pending_admin"?"Lượt này đang chờ Admin duyệt.":st==="rejected"?"Lượt này đã bị từ chối. Có thể hoàn tác bản ghi rồi quét lại.":"Lượt check-in đã được ghi nhận trước đó.");return}const who=result.attendeeType==="external"?"Sinh viên ngoài CLB":result.memberName||mssv;const reg=result.registered?" Có đăng ký trên cổng sự kiện.":result.attendeeType==="member"?" Admin đã xác nhận dù chưa đăng ký.":" Được ghi nhận theo chế độ check-in Public.";const activity=result.activityApplied?` Đồng thời đã cập nhật hoạt động liên kết${result.activityAppliedValue===true?"":` (${Number(result.activityAppliedValue||0)} điểm)`}.`:result.activityLocked?" Cột hoạt động liên kết đang khóa nên không thay đổi điểm.":"";eventStudentQrStatus("success",`✓ ${who}`,`${mssv} đã check-in thành công.${reg}${activity}`)}catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}finally{setTimeout(()=>{eventStudentQrBusy=false},650)}}
+async function submitManualEventStudentMssv(){const input=$("#eventStudentQrManual");if(!input)return;const value=input.value.trim();if(!value)return;input.value="";await processEventStudentQrPayload(value,{method:"manual_mssv"})}
 
-async function submitManualEventStudentMssv(){
-  const input=$("#eventStudentQrManual");if(!input)return;const value=input.value.trim();if(!value)return;
-  input.value="";await processEventStudentQrPayload(value,{method:"manual_mssv"});
-}
+async function stopEventStudentQrScanner({silent=false,keepWatch=true}={}){eventStudentQrBusy=false;if(!keepWatch&&eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}if(eventStudentQrScanner){const q=eventStudentQrScanner;eventStudentQrScanner=null;try{if(q.getState?.()===2||q.getState?.()===3)await q.stop()}catch{}try{q.clear?.()}catch{}}if(eventStudentQrNativeRaf){cancelAnimationFrame(eventStudentQrNativeRaf);eventStudentQrNativeRaf=0}if(eventStudentQrNativeStream){try{eventStudentQrNativeStream.getTracks().forEach(t=>t.stop())}catch{}eventStudentQrNativeStream=null}const reader=$("#eventStudentQrReader");if(reader)reader.innerHTML=`<div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để tiếp tục quét.</div>`;const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=false;btn.textContent="Bật camera"}if(!silent&&eventStudentQrEventId)eventStudentQrStatus("","Camera đã tắt","Không có hình ảnh hoặc video nào được lưu.");if(!keepWatch)eventStudentQrEventId=""}
+async function startEventStudentQrNative(){if(!("BarcodeDetector" in window))throw new Error("Trình duyệt không hỗ trợ bộ quét QR dự phòng.");const detector=new BarcodeDetector({formats:["qr_code"]});const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});eventStudentQrNativeStream=stream;const reader=$("#eventStudentQrReader");reader.innerHTML='<video id="eventStudentQrNativeVideo" playsinline muted autoplay></video>';const video=$("#eventStudentQrNativeVideo");video.srcObject=stream;await video.play();const loop=async()=>{if(!eventStudentQrNativeStream||!eventStudentQrEventId)return;try{const codes=await detector.detect(video);if(codes?.[0]?.rawValue)processEventStudentQrPayload(codes[0].rawValue).catch(()=>{})}catch{}eventStudentQrNativeRaf=requestAnimationFrame(loop)};loop()}
+async function startEventStudentQrScanner(){const ev=eventFor(eventStudentQrEventId);if(!ev)return;if(!window.isSecureContext)return eventStudentQrStatus("error","Camera cần HTTPS","Hãy mở website trên domain Vercel HTTPS để dùng camera.");if(!navigator.mediaDevices?.getUserMedia)return eventStudentQrStatus("error","Không truy cập được camera","Trình duyệt hiện tại không hỗ trợ camera web. Có thể dùng ô nhập MSSV dự phòng.");await stopEventStudentQrScanner({silent:true,keepWatch:true});eventStudentQrEventId=ev.id;const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=true;btn.textContent="Đang mở camera…"}eventStudentQrStatus("","Đang mở camera","Trình duyệt có thể hỏi quyền Camera. Chọn Cho phép để quét QR sinh viên.");try{if(window.Html5Qrcode){const reader=$("#eventStudentQrReader");reader.innerHTML="";const scanner=new Html5Qrcode("eventStudentQrReader",{verbose:false});eventStudentQrScanner=scanner;await scanner.start({facingMode:"environment"},{fps:10,qrbox:(w,h)=>{const size=Math.max(180,Math.min(w,h,300));return{width:size,height:size}},aspectRatio:1.333333},decoded=>{processEventStudentQrPayload(decoded).catch(()=>{})},()=>{})}else await startEventStudentQrNative();if(btn){btn.disabled=false;btn.textContent="Khởi động lại camera"}eventStudentQrStatus("","Đang quét","Đưa mã QR sinh viên vào giữa khung. Dữ liệu QR gốc không được lưu.")}catch(e){console.warn("QR camera start",e);try{await stopEventStudentQrScanner({silent:true,keepWatch:true})}catch{}eventStudentQrEventId=ev.id;const msg=/NotAllowed|Permission|denied/i.test(String(e?.name||"")+String(e?.message||""))?"Quyền Camera đang bị từ chối. Hãy cho phép Camera cho website rồi thử lại.":"Không mở được camera. Hãy thử lại hoặc dùng ô nhập MSSV dự phòng.";eventStudentQrStatus("error","Không mở được camera",msg)}}
 
-async function stopEventStudentQrScanner({silent=false,keepWatch=true}={}){
-  eventStudentQrBusy=false;
-  if(!keepWatch&&eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}
-  if(eventStudentQrScanner){
-    const q=eventStudentQrScanner;eventStudentQrScanner=null;
-    try{if(q.getState?.()===2||q.getState?.()===3)await q.stop()}catch{}
-    try{q.clear?.()}catch{}
-  }
-  if(eventStudentQrNativeRaf){cancelAnimationFrame(eventStudentQrNativeRaf);eventStudentQrNativeRaf=0}
-  if(eventStudentQrNativeStream){try{eventStudentQrNativeStream.getTracks().forEach(t=>t.stop())}catch{}eventStudentQrNativeStream=null}
-  const reader=$("#eventStudentQrReader");if(reader)reader.innerHTML=`<div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để tiếp tục quét.</div>`;
-  const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=false;btn.textContent="Bật camera"}
-  if(!silent&&eventStudentQrEventId)eventStudentQrStatus("","Camera đã tắt","Không có hình ảnh hoặc video nào được lưu.");
-  if(!keepWatch)eventStudentQrEventId="";
-}
-
-async function startEventStudentQrNative(){
-  if(!("BarcodeDetector" in window))throw new Error("Trình duyệt không hỗ trợ bộ quét QR dự phòng.");
-  const detector=new BarcodeDetector({formats:["qr_code"]});
-  const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
-  eventStudentQrNativeStream=stream;
-  const reader=$("#eventStudentQrReader");reader.innerHTML='<video id="eventStudentQrNativeVideo" playsinline muted autoplay></video>';
-  const video=$("#eventStudentQrNativeVideo");video.srcObject=stream;await video.play();
-  const loop=async()=>{
-    if(!eventStudentQrNativeStream||!eventStudentQrEventId)return;
-    try{const codes=await detector.detect(video);if(codes?.[0]?.rawValue)processEventStudentQrPayload(codes[0].rawValue).catch(()=>{})}catch{}
-    eventStudentQrNativeRaf=requestAnimationFrame(loop);
-  };loop();
-}
-
-async function startEventStudentQrScanner(){
-  const ev=eventFor(eventStudentQrEventId);if(!ev)return;
-  if(!window.isSecureContext)return eventStudentQrStatus("error","Camera cần HTTPS","Hãy mở website trên domain Vercel HTTPS để dùng camera.");
-  if(!navigator.mediaDevices?.getUserMedia)return eventStudentQrStatus("error","Không truy cập được camera","Trình duyệt hiện tại không hỗ trợ camera web. Có thể dùng ô nhập MSSV dự phòng.");
-  await stopEventStudentQrScanner({silent:true,keepWatch:true});
-  eventStudentQrEventId=ev.id;
-  const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=true;btn.textContent="Đang mở camera…"}
-  eventStudentQrStatus("","Đang mở camera","Trình duyệt có thể hỏi quyền Camera. Chọn Cho phép để quét QR sinh viên.");
-  try{
-    if(window.Html5Qrcode){
-      const reader=$("#eventStudentQrReader");reader.innerHTML="";
-      const scanner=new Html5Qrcode("eventStudentQrReader",{verbose:false});eventStudentQrScanner=scanner;
-      await scanner.start({facingMode:"environment"},{fps:10,qrbox:(w,h)=>{const size=Math.max(180,Math.min(w,h,300));return {width:size,height:size}},aspectRatio:1.333333},decoded=>{processEventStudentQrPayload(decoded).catch(()=>{})},()=>{});
-    }else await startEventStudentQrNative();
-    if(btn){btn.disabled=false;btn.textContent="Khởi động lại camera"}
-    eventStudentQrStatus("","Đang quét","Đưa mã QR sinh viên vào giữa khung. Chỉ MSSV sau khi đối chiếu mới được lưu.");
-  }catch(e){
-    console.warn("QR camera start",e);
-    try{await stopEventStudentQrScanner({silent:true,keepWatch:true})}catch{}
-    eventStudentQrEventId=ev.id;
-    const msg=/NotAllowed|Permission|denied/i.test(String(e?.name||"")+String(e?.message||""))?"Quyền Camera đang bị từ chối. Hãy cho phép Camera cho website rồi thử lại.":"Không mở được camera. Hãy thử lại hoặc dùng ô nhập MSSV dự phòng.";
-    eventStudentQrStatus("error","Không mở được camera",msg);
-  }
-}
-
-function renderEventStudentQrCheckinRows(){
-  const root=$("#eventStudentQrList");if(!root)return;
-  const ev=eventFor(eventStudentQrEventId),total=eventStudentQrCheckinRows.length,membersCount=eventStudentQrMembers(ev).length;
-  const summary=$("#eventStudentQrSummary");if(summary)summary.innerHTML=`<span>${total} đã check-in</span><span>${Math.max(0,membersCount-total)} chưa check-in</span><span>${membersCount} thành viên học kỳ</span>`;
-  root.innerHTML=eventStudentQrCheckinRows.length?eventStudentQrCheckinRows.map(r=>`<div class="event-student-qr-row"><div><b>${esc(r.memberName||"Thành viên")}</b><small>${esc(r.mssv||"")} • ${esc(eventQrCheckinTimeLabel(r.checkedInAt))}${r.method==="manual_mssv"?" • nhập tay":" • QR trường"}</small></div><button class="danger" onclick="undoEventStudentQrCheckin('${esc(r.memberId)}')">Hoàn tác</button></div>`).join(""):`<div class="empty">Chưa có lượt check-in cho sự kiện này.</div>`;
-}
-function watchEventStudentQrCheckins(eventId){
-  if(eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}
-  eventStudentQrCheckinUnsub=fbDb.collection("eventPortals").doc(eventId).collection("qrCheckins").orderBy("checkedInAt","desc").onSnapshot(s=>{eventStudentQrCheckinRows=s.docs.map(d=>({id:d.id,...d.data()}));renderEventStudentQrCheckinRows()},e=>{console.warn("QR check-in list",e);eventStudentQrStatus("error","Không tải được danh sách check-in",e?.message||String(e))});
-}
-
-async function openEventStudentQrCheckin(eventId){
-  if(!canEditModule("attendance"))return alert("Tài khoản chưa có quyền chỉnh sửa Điểm danh / điểm.");
-  const ev=eventFor(eventId);if(!ev)return;
-  if(ev.semester!==semester)return alert("Hãy chuyển sang đúng học kỳ của sự kiện trước khi quét.");
-  if(ev.qrCheckinEnabled!==true)return alert("QR check-in đang tắt. Hãy mở Chỉnh sửa sự kiện và bật QR check-in sinh viên.");
-  if(semesterLocked(ev.semester))return alert("Học kỳ đang bị khóa nên không thể check-in.");
-  await stopEventStudentQrScanner({silent:true,keepWatch:false});eventStudentQrEventId=eventId;eventStudentQrCheckinRows=[];
-  const linked=eventQrLinkedActivity(ev);
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1080px,100%)"><div class="modal-head"><div><h2>QR check-in sinh viên</h2><div class="small-help">${esc(ev.title)} • ${esc(state.semesters?.[ev.semester]?.name||ev.semester)}${linked?` • Hoạt động: <b>${esc(linked.item.name)}</b>`:""}</div></div><button onclick="closeModal()">×</button></div><div class="event-student-qr-privacy"><b>Quyền riêng tư:</b> camera chỉ được dùng để đọc mã QR ngay trên thiết bị. Hệ thống <b>không lưu ảnh, video, khung hình camera hoặc chuỗi QR gốc</b>. Sau khi quét, chỉ MSSV đã đối chiếu với danh sách thành viên cùng bản ghi check-in của sự kiện được lưu.</div><div class="event-student-qr-shell"><div class="event-student-qr-camera"><div id="eventStudentQrReader" class="event-student-qr-reader"><div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để bắt đầu.</div></div><div class="event-student-qr-toolbar"><button id="eventStudentQrStartBtn" class="primary" onclick="startEventStudentQrScanner()">Bật camera</button><button class="secondary" onclick="stopEventStudentQrScanner()">Tắt camera</button></div><div class="small-help" style="margin-top:8px">Mỗi sự kiện có danh sách check-in riêng. Một thành viên chỉ được ghi nhận một lần trong cùng sự kiện.</div></div><div class="event-student-qr-panel"><div id="eventStudentQrStatus" class="event-student-qr-status"><h4>Sẵn sàng</h4><p>Bật camera rồi đưa QR sinh viên vào khung quét.</p></div><div class="event-student-qr-manual"><input id="eventStudentQrManual" autocomplete="off" placeholder="Dự phòng: nhập MSSV, ví dụ CS210650" onkeydown="if(event.key==='Enter'){event.preventDefault();submitManualEventStudentMssv()}"><button class="secondary" onclick="submitManualEventStudentMssv()">Check-in</button></div><div id="eventStudentQrSummary" class="event-student-qr-summary"></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px"><b style="font-size:11px">Lượt check-in gần nhất</b><button class="secondary" onclick="exportEventStudentQrCheckins()">Xuất Excel</button></div><div id="eventStudentQrList" class="event-student-qr-list"><div class="empty">Đang tải…</div></div></div></div></div></div>`;
-  $("#modalWrap").classList.remove("hidden");syncModalBodyState();watchEventStudentQrCheckins(eventId);
-}
-
-async function undoEventStudentQrCheckin(memberId){
-  const ev=eventFor(eventStudentQrEventId);if(!ev||!confirm("Hoàn tác lượt check-in này?"))return;
-  const ref=fbDb.collection("eventPortals").doc(ev.id).collection("qrCheckins").doc(memberId),memberRef=fbDb.collection("members").doc(memberId);
-  try{
-    await fbDb.runTransaction(async tx=>{
-      const [cSnap,mSnap]=await Promise.all([tx.get(ref),tx.get(memberRef)]);if(!cSnap.exists)return;
-      const c=cSnap.data()||{},md=mSnap.exists?(mSnap.data()||{}):{};
-      if(c.activityApplied===true&&c.linkedActivityId&&mSnap.exists){
-        const current=(md.scores||{})[c.linkedActivityId];
-        if(current===c.activityAppliedValue){
-          const patch={updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid};
-          patch[`scores.${c.linkedActivityId}`]=c.previousActivityHadValue?c.previousActivityValue:firebase.firestore.FieldValue.delete();
-          tx.update(memberRef,patch);
-        }
-      }
-      tx.delete(ref);
-    });
-    const local=(state.members||[]).find(m=>m.id===memberId),row=eventStudentQrCheckinRows.find(r=>r.memberId===memberId);
-    if(local&&row?.activityApplied&&row.linkedActivityId){local.scores=local.scores||{};if(local.scores[row.linkedActivityId]===row.activityAppliedValue){if(row.previousActivityHadValue)local.scores[row.linkedActivityId]=row.previousActivityValue;else delete local.scores[row.linkedActivityId]}}
-    await logAudit({action:"event-qr-checkin-undo",module:"attendance",entityType:"member",entityId:memberId,summary:`Hoàn tác QR check-in ${ev.title}`,semesterKey:ev.semester});
-    renderQLTV();renderAttendanceSelector();toast("Đã hoàn tác check-in");
-  }catch(e){alert("Không hoàn tác được check-in: "+(e?.message||e))}
-}
-
-function exportEventStudentQrCheckins(){
-  const ev=eventFor(eventStudentQrEventId);if(!ev||!eventStudentQrCheckinRows.length)return alert("Chưa có dữ liệu check-in để xuất.");
-  const rows=eventStudentQrCheckinRows.map((r,i)=>({"STT":i+1,"Họ và tên":r.memberName||"","MSSV":r.mssv||"","Thời gian check-in":eventQrCheckinTimeLabel(r.checkedInAt),"Phương thức":r.method==="manual_mssv"?"Nhập MSSV":"QR trường","Người ghi nhận":r.checkedInByName||""}));
-  const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"QR CHECKIN");XLSX.writeFile(wb,`QR_Checkin_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`);
-}
-
+function filteredEventQrRows(){return (eventStudentQrCheckinRows||[]).filter(r=>(eventStudentQrFilter.type==="all"||r.attendeeType===eventStudentQrFilter.type)&&(eventStudentQrFilter.registration==="all"||r.registrationStatus===eventStudentQrFilter.registration)&&(eventStudentQrFilter.status==="all"||r.checkinStatus===eventStudentQrFilter.status))}
+function renderEventStudentQrCheckinRows(){const root=$("#eventStudentQrList");if(!root)return;const rows=filteredEventQrRows(),total=eventStudentQrCheckinRows.length,members=eventStudentQrCheckinRows.filter(r=>r.attendeeType!=="external").length,external=eventStudentQrCheckinRows.filter(r=>r.attendeeType==="external").length,pending=eventStudentQrCheckinRows.filter(r=>r.checkinStatus==="pending_admin").length;const summary=$("#eventStudentQrSummary");if(summary)summary.innerHTML=`<span>${total} tổng lượt</span><span>${members} thành viên</span><span>${external} ngoài CLB</span><span>${pending} chờ Admin</span>`;root.innerHTML=rows.length?rows.map(r=>{const st=r.checkinStatus||"approved",cls=st==="pending_admin"?"pending":st==="rejected"?"rejected":"";return `<div class="event-student-qr-row ${cls}"><div><b>${esc(r.memberName||(r.attendeeType==="external"?"Sinh viên ngoài CLB":"Thành viên"))}</b><small>${esc(r.mssv||"")} • ${esc(eventQrCheckinTimeLabel(r.checkedInAt))} • ${r.method==="manual_mssv"?"nhập tay":r.method==="public_scanner"?"link check-in":"QR trường"}</small><div class="event-student-qr-tags"><span class="event-student-qr-tag ${r.attendeeType==="external"?"external":""}">${r.attendeeType==="external"?"Ngoài CLB":"Thành viên CLB"}</span><span class="event-student-qr-tag ${r.registrationStatus==="registered"?"ok":"warn"}">${r.registrationStatus==="registered"?"Có đăng ký":"Chưa đăng ký"}</span><span class="event-student-qr-tag ${st==="approved"?"ok":st==="pending_admin"?"warn":""}">${st==="approved"?"Đã check-in":st==="pending_admin"?"Chờ Admin":"Đã từ chối"}</span></div></div><div class="event-student-qr-row-actions">${st==="pending_admin"?(canEditClub()?`<button class="primary" onclick="decideEventQrCheckin('${esc(r.id)}',true)">Duyệt</button><button class="danger" onclick="decideEventQrCheckin('${esc(r.id)}',false)">Từ chối</button>`:`<span class="small-help">Chờ Admin duyệt</span>`):`<button class="danger" onclick="undoEventStudentQrCheckin('${esc(r.id)}')">Hoàn tác</button>`}</div></div>`}).join(""):`<div class="empty">Không có lượt check-in phù hợp bộ lọc.</div>`}
+function watchEventStudentQrCheckins(eventId){if(eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}eventStudentQrCheckinUnsub=fbDb.collection("eventPortals").doc(eventId).collection("qrCheckins").orderBy("checkedInAt","desc").onSnapshot(s=>{eventStudentQrCheckinRows=s.docs.map(d=>({id:d.id,...d.data()}));renderEventStudentQrCheckinRows()},e=>{console.warn("QR check-in list",e);eventStudentQrStatus("error","Không tải được danh sách check-in",e?.message||String(e))})}
+async function openEventStudentQrCheckin(eventId){if(!canEditModule("attendance"))return alert("Tài khoản chưa có quyền chỉnh sửa Điểm danh / điểm.");const ev=eventFor(eventId);if(!ev)return;if(ev.semester!==semester)return alert("Hãy chuyển sang đúng học kỳ của sự kiện trước khi quét.");if(ev.qrCheckinEnabled!==true)return alert("QR check-in đang tắt. Hãy mở Chỉnh sửa sự kiện và bật QR check-in sinh viên.");if(semesterLocked(ev.semester))return alert("Học kỳ đang bị khóa nên không thể check-in.");await stopEventStudentQrScanner({silent:true,keepWatch:false});eventStudentQrEventId=eventId;eventStudentQrCheckinRows=[];eventStudentQrFilter={type:"all",registration:"all",status:"all"};const linked=eventQrLinkedActivity(ev);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(1120px,100%)"><div class="modal-head"><div><h2>QR check-in sinh viên</h2><div class="small-help">${esc(ev.title)} • ${esc(state.semesters?.[ev.semester]?.name||ev.semester)}${linked?` • Hoạt động: <b>${esc(linked.item.name)}</b>`:""} • ${ev.qrCheckinAudience==="public"?"Public":"Chỉ thành viên"}</div></div><button onclick="closeModal()">×</button></div><div class="event-student-qr-privacy"><b>Quyền riêng tư:</b> camera chỉ đọc mã ngay trên thiết bị. Hệ thống <b>không lưu ảnh, video, khung hình camera hoặc chuỗi QR gốc</b>. Thành viên đã đăng ký được check-in ngay; thành viên chưa đăng ký cần Admin xác nhận. Sự kiện Public có thể ghi nhận MSSV ngoài danh sách CLB.</div><div class="event-student-qr-shell"><div class="event-student-qr-camera"><div id="eventStudentQrReader" class="event-student-qr-reader"><div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để bắt đầu.</div></div><div class="event-student-qr-toolbar"><button id="eventStudentQrStartBtn" class="primary" onclick="startEventStudentQrScanner()">Bật camera</button><button class="secondary" onclick="stopEventStudentQrScanner()">Tắt camera</button></div><div class="small-help" style="margin-top:8px">Một MSSV chỉ có một bản ghi check-in trong cùng sự kiện.</div></div><div class="event-student-qr-panel"><div id="eventStudentQrStatus" class="event-student-qr-status"><h4>Sẵn sàng</h4><p>Bật camera rồi đưa QR sinh viên vào khung quét.</p></div><div class="event-student-qr-manual"><input id="eventStudentQrManual" autocomplete="off" placeholder="Dự phòng: nhập MSSV, ví dụ CS210650" onkeydown="if(event.key==='Enter'){event.preventDefault();submitManualEventStudentMssv()}"><button class="secondary" onclick="submitManualEventStudentMssv()">Check-in</button></div><div id="eventStudentQrSummary" class="event-student-qr-summary"></div><div class="event-student-qr-filters"><select onchange="eventStudentQrFilter.type=this.value;renderEventStudentQrCheckinRows()"><option value="all">Tất cả đối tượng</option><option value="member">Thành viên CLB</option><option value="external">Ngoài CLB</option></select><select onchange="eventStudentQrFilter.registration=this.value;renderEventStudentQrCheckinRows()"><option value="all">Mọi đăng ký</option><option value="registered">Có đăng ký</option><option value="unregistered">Chưa đăng ký</option></select><select onchange="eventStudentQrFilter.status=this.value;renderEventStudentQrCheckinRows()"><option value="all">Mọi trạng thái</option><option value="approved">Đã check-in</option><option value="pending_admin">Chờ Admin</option><option value="rejected">Đã từ chối</option></select></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px"><b style="font-size:11px">Kết quả check-in</b><button class="secondary" onclick="exportEventStudentQrCheckins()">Xuất Excel theo bộ lọc</button></div><div id="eventStudentQrList" class="event-student-qr-list"><div class="empty">Đang tải…</div></div></div></div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState();watchEventStudentQrCheckins(eventId)}
+async function decideEventQrCheckin(checkinId,approve){const ev=eventFor(eventStudentQrEventId);if(!ev)return;try{await eventCheckinApi({action:"decision",eventId:ev.id,checkinId,approve:approve===true});toast(approve?"Đã duyệt check-in":"Đã từ chối check-in")}catch(e){alert("Không cập nhật được check-in: "+(e?.message||e))}}
+async function undoEventStudentQrCheckin(checkinId){const ev=eventFor(eventStudentQrEventId);if(!ev||!confirm("Hoàn tác lượt check-in này?"))return;try{await eventCheckinApi({action:"undo",eventId:ev.id,checkinId});await logAudit({action:"event-qr-checkin-undo",module:"attendance",entityType:"eventQrCheckin",entityId:checkinId,summary:`Hoàn tác QR check-in ${ev.title}`,semesterKey:ev.semester});toast("Đã hoàn tác check-in")}catch(e){alert("Không hoàn tác được check-in: "+(e?.message||e))}}
+function exportEventStudentQrCheckins(){const ev=eventFor(eventStudentQrEventId),rows=filteredEventQrRows();if(!ev||!rows.length)return alert("Không có dữ liệu theo bộ lọc để xuất.");const data=rows.map((r,i)=>({"STT":i+1,"Họ và tên":r.memberName||"","MSSV":r.mssv||"","Đối tượng":r.attendeeType==="external"?"Ngoài CLB":"Thành viên CLB","Đăng ký":r.registrationStatus==="registered"?"Có đăng ký":"Chưa đăng ký","Trạng thái":r.checkinStatus==="approved"?"Đã check-in":r.checkinStatus==="pending_admin"?"Chờ Admin":"Đã từ chối","Thời gian":eventQrCheckinTimeLabel(r.checkedInAt),"Phương thức":r.method==="manual_mssv"?"Nhập MSSV":r.method==="public_scanner"?"Link ngoài BCN":"QR trường"}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"QR CHECKIN");XLSX.writeFile(wb,`QR_Checkin_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`)}
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&eventStudentQrEventId&&(eventStudentQrScanner||eventStudentQrNativeStream))stopEventStudentQrScanner({silent:true,keepWatch:true}).catch(()=>{})});
+
+// ===== V76 — Member QR portal & delegated event scanner links =====
+function memberQrPortalUrl(semKey=semester){try{const u=new URL("/ma-thanh-vien",location.origin);u.searchParams.set("semester",semKey);return u.href}catch{return `ma-thanh-vien.html?semester=${encodeURIComponent(semKey)}`}}
+async function renderMemberQrAdmin(){if(!canEditClub())return;const link=$("#memberQrPortalLink");if(link)link.value=memberQrPortalUrl(semester);try{const [portalSnap,cardsSnap]=await Promise.all([fbDb.collection("memberQrPortals").doc(semester).get(),fbDb.collection("memberQrCards").get()]);const portal=portalSnap.exists?portalSnap.data()||{}:{};const open=portal.open===true&&!semesterLocked();const st=$("#memberQrPortalState");if(st)st.innerHTML=`Cổng: <b>${open?"Đang mở":"Đang đóng"}</b> • ${esc(sem().name||semester)}`;if($("#memberQrOpenBtn"))$("#memberQrOpenBtn").disabled=open||semesterLocked();if($("#memberQrCloseBtn"))$("#memberQrCloseBtn").disabled=!portal.open;const memberKeys=new Set((members()||[]).map(m=>normalizeMssvKey(m.mssv)).filter(Boolean));const rows=cardsSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.issuedSemester===semester||memberKeys.has(normalizeMssvKey(c.mssv))).sort((a,b)=>String(a.mssv||"").localeCompare(String(b.mssv||"")));const active=rows.filter(r=>r.active!==false).length;const sum=$("#memberQrAdminSummary");if(sum)sum.innerHTML=`<span>${rows.length} mã liên quan học kỳ</span><span>${active} đang hoạt động</span><span>${rows.length-active} đã vô hiệu hóa</span>`;const root=$("#memberQrAdminList");if(root)root.innerHTML=rows.length?rows.map(r=>`<div class="member-qr-row"><div><b>${esc(r.mssv||r.id)}</b><small>${r.active===false?"QR đang bị vô hiệu hóa":"QR có thể dùng để check-in"}${r.issuedSemester?` • cấp gần nhất ${esc(r.issuedSemester)}`:""}</small></div><div style="display:flex;gap:7px;align-items:center"><span class="member-qr-state ${r.active===false?"off":""}">${r.active===false?"Đã khóa":"Hoạt động"}</span><button class="${r.active===false?"primary":"danger"}" onclick="setMemberQrCardActive('${esc(r.id)}',${r.active===false?"true":"false"})">${r.active===false?"Kích hoạt lại":"Vô hiệu hóa"}</button></div></div>`).join(""):`<div class="empty">Chưa có thành viên nào nhận QR trong phạm vi học kỳ này.</div>`}catch(e){console.error("member QR admin",e);const root=$("#memberQrAdminList");if(root)root.innerHTML=`<div class="empty">Không tải được dữ liệu QR: ${esc(e.message||e)}</div>`}}
+async function setMemberQrPortalOpen(open){if(!canEditClub())return;if(semesterLocked())return alert("Học kỳ đang khóa.");try{await fbDb.collection("memberQrPortals").doc(semester).set({semester,open:open===true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid},{merge:true});toast(open?"Đã mở cổng cấp QR thành viên":"Đã đóng cổng cấp QR thành viên");renderMemberQrAdmin()}catch(e){alert("Không cập nhật được cổng QR: "+(e.message||e))}}
+async function setMemberQrCardActive(cardId,active){if(!canEditClub())return;if(!confirm(active?"Kích hoạt lại QR MSSV này?":"Vô hiệu hóa QR MSSV này? Mọi QR chứa cùng MSSV sẽ bị từ chối khi check-in cho đến khi kích hoạt lại."))return;try{await fbDb.collection("memberQrCards").doc(cardId).set({active:active===true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid},{merge:true});toast(active?"Đã kích hoạt lại QR":"Đã vô hiệu hóa QR");renderMemberQrAdmin()}catch(e){alert("Không cập nhật được QR: "+(e.message||e))}}
+function secureEventScannerToken(){const b=new Uint8Array(30);crypto.getRandomValues(b);let x="";for(const v of b)x+=String.fromCharCode(v);return btoa(x).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
+function eventScannerPublicUrl(token){try{const u=new URL("/check-in-su-kien",location.origin);u.searchParams.set("token",token);return u.href}catch{return `check-in-su-kien.html?token=${encodeURIComponent(token)}`}}
+async function loadEventScannerLinks(eventId){const snap=await fbDb.collection("eventScannerLinks").where("eventId","==",eventId).get();return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(tsMillis(b.createdAt)||0)-(tsMillis(a.createdAt)||0))}
+async function openEventScannerLinkManager(eventId){if(!canEditClub())return alert("Chỉ Admin/Super Admin được tạo link check-in ngoài BCN.");const ev=eventFor(eventId);if(!ev)return;try{const rows=await loadEventScannerLinks(eventId),active=rows.find(x=>x.active===true)||null;const url=active?eventScannerPublicUrl(active.id):"";$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Link check-in ngoài BCN</h2><div class="small-help">${esc(ev.title)} • Link chỉ cho phép quét/check-in, không hiển thị email, SĐT hay dữ liệu liên hệ.</div></div><button onclick="closeModal()">×</button></div><div class="v76-privacy-note"><b>Bảo mật:</b> link dùng token ngẫu nhiên dài và mọi thao tác check-in được xác minh ở Vercel API. Người có link không được quyền đọc danh sách thành viên hoặc phản hồi sự kiện.</div><div class="scanner-link-box" style="margin-top:12px">${active?`<div class="scanner-link-current"><b>Link đang hoạt động</b><small>${esc(url)}</small></div><div class="scanner-link-actions"><button class="secondary" onclick="copyText('${esc(url)}')">Sao chép link</button><button class="primary" onclick="window.open('${esc(url)}','_blank','noopener,noreferrer')">Mở trang quét</button><button class="danger" onclick="revokeEventScannerLink('${esc(active.id)}','${esc(eventId)}')">Vô hiệu hóa link</button><button class="secondary" onclick="createEventScannerLink('${esc(eventId)}',true)">Tạo link mới</button></div>`:`<div class="scanner-link-current"><b>Chưa có link hoạt động</b><small>Tạo một link riêng để tình nguyện viên/người hỗ trợ có thể quét check-in mà không cần tài khoản BCN.</small></div><div class="scanner-link-actions"><button class="primary" onclick="createEventScannerLink('${esc(eventId)}',false)">Tạo link check-in</button></div>`}</div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState()}catch(e){alert("Không tải được link check-in: "+(e.message||e))}}
+async function createEventScannerLink(eventId,replaceOld=false){if(!canEditClub())return;const ev=eventFor(eventId);if(!ev||ev.qrCheckinEnabled!==true)return alert("Hãy bật QR check-in cho sự kiện trước.");try{if(replaceOld){const rows=await loadEventScannerLinks(eventId);await Promise.all(rows.filter(x=>x.active===true).map(x=>fbDb.collection("eventScannerLinks").doc(x.id).set({active:false,revokedAt:firebase.firestore.FieldValue.serverTimestamp(),revokedBy:currentFirebaseUser.uid},{merge:true})))}const token=secureEventScannerToken();await fbDb.collection("eventScannerLinks").doc(token).set({eventId,semester:ev.semester,active:true,createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentFirebaseUser.uid,createdByName:currentUserLabel()},{merge:false});toast("Đã tạo link check-in riêng");openEventScannerLinkManager(eventId)}catch(e){alert("Không tạo được link: "+(e.message||e))}}
+async function revokeEventScannerLink(token,eventId){if(!canEditClub()||!confirm("Vô hiệu hóa link này ngay? Người đang giữ link sẽ không thể check-in tiếp."))return;try{await fbDb.collection("eventScannerLinks").doc(token).set({active:false,revokedAt:firebase.firestore.FieldValue.serverTimestamp(),revokedBy:currentFirebaseUser.uid},{merge:true});toast("Đã vô hiệu hóa link");openEventScannerLinkManager(eventId)}catch(e){alert("Không vô hiệu hóa được link: "+(e.message||e))}}
 
 $("#eventSearch").oninput=renderEvents;
 $("#createEventBtn").onclick=()=>openEventBuilder();
@@ -7197,7 +7052,7 @@ function renderEvents(){
             ${(()=>{const st=eventAvailability(ev);return `<span class="${st.className}">${esc(st.label)}</span>`})()}
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
             • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${eventAnswerFieldCount(ev)} trường`:"Thiếu trường"}</span>
-            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span> • <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in: Bật":"QR check-in: Tắt"}</span>${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
+            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span> • <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in: Bật":"QR check-in: Tắt"}</span>${ev.qrCheckinEnabled===true?` • <span class="event-checkin-audience-badge ${ev.qrCheckinAudience==="public"?"public":""}">${ev.qrCheckinAudience==="public"?"Check-in Public":"Chỉ thành viên"}</span>`:""}${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
           </div>
         </div>
         ${ev.specialType==="continuation"
@@ -7208,7 +7063,7 @@ function renderEvents(){
         <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
         <button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng / Test nhập</button>
         <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
-        ${ev.qrCheckinEnabled===true&&canEditModule("attendance")?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">Quét QR check-in</button>`:""}
+        ${ev.qrCheckinEnabled===true&&canEditModule("attendance")?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">Quét QR check-in</button>`:""}${ev.qrCheckinEnabled===true&&canEditClub()?`<button class="secondary" onclick="openEventScannerLinkManager('${ev.id}')">Link check-in ngoài BCN</button>`:""}
         <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
         ${canEditModule("events")?`
           <button class="secondary edit-only" onclick="openEventBuilder('${ev.id}')">Chỉnh sửa</button>
@@ -7501,6 +7356,10 @@ async function openEventBuilder(eventId=""){
       <label>QR check-in sinh viên
         <select id="eventQrCheckinEnabled"><option value="0" ${(ev?.qrCheckinEnabled||tpl?.qrCheckinEnabled)!==true?"selected":""}>Tắt</option><option value="1" ${(ev?.qrCheckinEnabled||tpl?.qrCheckinEnabled)===true?"selected":""}>Bật cho sự kiện này</option></select>
         <div class="permission-note">Quét QR của trường để đọc MSSV. Camera chỉ xử lý trực tiếp trên thiết bị; hệ thống không lưu ảnh, video hay chuỗi QR gốc. Chỉ lưu MSSV đã đối chiếu và bản ghi check-in của sự kiện.</div>
+      </label>
+      <label>Đối tượng QR check-in
+        <select id="eventQrCheckinAudience"><option value="members" ${(ev?.qrCheckinAudience||tpl?.qrCheckinAudience||"members")==="members"?"selected":""}>Chỉ thành viên CLB</option><option value="public" ${(ev?.qrCheckinAudience||tpl?.qrCheckinAudience)==="public"?"selected":""}>Public — cho phép sinh viên ngoài CLB</option></select>
+        <div class="permission-note">Thành viên đã đăng ký trên form sẽ tự check-in. Thành viên chưa đăng ký cần Admin xác nhận. Chế độ Public cho phép MSSV ngoài danh sách CLB được ghi nhận riêng và có thể lọc khi xem kết quả.</div>
       </label>
       <label>Tiêu đề sau khi gửi<input id="eventSuccessTitle" value="${esc(ev?.successTitle||"Gửi thông tin thành công")}"></label>
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
@@ -8064,6 +7923,9 @@ async function saveEventBuilder(){
   if(eventPoints>0&&!eventBuilderFields.some(f=>f.type==="mssv")){
     return alert("Muốn cộng điểm từ cổng sự kiện, form cần có một trường loại MSSV.");
   }
+  if($("#eventQrCheckinEnabled")?.value==="1"&&!eventBuilderFields.some(f=>f.type==="mssv")){
+    return alert("Bật QR check-in cần có một trường loại MSSV để hệ thống đối chiếu người đã đăng ký trên cổng sự kiện.");
+  }
   if(eventBuilderSpecialType==="continuation"){
     if(!eventBuilderTargetSemester||!state.semesters?.[eventBuilderTargetSemester]){
       return alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi lưu form đồng hành.`);
@@ -8106,7 +7968,8 @@ async function saveEventBuilder(){
     targetSemester:eventBuilderSpecialType==="continuation"?eventBuilderTargetSemester:"",
     eventPoints:eventPoints||0,
     qrCheckinEnabled:$("#eventQrCheckinEnabled")?.value==="1",
-    qrCheckinVersion:1,
+    qrCheckinAudience:$("#eventQrCheckinAudience")?.value==="public"?"public":"members",
+    qrCheckinVersion:2,
     fieldSchemaVersion:4,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
@@ -8171,7 +8034,7 @@ async function toggleEventOpen(id){
   save();renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện":"Đã đóng cổng sự kiện");
 }
 
-async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get(),qrSnap=await eventRef.collection("qrCheckins").get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});for(const d of qrSnap.docs)await moveToTrash("eventQrCheckin",d.id,d.data(),{eventId:id,label:`${d.data().memberName||"Check-in"} • ${d.data().mssv||""}`,semester:ev.semester});await commitInChunks([...snap.docs,...qrSnap.docs].map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();if($("#activitySettings"))renderSettings();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
+async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get(),qrSnap=await eventRef.collection("qrCheckins").get(),scannerSnap=await fbDb.collection("eventScannerLinks").where("eventId","==",id).get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});for(const d of qrSnap.docs)await moveToTrash("eventQrCheckin",d.id,d.data(),{eventId:id,label:`${d.data().memberName||"Check-in"} • ${d.data().mssv||""}`,semester:ev.semester});await commitInChunks([...snap.docs,...qrSnap.docs,...scannerSnap.docs].map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();if($("#activitySettings"))renderSettings();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
 
 let eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
 async function openEventSubmissions(eventId){

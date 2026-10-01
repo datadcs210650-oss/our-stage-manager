@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Mã QR thành viên • Our Stage</title>
+<link rel="icon" href="/favicon.png">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 90% 0,rgba(200,88,114,.12),transparent 28%),#f3f5f7;color:#202932;padding:24px}.wrap{width:min(620px,100%);margin:auto}.brand{display:flex;align-items:center;gap:11px;margin-bottom:18px}.brand img{width:52px;height:52px;object-fit:contain;background:#fff;border-radius:14px;padding:4px;box-shadow:0 8px 24px #0001}.brand b{display:block;letter-spacing:.18em;font-size:12px}.brand small{display:block;color:#84909a;margin-top:3px;letter-spacing:.12em}.card{background:#fff;border:1px solid #dde4e8;border-radius:22px;padding:24px;box-shadow:0 25px 80px rgba(28,42,52,.09)}h1{margin:0 0 8px;font-size:28px;line-height:1.15}.muted{color:#75818a;line-height:1.55;font-size:13px}.privacy{margin:16px 0;padding:12px 14px;border-radius:12px;background:#eff8f3;border:1px solid #d2eadc;color:#316a50;font-size:12px;line-height:1.5}.field{margin-top:16px}.field label{display:block;font-size:11px;font-weight:850;margin-bottom:7px}.row{display:flex;gap:8px}.row input{flex:1;min-width:0;padding:13px 14px;border:1px solid #d7e0e5;border-radius:11px;font:inherit;text-transform:uppercase}.row input:focus{outline:none;border-color:#76213a;box-shadow:0 0 0 4px rgba(118,33,58,.08)}button{border:0;border-radius:11px;padding:13px 16px;background:#76213a;color:#fff;font-weight:850;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.state{margin-top:14px;padding:11px 13px;border-radius:11px;background:#f4f6f7;font-size:12px;line-height:1.45}.state.error{background:#fff0f2;color:#9b2941}.state.ok{background:#edf8f1;color:#1e754d}.qr-card{display:none;margin-top:18px;padding:18px;border:1px solid #e0e6e9;border-radius:16px;text-align:center;background:#fff}.qr-card.show{display:block}.qr-box{width:260px;height:260px;max-width:100%;margin:0 auto 12px;display:grid;place-items:center}.qr-box img,.qr-box canvas{max-width:100%;height:auto}.mssv{font-size:22px;font-weight:900;letter-spacing:.08em}.note{margin-top:8px;color:#7c878e;font-size:11px;line-height:1.45}.closed{padding:20px;text-align:center;border-radius:14px;background:#fff4f5;color:#8a2940;font-weight:750}@media(max-width:560px){body{padding:14px}.card{padding:18px}.row{flex-direction:column}button{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img src="/logo-ui-centered.png" alt="Our Stage Club"><div><b>OUR STAGE</b><small>MÃ QR THÀNH VIÊN</small></div></div>
+  <div class="card">
+    <h1>Mã QR check-in của bạn</h1>
+    <p class="muted" id="semesterText">Đang kiểm tra cổng cấp mã…</p>
+    <div class="privacy"><b>Quyền riêng tư:</b> mã QR được tạo ra chỉ chứa đúng <b>MSSV</b>. Hệ thống không đưa email, số điện thoại hoặc thông tin liên hệ vào QR.</div>
+    <div id="closedBox" class="closed" style="display:none">Cổng cấp mã QR hiện chưa mở hoặc học kỳ đã khóa.</div>
+    <div id="formBox" style="display:none">
+      <div class="field"><label>MSSV</label><div class="row"><input id="mssv" maxlength="30" autocomplete="off" autocapitalize="characters" placeholder="Ví dụ CS210650"><button id="issueBtn">Tạo mã QR</button></div></div>
+      <div id="state" class="state">Nhập MSSV của bạn để tạo mã.</div>
+      <div id="qrCard" class="qr-card"><div id="qrBox" class="qr-box"></div><div id="qrMssv" class="mssv"></div><div class="note">Mã này có thể dùng lại cho các sự kiện hỗ trợ QR check-in cho đến khi Admin vô hiệu hóa quyền QR của MSSV này.</div></div>
+    </div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);const semester=(new URLSearchParams(location.search).get("semester")||"").trim().toUpperCase();
+function setState(text,kind=""){const el=$("#state");el.textContent=text;el.className=`state ${kind}`}
+async function api(body){const r=await fetch("/api/member-qr",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Lỗi ${r.status}`);return d}
+async function init(){if(!semester){$("#semesterText").textContent="Link không hợp lệ.";$("#closedBox").style.display="block";return}try{const c=await api({action:"config",semester});$("#semesterText").textContent=`Học kỳ: ${c.semesterName||semester}`;if(!c.open){$("#closedBox").style.display="block";return}$("#formBox").style.display="block"}catch(e){$("#semesterText").textContent="Không tải được cổng cấp mã.";$("#closedBox").style.display="block"}}
+async function issue(){const input=$("#mssv"),btn=$("#issueBtn"),mssv=input.value.trim();if(!mssv)return setState("Vui lòng nhập MSSV.","error");btn.disabled=true;setState("Đang xác minh MSSV…");try{const d=await api({action:"issue",semester,mssv});$("#qrBox").innerHTML="";new QRCode($("#qrBox"),{text:d.qrText,width:250,height:250,correctLevel:QRCode.CorrectLevel.M});$("#qrMssv").textContent=d.mssv;$("#qrCard").classList.add("show");setState("Đã tạo mã QR. QR chỉ chứa MSSV của bạn.","ok")}catch(e){$("#qrCard").classList.remove("show");setState(e.message||"Không thể tạo mã QR.","error")}finally{btn.disabled=false}}
+$("#issueBtn").onclick=issue;$("#mssv").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();issue()}});init();
+</script>
+</body>
+</html>

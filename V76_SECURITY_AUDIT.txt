@@ -1,0 +1,54 @@
+OUR STAGE CLUB MANAGER V76 — SECURITY & STABILITY AUDIT
+
+PASS — QR/camera privacy
+- No camera image/video/frame is persisted.
+- Raw decoded QR payload is used transiently and discarded; persisted check-in stores normalized MSSV only.
+- Member-issued QR payload is exactly MSSV.
+
+PASS — delegated scanner isolation
+- Public scanner has no Firebase client access to members/submissions/contacts.
+- eventScannerLinks are admin-only in Firestore Rules.
+- Scanner token is never written into a check-in record.
+- Successful delegated scan response is privacy-minimized: it does not reveal member/external type or registration status.
+- Public delegated page has no manual MSSV input.
+
+PASS — approval policy
+- Registered member: approved automatically.
+- Unregistered member scanned by Admin/Super Admin: explicit confirmation is required.
+- Unregistered member scanned by BCN or delegated link: pending_admin.
+- Only Admin/Super Admin can approve/reject pending_admin.
+
+PASS — public attendees
+- Non-members are accepted only when qrCheckinAudience == public.
+- Stored as attendeeType=external and can be filtered/exported separately.
+
+PASS — duplicate/concurrency control
+- Deterministic check-in document IDs prevent duplicate records per event/MSSV.
+- Approved check-in + linked activity update runs in a Firestore transaction.
+- Undo restores prior activity value only if the current value still equals the value applied by QR check-in.
+
+PASS — semester/activity safety
+- Server checks semester lock before check-in/decision/undo.
+- Linked activity score is not changed if activity column is locked.
+
+PASS — member QR revocation
+- Revocation is server-enforced before admin or delegated check-in.
+- Design limitation is documented: because QR contains only MSSV, revocation necessarily applies to every QR carrying that same MSSV.
+
+PASS — access controls
+- Admin/Super Admin manage member QR portal and delegated scanner links.
+- V76 Firestore Rules make memberQrPortals, memberQrCards and eventScannerLinks admin-only.
+- Normal QR check-in creation/update is routed through trusted Firebase Admin API.
+
+PASS — syntax/config
+- Inline JavaScript syntax checked for index.html, check-in-su-kien.html, ma-thanh-vien.html, su-kien.html, diem-danh.html, tra-cuu.html and tra-cuu-tu-do.html.
+- All api/*.js and lib/*.js pass node --check.
+- package.json and vercel.json parse successfully.
+- Source scan found no Firebase private key/service-account secret.
+
+PERFORMANCE NOTE
+- Common member lookup uses exact MSSV first, with a compatibility fallback for older member records.
+- Registration matching still scans the event submissions because historic submissions store MSSV inside dynamic answers. This preserves backward compatibility. If event volume becomes very large, a future migration can add a dedicated normalized registration index.
+
+OPERATIONAL SECURITY NOTE
+- A delegated scanner URL is a bearer secret. Anyone holding the link can submit scans for that event until the link is revoked. Use a fresh link when needed and revoke it after handing off/after the event.

@@ -15,6 +15,14 @@
     {
       "source": "/diem-danh",
       "destination": "/diem-danh.html"
+    },
+    {
+      "source": "/ma-thanh-vien",
+      "destination": "/ma-thanh-vien.html"
+    },
+    {
+      "source": "/check-in-su-kien",
+      "destination": "/check-in-su-kien.html"
     }
   ],
   "headers": [
@@ -215,6 +223,58 @@
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/ma-thanh-vien",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/ma-thanh-vien.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/check-in-su-kien",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/check-in-su-kien.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
         }
       ]
     }
