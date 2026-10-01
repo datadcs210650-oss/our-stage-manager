@@ -1,0 +1,19 @@
+V80 FIX REPORT
+
+FIXED
+- Delegated event scanner links now follow event manual open/close state server-side.
+- Public scanner page polls event state and stops camera immediately after closure.
+- public-scan validates event state on every scan.
+- Creating scanner links while event is closed is blocked both client-side and server-side.
+- Scanner-link manager clearly shows temporary suspension when an event is closed.
+- Mobile sidebar scrolling fixed with independent 100dvh scroll container and touch momentum.
+
+SECURITY
+- No new public Firestore permissions.
+- Scanner token remains in URL fragment (#token=), avoiding normal request URL logs.
+- Every public scan remains server-validated.
+- Closing an event is enforced by the server, not only hidden/disabled in UI.
+- No private keys or service-account JSON included.
+
+RULES
+- No Firestore Rules change required from V78/V79.

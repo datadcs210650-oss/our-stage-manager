@@ -364,6 +364,7 @@ async function adminCreateLink(req, body) {
   const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
   const [{ data:event }, state] = await Promise.all([loadEvent(db,eventId), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("Hãy bật QR check-in cho sự kiện trước.");
+  if (event.isOpen === false) throw bad("Sự kiện đang đóng nên chưa thể tạo link check-in.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   if (body.replaceOld === true) {
     const old = await db.collection("eventScannerLinks").where("eventId", "==", eventId).get();
@@ -412,6 +413,7 @@ async function publicConfig(body) {
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
+  if (event.isOpen === false) throw bad("Sự kiện đã đóng. Link check-in tạm ngưng hiệu lực.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   return {
     ok: true,
@@ -430,6 +432,7 @@ async function publicScan(body) {
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
+  if (event.isOpen === false) throw bad("Sự kiện đã đóng. Link check-in tạm ngưng hiệu lực.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
@@ -540,14 +543,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:78 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:80 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:78 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:80 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -563,9 +566,9 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 200, result);
   } catch (error) {
     const code = String(error?.code || "");
-    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found"]);
+    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/event-closed"]);
     if (clientCodes.has(code)) {
-      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" ? 404 : code === "osc/semester-locked" ? 409 : 400;
+      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" ? 404 : code === "osc/semester-locked" || code === "osc/event-closed" ? 409 : 400;
       return sendJson(res, status, { ok: false, error: error.message, code });
     }
     return handleError(res, error);
