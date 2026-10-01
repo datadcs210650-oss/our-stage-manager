@@ -368,7 +368,6 @@ async function adminCreateLink(req, body) {
   const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
   const [{ data:event }, state] = await Promise.all([loadEvent(db,eventId), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("Hãy bật QR check-in cho sự kiện trước.");
-  if (event.isOpen === false) throw bad("Sự kiện đang đóng nên chưa thể tạo link check-in.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   if (body.replaceOld === true) {
     const old = await db.collection("eventScannerLinks").where("eventId", "==", eventId).get();
@@ -394,6 +393,46 @@ async function adminRevokeLink(req, body) {
   if (!snap.exists) throw bad("Link check-in không tồn tại.", "osc/scanner-invalid");
   await ref.set({ active:false, revokedAt:admin.firestore.FieldValue.serverTimestamp(), revokedBy:actor.decoded.uid }, { merge:true });
   return { ok:true, token, active:false };
+}
+
+async function adminSetLinkActive(req, body) {
+  const actor = await requireManager(req);
+  const db = getDb(), token = normalizeToken(body.token), active = body.active === true;
+  const ref = db.collection("eventScannerLinks").doc(token), snap = await ref.get();
+  if (!snap.exists) throw bad("Link check-in không tồn tại.", "osc/scanner-invalid");
+  const link = snap.data() || {};
+  const [{ data:event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
+  if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.");
+  if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
+
+  // Keep at most one delegated scanner link active per event. This is independent
+  // from event.isOpen: closing registration must not stop check-in.
+  if (active) {
+    const all = await db.collection("eventScannerLinks").where("eventId", "==", event.id).get();
+    const batch = db.batch();
+    for (const d of all.docs) {
+      if (d.id !== token && d.data()?.active === true) {
+        batch.set(d.ref, {
+          active:false,
+          disabledAt:admin.firestore.FieldValue.serverTimestamp(),
+          disabledBy:actor.decoded.uid
+        }, { merge:true });
+      }
+    }
+    batch.set(ref, {
+      active:true,
+      reactivatedAt:admin.firestore.FieldValue.serverTimestamp(),
+      reactivatedBy:actor.decoded.uid
+    }, { merge:true });
+    await batch.commit();
+  } else {
+    await ref.set({
+      active:false,
+      disabledAt:admin.firestore.FieldValue.serverTimestamp(),
+      disabledBy:actor.decoded.uid
+    }, { merge:true });
+  }
+  return { ok:true, token, active };
 }
 
 async function adminDeleteEventLinks(req, body) {
@@ -485,7 +524,6 @@ async function publicConfig(body) {
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
-  if (event.isOpen === false) throw bad("Sự kiện đã đóng. Link check-in tạm ngưng hiệu lực.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   return {
     ok: true,
@@ -504,7 +542,6 @@ async function publicScan(body) {
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
-  if (event.isOpen === false) throw bad("Sự kiện đã đóng. Link check-in tạm ngưng hiệu lực.", "osc/event-closed");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
@@ -615,14 +652,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:81 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:82 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:81 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:82 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -631,6 +668,7 @@ module.exports = async function handler(req, res) {
     else if (action === "admin-links") result = await adminLinks(req, body);
     else if (action === "admin-create-link") result = await adminCreateLink(req, body);
     else if (action === "admin-revoke-link") result = await adminRevokeLink(req, body);
+    else if (action === "admin-set-link-active") result = await adminSetLinkActive(req, body);
     else if (action === "admin-delete-event-links") result = await adminDeleteEventLinks(req, body);
     else if (action === "admin-delete-event") result = await adminDeleteEvent(req, body);
     else if (action === "decision") result = await decide(req, body);
@@ -639,9 +677,9 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 200, result);
   } catch (error) {
     const code = String(error?.code || "");
-    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/event-closed"]);
+    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found"]);
     if (clientCodes.has(code)) {
-      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" ? 404 : code === "osc/semester-locked" || code === "osc/event-closed" ? 409 : 400;
+      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" ? 404 : code === "osc/semester-locked" ? 409 : 400;
       return sendJson(res, status, { ok: false, error: error.message, code });
     }
     return handleError(res, error);

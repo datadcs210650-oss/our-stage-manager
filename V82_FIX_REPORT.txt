@@ -1,0 +1,5 @@
+V82 FIX REPORT
+
+Root cause: V80 intentionally tied public scanner validity to event.isOpen. This conflicted with the desired workflow where registration may close before on-site check-in ends.
+
+Fix: removed event.isOpen gating from delegated scanner config/scan/link creation and added a dedicated server-side link active toggle. Registration and check-in now have separate lifecycle controls.
