@@ -1,0 +1,16 @@
+V75 SYSTEM REVIEW
+
+PASS — Event-specific QR check-in storage under eventPortals/{eventId}/qrCheckins/{memberId}.
+PASS — No raw QR payload/photo/video/frame is persisted.
+PASS — Duplicate check-in prevented by deterministic member document + transaction.
+PASS — Check-in can atomically update linked activity attendance/score.
+PASS — Locked activity remains untouched while event check-in can still be recorded.
+PASS — Undo restores prior activity value only when the current value still equals the value applied by QR check-in.
+PASS — Camera cleanup on modal close/logout/tab hidden.
+PASS — Manual MSSV fallback does not weaken event separation.
+PASS — Existing V73 Account API and V74 Activity Portal features preserved.
+PASS — Event deletion also moves QR check-ins into private Trash Bin before deletion.
+
+REQUIRES
+- Publish firestore_rules_v75.rules.
+- Redeploy vercel.json so same-origin camera permission is enabled.
