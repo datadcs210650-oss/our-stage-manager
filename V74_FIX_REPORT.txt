@@ -1,0 +1,33 @@
+OUR STAGE CLUB MANAGER V74 — FIX REPORT
+=======================================
+
+FIXED
+[PASS] Sidebar logo + OUR STAGE căn trái dạng ngang.
+[PASS] Brand/sidebar trở thành nút Home về Tổng quan, hỗ trợ chuột + bàn phím.
+[PASS] Event title hỗ trợ newline từ Event Builder đến public portal.
+[PASS] Event description cũng giữ newline trên public portal.
+[PASS] Mỗi activity có Activity Event Portal Manager.
+[PASS] Event có thể link/unlink activity bất kỳ trong đúng học kỳ.
+[PASS] Linked portal hiển thị badge hoạt động trong danh sách Cổng sự kiện.
+[PASS] Linked portal dùng đúng activity item để ghi nhận attendance/score; không tạo duplicate scoring item.
+[PASS] Delete activity an toàn: gỡ link event trước, giữ event/submissions.
+[PASS] Existing field editor V71/V72 giữ nguyên đầy đủ.
+[PASS] V73 Account API giữ nguyên.
+[PASS] Node engine pin 22.x.
+
+AUDIT / REGRESSION STATIC CHECK
+[PASS] index.html inline JS syntax.
+[PASS] su-kien.html inline JS syntax.
+[PASS] diem-danh.html inline JS syntax.
+[PASS] tra-cuu.html inline JS syntax.
+[PASS] tra-cuu-tu-do.html inline JS syntax.
+[PASS] All Vercel API JS syntax.
+[PASS] Firebase Admin helper syntax.
+[PASS] vercel.json valid JSON.
+[PASS] package.json valid JSON.
+[PASS] No missing referenced local assets detected.
+
+SECURITY / RULES
+- Firestore V69 event portal create/update permits the new link metadata while preserving semester + editEvents checks.
+- Submission attendance/point updates still require editAttendance and semester unlocked.
+- No service-account credentials are included in the package.

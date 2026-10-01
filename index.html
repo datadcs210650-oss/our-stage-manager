@@ -1973,6 +1973,44 @@ button,a,input,select,textarea{touch-action:manipulation}
 @media(max-width:900px){.division-layout{grid-template-columns:1fr}.division-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.division-checkbox-grid{grid-template-columns:1fr}.division-summary-grid{grid-template-columns:1fr 1fr}.manual-sync-status{display:none!important}}
 </style>
+<style id="v74-activity-portal-fix">
+/* ==========================================================
+   V74 — Brand left alignment + activity event portals
+   ========================================================== */
+.sidebar .brand-wrap{
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+  gap:12px!important;
+  min-height:86px!important;
+  padding:8px 6px 14px!important;
+  cursor:pointer!important;
+  user-select:none;
+}
+.sidebar .brand-wrap:focus-visible{outline:2px solid rgba(255,255,255,.75);outline-offset:3px;border-radius:16px}
+.sidebar .side-logo{width:62px!important;height:62px!important;margin:0!important;flex:0 0 auto!important}
+.sidebar .brand-text{width:auto!important;min-width:0!important;text-align:left!important}
+.sidebar .brand-text .brand,.sidebar .brand-sub{width:auto!important;text-align:left!important}
+body.sidebar-collapsed .sidebar .brand-wrap{justify-content:center!important;padding-left:0!important;padding-right:0!important}
+body.sidebar-collapsed .sidebar .side-logo{width:50px!important;height:50px!important}
+body.sidebar-collapsed .sidebar .brand-text{display:none!important}
+.event-card-title,.event-card-description,.event-preview-title{white-space:pre-line}
+.event-linked-activity-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:#eef5ff;color:#315b8c;border:1px solid #d5e5f8;font-weight:800}
+.event-builder-modal #eventTitle{min-height:70px!important;resize:vertical!important;line-height:1.35!important}
+.activity-setting-row{grid-template-columns:minmax(230px,1fr) 165px 140px 90px 118px 100px 48px!important;min-width:970px!important}
+.activity-portal-btn{min-height:38px!important;white-space:nowrap!important;padding:8px 10px!important}
+.activity-portal-manage-list{display:grid;gap:9px;margin-top:8px}
+.activity-portal-manage-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e4e9ec;border-radius:12px;background:#fff}
+.activity-portal-manage-row b{display:block;white-space:pre-line}
+.activity-portal-manage-row small{display:block;margin-top:4px;color:#7a858d}
+.activity-portal-manage-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){
+  .activity-setting-row{grid-template-columns:minmax(220px,1fr) 165px 140px 90px 118px 100px 48px!important;min-width:950px!important}
+  .activity-portal-manage-row{align-items:flex-start;flex-direction:column}
+  .activity-portal-manage-actions{width:100%;justify-content:flex-start}
+}
+</style>
 </head>
 <body class="auth-login">
 
@@ -2045,7 +2083,7 @@ button,a,input,select,textarea{touch-action:manipulation}
 
 <div id="app" class="app hidden">
   <aside class="sidebar">
-    <div class="brand-wrap"><img src="/logo-ui-centered.png" class="side-logo" alt="Our Stage Club Logo"><div class="brand-text"><div class="brand">OUR<br><span>STAGE</span></div><div class="brand-sub">CLUB MANAGER</div></div></div>
+    <div class="brand-wrap" id="homeBrandBtn" role="button" tabindex="0" aria-label="Về Tổng quan" title="Về Tổng quan"><img src="/logo-ui-centered.png" class="side-logo" alt="Our Stage Club Logo"><div class="brand-text"><div class="brand">OUR<br><span>STAGE</span></div><div class="brand-sub">CLUB MANAGER</div></div></div>
     <div class="sidebar-scroll" id="sidebarScroll" tabindex="0" aria-label="Menu chức năng">
       <div id="favoriteNav" class="favorite-nav"></div>
       <div class="nav">
@@ -2618,7 +2656,7 @@ function lookupConfig(){
   return cfg;
 }
 
-let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,selectedDivisionId="",currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
+let semester=Object.keys(state.semesters)[0]||"SU26",selectedInfoId=null,selectedDivisionId="",currentProfile=null,currentFirebaseUser=null,attendancePreviewRows=[],attendanceTarget=null,fundPreviewRows=[],memberImportPreviewRows=[],memberImportHeaders=[],eventBuilderFields=[],eventBuilderId=null,eventBuilderSpecialType="",eventBuilderTargetSemester="",eventBuilderLinkedActivityId="",currentEventSubmissionRows=[],currentEventSubmissionEventId="",cloudStateTimer=null,cloudStateUnsub=null,eventAutoTimer=null,selectedMemberIds=new Set(),initialRouteApplied=false;
 let userPreferences={favorites:[],savedFilters:[],importMappings:{}};
 let activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:"",schoolType:"",division:""};
 let auditRows=[],importHistoryRows=[],trashRows=[],approvalRows=[],notificationRows=[],selectedTrashIds=new Set();
@@ -3302,7 +3340,7 @@ function updateWorkspaceWindowMeta(){document.querySelectorAll("main > section[i
 function decorateWorkspaceSections(){document.querySelectorAll("main > section[id]").forEach(sec=>{sec.classList.add("workspace-window");if(sec.firstElementChild?.classList.contains("workspace-window-bar"))return;const bar=document.createElement("div");bar.className="workspace-window-bar";bar.innerHTML=`<div class="window-bar-left"><span class="window-dots"><i></i><i></i><i></i></span><b class="workspace-window-title">${esc(navLabel(sec.id))}</b></div><span class="window-bar-meta"></span>`;sec.insertBefore(bar,sec.firstChild)});updateWorkspaceWindowMeta()}
 function toggleSidebarShell(){if(matchMedia("(max-width:1000px)").matches)document.body.classList.toggle("sidebar-open");else document.body.classList.toggle("sidebar-collapsed")}
 function closeMobileSidebar(){document.body.classList.remove("sidebar-open")}
-function initV40Shell(){enhanceSidebarNavigation();decorateWorkspaceSections();renderWorkspaceDock("dashboard");$("#sidebarToggleBtn")?.addEventListener("click",toggleSidebarShell);$("#sidebarBackdrop")?.addEventListener("click",closeMobileSidebar);$("#loginPasswordToggle")?.addEventListener("click",()=>{const input=$("#adminPass");if(!input)return;input.type=input.type==="password"?"text":"password";$("#loginPasswordToggle").textContent=input.type==="password"?"Hiện":"Ẩn"})}
+function initV40Shell(){enhanceSidebarNavigation();decorateWorkspaceSections();renderWorkspaceDock("dashboard");$("#sidebarToggleBtn")?.addEventListener("click",toggleSidebarShell);$("#sidebarBackdrop")?.addEventListener("click",closeMobileSidebar);const homeBrand=$("#homeBrandBtn");homeBrand?.addEventListener("click",()=>{openTab("dashboard");closeMobileSidebar()});homeBrand?.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openTab("dashboard");closeMobileSidebar()}});$("#loginPasswordToggle")?.addEventListener("click",()=>{const input=$("#adminPass");if(!input)return;input.type=input.type==="password"?"text":"password";$("#loginPasswordToggle").textContent=input.type==="password"?"Hiện":"Ẩn"})}
 
 function openTab(tab){
   if(!canAccessTab(tab)){toast("Tài khoản chưa được cấp quyền truy cập chức năng này.");return}
@@ -6706,6 +6744,63 @@ $("#freeLookupSearch").oninput=()=>renderFreeLookup();
 
 function eventFor(id){return state.events.find(e=>e.id===id)}
 
+/* ===== V74: Cổng sự kiện liên kết trực tiếp với từng hoạt động ===== */
+function linkedEventsForActivity(activityId,semKey=semester){
+  const id=String(activityId||"");
+  if(!id)return [];
+  return (state.events||[]).filter(ev=>ev.semester===semKey&&String(ev.linkedActivityId||"")===id);
+}
+function activityPortalTemplate(gi,ii){
+  const g=sem().groups?.[gi],it=g?.items?.[ii];
+  if(!g||!it)return null;
+  return {
+    name:it.name||"Cổng sự kiện hoạt động",
+    description:it.date?`Đăng ký / ghi nhận thông tin cho hoạt động ${it.name||""} • ${it.date}`:`Đăng ký / ghi nhận thông tin cho hoạt động ${it.name||""}`,
+    resultAction:"none",
+    eventPoints:activityMaxPoints(it)||0,
+    linkedActivityId:it.id||"",
+    linkedActivityGroupId:g.id||"",
+    fields:[
+      {label:"Họ và tên",type:"text",required:true},
+      {label:"MSSV",type:"mssv",required:true},
+      {label:"Email",type:"email",required:false},
+      {label:"Ghi chú",type:"textarea",required:false}
+    ]
+  };
+}
+function createActivityEventPortal(gi,ii){
+  if(!canEditModule("events"))return alert("Tài khoản chưa có quyền chỉnh sửa Cổng sự kiện.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trước khi tạo cổng sự kiện.");
+  const tpl=activityPortalTemplate(gi,ii);if(!tpl)return alert("Không tìm thấy hoạt động.");
+  window.__eventTemplate=tpl;
+  closeModal();
+  setTimeout(()=>openEventBuilder(""),0);
+}
+function openActivityPortalManager(gi,ii){
+  const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
+  const portals=linkedEventsForActivity(it.id);
+  const rows=portals.length?portals.map(ev=>`<div class="activity-portal-manage-row">
+    <div><b>${esc(ev.title||"Cổng sự kiện")}</b><small>${eventAvailability(ev).label} • ${eventAnswerFieldCount(ev)} trường</small></div>
+    <div class="activity-portal-manage-actions"><button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng</button><button class="secondary" onclick="closeModal();setTimeout(()=>openEventSubmissions('${ev.id}'),0)">Kết quả</button>${canEditModule("events")?`<button class="secondary" onclick="closeModal();setTimeout(()=>openEventBuilder('${ev.id}'),0)">Chỉnh sửa</button>`:""}</div>
+  </div>`).join(""):`<div class="empty">Hoạt động này chưa có cổng sự kiện.</div>`;
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Cổng sự kiện của hoạt động</h2><div class="small-help">${esc(g.name)} → <b>${esc(it.name)}</b></div></div><button onclick="closeModal()">×</button></div><div class="activity-portal-manage-list">${rows}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Đóng</button>${canEditModule("events")&&!semesterLocked()?`<button class="primary" onclick="createActivityEventPortal(${gi},${ii})">+ Tạo cổng mới</button>`:""}</div></div></div>`;
+  $("#modalWrap").classList.remove("hidden");syncModalBodyState();
+}
+function eventBuilderActivityOptions(selectedId="",semKey=semester){
+  const cfg=state.semesters?.[semKey],selected=String(selectedId||"");
+  const options=[`<option value="">Không liên kết hoạt động</option>`];
+  let found=false;
+  for(const g of cfg?.groups||[]){
+    for(const it of g.items||[]){
+      const id=String(it.id||"");if(!id)continue;
+      if(id===selected)found=true;
+      options.push(`<option value="${esc(id)}" ${id===selected?"selected":""}>${esc(g.name||"Hoạt động")} → ${esc(it.name||id)}</option>`);
+    }
+  }
+  if(selected&&!found)options.push(`<option value="${esc(selected)}" selected>Hoạt động đã bị xóa / không còn trong cấu hình</option>`);
+  return options.join("");
+}
+
 function eventPointsValue(ev){
   const n=Number(ev?.eventPoints||0);
   return Number.isFinite(n)&&n>0?n:0;
@@ -6756,9 +6851,10 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
     return false;
   }
   const ev=eventFor(eventId);if(!ev)return false;
+  const linked=ev.linkedActivityId?activityItemById(ev.linkedActivityId,ev.semester):null;
   const points=eventPointsValue(ev);
-  if(!points){
-    if(!silent)alert("Cổng sự kiện này không cấu hình điểm.");
+  if(!points&&!linked){
+    if(!silent)alert("Cổng sự kiện này không cấu hình điểm hoặc hoạt động liên kết.");
     return false;
   }
   if(semesterLocked(ev.semester)){
@@ -6785,25 +6881,34 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
     return false;
   }
 
-  const item=await ensureEventPointActivity(ev);
+  const item=linked?.item||await ensureEventPointActivity(ev);
+  if(!item){
+    await ref.set({pointsStatus:"Không tìm thấy hoạt động đã liên kết",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(!silent)alert("Hoạt động liên kết không còn tồn tại. Hãy chỉnh lại cổng sự kiện.");
+    return false;
+  }
   if(item?.locked===true){
     await ref.set({pointsStatus:"Cột điểm đã khóa",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     if(!silent)alert(lockedActivityMessage(item.id,ev.semester));
     return false;
   }
   target.scores=target.scores||{};
-  const before=Number(target.scores[item.id]||0);
-  target.scores[item.id]=points;
+  const linkedGroup=linked?.group||eventPointGroup(ev.semester,{create:false});
+  const linkedMode=activityMode(linkedGroup,item);
+  const linkedDefaultPoints=activityMaxPoints(item);
+  const appliedValue=ev.linkedActivityId&&linkedMode==="checkbox"?true:(ev.linkedActivityId?Math.min(points||linkedDefaultPoints,linkedDefaultPoints||points):points);
+  const before=target.scores[item.id]??(linkedMode==="checkbox"?false:0);
+  target.scores[item.id]=appliedValue;
 
   await fbDb.collection("members").doc(target.id).update({
-    [`scores.${item.id}`]:points,
+    [`scores.${item.id}`]:appliedValue,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy:currentFirebaseUser?.uid||""
   });
   await ref.set({
     pointsApplied:true,
-    pointsValue:points,
-    pointsStatus:`Đã cộng ${points} điểm`,
+    pointsValue:linkedMode==="checkbox"?(activityMaxPoints(item)||points||0):appliedValue,
+    pointsStatus:linkedMode==="checkbox"?"Đã ghi nhận tham gia":`Đã cộng ${appliedValue} điểm`,
     pointsAppliedAt:firebase.firestore.FieldValue.serverTimestamp(),
     pointsAppliedBy:currentFirebaseUser?.uid||""
   },{merge:true});
@@ -6813,14 +6918,14 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
     module:"attendance",
     entityType:"member",
     entityId:target.id,
-    summary:`Cộng ${points} điểm từ sự kiện ${ev.title} cho ${target.name}`,
+    summary:linkedMode==="checkbox"?`Ghi nhận tham gia ${item.name} từ cổng sự kiện cho ${target.name}`:`Cộng ${appliedValue} điểm từ sự kiện ${ev.title} cho ${target.name}`,
     before:{itemId:item.id,value:before},
-    after:{itemId:item.id,value:points},
+    after:{itemId:item.id,value:appliedValue},
     undo:{type:"memberScore",memberId:target.id,itemId:item.id,value:before},
     semesterKey:ev.semester
   });
 
-  if(!silent)toast(`Đã cộng ${points} điểm`);
+  if(!silent)toast(linkedMode==="checkbox"?"Đã ghi nhận tham gia":`Đã cộng ${appliedValue} điểm`);
   return true;
 }
 
@@ -6849,13 +6954,13 @@ function renderEvents(){
     return `<div class="event-card">
       <div class="event-card-head">
         <div>
-          <h3>${esc(ev.title)}</h3>
-          <p>${esc(ev.description||"Không có mô tả")}</p>
+          <h3 class="event-card-title">${esc(ev.title)}</h3>
+          <p class="event-card-description">${esc(ev.description||"Không có mô tả")}</p>
           <div class="small-help" style="margin-top:6px">
             ${(()=>{const st=eventAvailability(ev);return `<span class="${st.className}">${esc(st.label)}</span>`})()}
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
             • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${eventAnswerFieldCount(ev)} trường`:"Thiếu trường"}</span>
-            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span>${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
+            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span>${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
           </div>
         </div>
         ${ev.specialType==="continuation"
@@ -7128,6 +7233,7 @@ async function openEventBuilder(eventId=""){
   const tpl=!eventId?window.__eventTemplate:null;window.__eventTemplate=null;
   eventBuilderSpecialType=ev?.specialType||tpl?.specialType||"";
   eventBuilderTargetSemester=ev?.targetSemester||tpl?.targetSemester||(eventBuilderSpecialType==="continuation"?nextMainSemesterCode(ev?.semester||semester):"");
+  eventBuilderLinkedActivityId=ev?.linkedActivityId||tpl?.linkedActivityId||"";
   const rawBuilderFields=(Array.isArray(ev?.fields)&&ev.fields.length)
     ? ev.fields
     : ((Array.isArray(tpl?.fields)&&tpl.fields.length)?tpl.fields:defaultEventFieldsFor(ev||tpl||{}));
@@ -7137,8 +7243,9 @@ async function openEventBuilder(eventId=""){
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal event-builder-modal">
     <div class="modal-head"><div><h2>${ev?"Chỉnh sửa":"Tạo"} cổng sự kiện</h2><div class="modal-kicker">${esc(eventSemesterName)} • Cổng sự kiện</div></div><button class="modal-close-btn" onclick="closeModal()" aria-label="Đóng">×</button></div>
     <div class="form-grid">
-      <label>Tiêu đề<input id="eventTitle" value="${esc(ev?.title||tpl?.name||"")}"></label>
+      <label>Tiêu đề<textarea id="eventTitle" rows="2" maxlength="200" placeholder="Có thể nhấn Enter để xuống dòng">${esc(ev?.title||tpl?.name||"")}</textarea><div class="permission-note">Dòng xuống trong ô này sẽ được giữ nguyên ở cổng sự kiện. Tối đa 200 ký tự.</div></label>
       <label>Học kỳ<input id="eventSemesterDisplay" value="${esc(eventSemesterName)}" readonly><div class="permission-note">Sự kiện được cố định vào học kỳ này. Muốn tạo cho kỳ khác, hãy đổi học kỳ ở menu bên trái rồi tạo sự kiện mới.</div></label>
+      <label class="full">Liên kết với hoạt động<select id="eventLinkedActivity">${eventBuilderActivityOptions(eventBuilderLinkedActivityId,eventSemesterKey)}</select><div class="permission-note">Có thể tạo cổng ngay từ Thiết lập → Hoạt động. Liên kết này giúp biết cổng thuộc hoạt động nào và không tạo thêm cột điểm trùng.</div></label>
       <label class="full">Mô tả<textarea id="eventDescription" rows="3">${esc(ev?.description||tpl?.description||"")}</textarea></label>
       <label>Trạng thái<select id="eventIsOpen"><option value="1" ${ev?.isOpen!==false?"selected":""}>Cho phép hoạt động theo lịch</option><option value="0" ${ev?.isOpen===false?"selected":""}>Đóng cổng thủ công</option></select></label>
       <label>Mở từ (không bắt buộc)<input id="eventOpenAt" type="datetime-local" value="${esc(dateTimeLocalValue(ev?.openAt))}"><div class="permission-note">Để trống = mở ngay khi trạng thái cho phép.</div></label>
@@ -7488,7 +7595,7 @@ function previewEventBuilderForm(){
     else control=`<input disabled type="${f.type==="email"?"email":f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text"}" style="width:100%">`;
     return `<div class="field"><label>${esc(f.label)} ${required}</label>${control}</div>`;
   }).join("");
-  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="eventPreviewOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Xem trước form</h2><div class="small-help">${esc($("#eventTitle")?.value||"Cổng sự kiện")}</div></div><button onclick="document.getElementById('eventPreviewOverlay')?.remove()">×</button></div>${preview||'<div class="event-field-empty-warning">Chưa có trường nào.</div>'}<div class="modal-actions"><button class="primary" onclick="document.getElementById('eventPreviewOverlay')?.remove()">Đóng xem trước</button></div></div></div>`);
+  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="eventPreviewOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Xem trước form</h2><div class="small-help event-preview-title">${esc($("#eventTitle")?.value||"Cổng sự kiện")}</div></div><button onclick="document.getElementById('eventPreviewOverlay')?.remove()">×</button></div>${preview||'<div class="event-field-empty-warning">Chưa có trường nào.</div>'}<div class="modal-actions"><button class="primary" onclick="document.getElementById('eventPreviewOverlay')?.remove()">Đóng xem trước</button></div></div></div>`);
 }
 
 function continuationActivityId(sourceSem,targetSem){return `continuation_${sourceSem}_${targetSem}`}
@@ -7739,11 +7846,16 @@ async function saveEventBuilder(){
     if("imageData" in x)x.imageData="";
     return x;
   });
+  const linkedActivityId=String($("#eventLinkedActivity")?.value||"");
+  const linkedActivity=linkedActivityId?activityItemById(linkedActivityId,lockedSemester):null;
   const fullEvent={
     id:eventId,
     title,
     description:$("#eventDescription").value.trim(),
     semester:lockedSemester,
+    linkedActivityId,
+    linkedActivityGroupId:linkedActivity?.group?.id||"",
+    linkedActivityName:linkedActivity?.item?.name||"",
     isOpen:$("#eventIsOpen").value==="1",
     openAt:openAt?firebase.firestore.Timestamp.fromDate(openAt):null,
     closeAt:closeAt?firebase.firestore.Timestamp.fromDate(closeAt):null,
@@ -7775,11 +7887,12 @@ async function saveEventBuilder(){
     });
 
     if(fullEvent.specialType==="continuation"&&fullEvent.isOpen)await ensureContinuationActivity(fullEvent);
-    else if(eventPoints>0)await ensureEventPointActivity(fullEvent);
+    else if(eventPoints>0&&!fullEvent.linkedActivityId)await ensureEventPointActivity(fullEvent);
 
     closeModal();
     save();
     renderEvents();
+    if($("#activitySettings"))renderSettings();
     scheduleRealtimeRender("events");
     toast(fullEvent.specialType==="continuation"
       ?"Đã lưu form đồng hành kỳ tiếp theo"
@@ -7814,7 +7927,7 @@ async function toggleEventOpen(id){
   save();renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện":"Đã đóng cổng sự kiện");
 }
 
-async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});await commitInChunks(snap.docs.map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
+async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get();await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});await commitInChunks(snap.docs.map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();if($("#activitySettings"))renderSettings();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
 
 let eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
 async function openEventSubmissions(eventId){
@@ -7872,7 +7985,7 @@ function renderSubmissionCard(ev,s){
 
     <div class="event-actions">
       ${ev.resultAction.startsWith("fundPaid")&&!s.actionApplied&&canEditModule("finance")?`<button class="primary" onclick="approveEventFundPaid('${ev.id}','${s.id}')">Đánh dấu đã đóng quỹ</button>`:""}
-      ${ev.specialType!=="continuation"&&eventPointsValue(ev)>0&&!s.pointsApplied&&canEditModule("attendance")?`<button class="secondary" onclick="applyEventPoints('${ev.id}','${s.id}')">Cộng ${eventPointsValue(ev)} điểm</button>`:""}
+      ${ev.specialType!=="continuation"&&(eventPointsValue(ev)>0||ev.linkedActivityId)&&!s.pointsApplied&&canEditModule("attendance")?`<button class="secondary" onclick="applyEventPoints('${ev.id}','${s.id}')">${ev.linkedActivityId&&activityMode(activityItemById(ev.linkedActivityId,ev.semester)?.group,activityItemById(ev.linkedActivityId,ev.semester)?.item)==="checkbox"?"Ghi nhận tham gia":`Cộng ${eventPointsValue(ev)||activityMaxPoints(activityItemById(ev.linkedActivityId,ev.semester)?.item)||0} điểm`}</button>`:""}
       ${ev.specialType==="continuation"&&canEditModule("events")?`<button class="secondary" onclick="openEditContinuationSubmission('${ev.id}','${s.id}')">Chỉnh sửa kết quả</button>`:""}
       ${canEditModule("events")?`<button class="danger" onclick="deleteSingleEventSubmission('${ev.id}','${s.id}')">Xóa phản hồi</button>`:""}
     </div>
@@ -9744,7 +9857,7 @@ function renderSettings(){
         <div><button class="secondary" onclick="addActivityItem(${gi})">+ Thêm hoạt động</button></div>
       </div>
       <div class="activity-setting-table">
-        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span></span></div>
+        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span>Cổng sự kiện</span><span></span></div>
         ${g.items.map((it,ii)=>`
           <div class="activity-setting-row ${it.locked?"activity-config-locked":""}" data-activity-lock-row="${gi}:${ii}">
             <input class="lock-protected-config" value="${esc(it.name)}" aria-label="Tên hoạt động" ${it.locked?"disabled":""} onchange="sem().groups[${gi}].items[${ii}].name=this.value">
@@ -9758,10 +9871,11 @@ function renderSettings(){
             </div>
             <input class="num-clear activity-max-points lock-protected-config" type="number" min="0" step="any" value="${Number(it.points||0)===0?"":Number(it.points||0)}" placeholder="0" aria-label="Điểm tối đa" ${it.locked?"disabled":""} onchange="setActivityMaxPoints(${gi},${ii},this.value)">
             <button class="activity-lock-btn ${it.locked?"locked":"unlocked"}" type="button" onclick="toggleActivityColumnLock(${gi},${ii})">${it.locked?"🔒 Đã khóa":"🔓 Đang mở"}</button>
+            <button class="activity-portal-btn secondary" type="button" onclick="openActivityPortalManager(${gi},${ii})">Cổng${linkedEventsForActivity(it.id).length?` (${linkedEventsForActivity(it.id).length})`:""}</button>
             <button class="danger lock-protected-config" ${it.locked?"disabled":""} title="${it.locked?"Mở khóa cột trước khi xóa":"Xóa hoạt động"}" onclick="removeActivityItem(${gi},${ii})">×</button>
           </div>`).join("")}
       </div>
-      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. Với Nhập điểm, hệ thống không cho nhập vượt <b>Điểm tối đa</b>. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
+      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. Với Nhập điểm, hệ thống không cho nhập vượt <b>Điểm tối đa</b>. Nút <b>Cổng</b> cho phép tạo/quản lý cổng sự kiện riêng của hoạt động và chỉnh tùy ý các trường form. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
     </div>`).join("");
   renderUniversitySettings();
   applyZeroClearBehavior();
@@ -10075,7 +10189,22 @@ function applyActivityColumnLocksInSettings(){
   });
 }
 function addActivityItem(gi){const g=sem().groups[gi];g.items.push({id:"act_"+uid(),name:"Hoạt động mới",date:"",points:5,mode:g.mode==="number"?"number":"checkbox",locked:false});save();renderSettings()}
-function removeActivityItem(gi,ii){if(confirm("Xóa cột hoạt động này?")){sem().groups[gi].items.splice(ii,1);save();renderSettings()}}
+async function removeActivityItem(gi,ii){
+  if(!canEditClub())return;
+  const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
+  const linked=linkedEventsForActivity(it.id);
+  const message=linked.length
+    ? `Hoạt động này đang liên kết với ${linked.length} cổng sự kiện. Nếu xóa hoạt động, các cổng vẫn được giữ lại nhưng sẽ được gỡ liên kết để tránh lỗi.\n\nBạn có chắc muốn xóa?`
+    : "Xóa cột hoạt động này?";
+  if(!confirm(message))return;
+  try{
+    if(linked.length){
+      await Promise.all(linked.map(ev=>fbDb.collection("eventPortals").doc(ev.id).set({linkedActivityId:"",linkedActivityGroupId:"",linkedActivityName:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})));
+      linked.forEach(ev=>{ev.linkedActivityId="";ev.linkedActivityGroupId="";ev.linkedActivityName=""});
+    }
+    sem().groups[gi].items.splice(ii,1);save();renderSettings();renderEvents();toast(linked.length?"Đã xóa hoạt động và gỡ liên kết cổng sự kiện":"Đã xóa hoạt động");
+  }catch(e){console.error("removeActivityItem",e);alert("Không xóa được hoạt động vì chưa gỡ được liên kết cổng sự kiện: "+(e.message||e))}
+}
 $("#saveActivitiesBtn").onclick=()=>{save();toast("Đã lưu hoạt động")};
 if($("#addUniversityBtn"))$("#addUniversityBtn").onclick=addUniversitySetting;
 if($("#saveUniversitiesBtn"))$("#saveUniversitiesBtn").onclick=saveUniversitySettings;

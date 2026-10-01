@@ -1,0 +1,30 @@
+OUR STAGE CLUB MANAGER V73 — ACCOUNT API FIX REPORT
+
+STATUS
+PASS — frontend account-update route now has a matching Vercel Serverless Function.
+PASS — account-create backend added.
+PASS — account-delete backend added.
+PASS — manager password reset backend + UI added.
+PASS — permissions-migrate route added so the existing login call no longer targets a missing endpoint.
+PASS — /api/health added for deployment diagnostics.
+PASS — duplicate email protection added.
+PASS — UID is preserved when changing email.
+PASS — Auth + Firestore account profile are synchronized.
+PASS — update rollback is attempted if Firestore write fails after Firebase Auth update.
+PASS — delete rollback is attempted if Firebase Auth deletion fails.
+PASS — server-side authorization checks Admin/Super Admin role and active status.
+PASS — Admin cannot manage Admin/Super Admin.
+PASS — Super Admin cannot modify another Super Admin through these endpoints.
+PASS — self-target admin operations are blocked.
+PASS — account lock also disables Firebase Authentication.
+PASS — password reset revokes refresh tokens.
+PASS — no service-account secret is placed in client code.
+PASS — existing V72 public/event/lookup/attendance files are preserved.
+
+DEPLOYMENT DEPENDENCY
+Vercel must install package.json dependencies and must have Firebase Admin environment variables.
+Use /api/health after deploy to distinguish missing API (404) from missing Admin environment variables (500).
+
+STATIC CHECKS PERFORMED
+- node --check: all API/lib JavaScript files PASS.
+- index.html inline JavaScript syntax parse PASS.
