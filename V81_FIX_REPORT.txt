@@ -1,0 +1,32 @@
+OUR STAGE CLUB MANAGER V81 — EVENT DELETE RELIABILITY FIX
+
+ROOT CAUSE
+- Event deletion moved QR check-in rows into trash as type "eventQrCheckin".
+- Firestore Rules only allowed trash types: member, finance, event, eventSubmission.
+- Therefore any event containing QR check-ins failed with "Missing or insufficient permissions" before deletion could finish.
+
+V81 FIX
+1. Event deletion is now performed by authenticated Firebase Admin server API action: admin-delete-event.
+2. Server verifies the caller has Events edit permission (Admin/Super Admin or authorized BCN).
+3. Locked semesters cannot be deleted.
+4. All event, submission and QR check-in data is backed up to Trash BEFORE any live data is deleted.
+5. Deletes are committed in bounded batches; the parent event is deleted last.
+6. Delegated scanner links for the event are deleted with the event.
+7. Stable trash IDs reduce duplicate backups when a failed deletion is retried.
+8. Firestore Rules V81 also allow eventQrCheckin as a valid trash type for consistency with restore behavior.
+9. package.json version corrected to 81.0.0.
+10. Client error messages now distinguish missing API deployment and locked-semester errors.
+
+AUDIT RESULTS
+- All inline JavaScript in all HTML pages: PASS node --check.
+- All Vercel API and lib JavaScript: PASS node --check.
+- Secret/private-key source scan: PASS.
+- Trash type consistency: PASS.
+- Event delete permission is enforced server-side.
+- Event scanner links cleaned up during delete.
+- Existing QR check-in, member QR, account API and public portals unchanged.
+
+DEPLOY
+- Upload patch files to the repository root, including api/event-checkin.js.
+- Publish firestore_rules_v81.rules in Firebase Firestore Rules.
+- Vercel Environment Variables do not need to be entered again.

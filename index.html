@@ -7033,7 +7033,7 @@ function eventQrLinkedActivity(ev){
   try{return activityItemById(ev.linkedActivityId,ev.semester)||null}catch(e){console.warn("linked event activity",e);return null}
 }
 function eventQrCheckinTimeLabel(v){return v?dateTime(v):"vừa xong"}
-async function eventCheckinApi(body){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},15000);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||(res.status===404?"API /api/event-checkin chưa được deploy trên Vercel.":`API trả về lỗi ${res.status}`));e.code=data.code||"";e.status=res.status;throw e}return data}
+async function eventCheckinApi(body,timeoutMs=15000){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},timeoutMs);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||(res.status===404?"API /api/event-checkin chưa được deploy trên Vercel.":`API trả về lỗi ${res.status}`));e.code=data.code||"";e.status=res.status;throw e}return data}
 
 async function commitEventStudentQrCheckin(eventId,mssv,{method="school_qr",decision=""}={}){return eventCheckinApi({action:"admin-scan",eventId,mssv,method,decision})}
 async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),mssv=extractEventStudentMssv(rawText),now=Date.now();if(!mssv){eventStudentQrStatus("error","Không nhận diện được MSSV","Dữ liệu QR gốc đã được bỏ ngay và không được lưu.");return}if(mssv===eventStudentQrLastText&&now-eventStudentQrLastAt<1800)return;eventStudentQrLastText=mssv;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,mssv,{method});if(result.needsConfirmation){const ok=confirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên cổng sự kiện này.
@@ -8123,7 +8123,26 @@ async function toggleEventOpen(id){
   save();renderEvents();toast(ev.isOpen?"Đã mở cổng sự kiện • Link check-in hoạt động lại":"Đã đóng cổng sự kiện • Link check-in tạm khóa ngay");
 }
 
-async function deleteEventPortal(id){if(!canEditModule("events"))return;const ev=eventFor(id);if(!ev)return;if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;try{const eventRef=fbDb.collection("eventPortals").doc(id);const full=await eventRef.get(),snap=await eventRef.collection("submissions").get(),qrSnap=await eventRef.collection("qrCheckins").get();try{await eventCheckinApi({action:"admin-delete-event-links",eventId:id})}catch(linkCleanupError){console.warn("scanner link cleanup",linkCleanupError)}await moveToTrash("event",id,full.exists?full.data():ev,{label:ev.title,semester:ev.semester});for(const d of snap.docs)await moveToTrash("eventSubmission",d.id,d.data(),{eventId:id,label:d.data().submitterLabel||"Phản hồi",semester:ev.semester});for(const d of qrSnap.docs)await moveToTrash("eventQrCheckin",d.id,d.data(),{eventId:id,label:`${d.data().memberName||"Check-in"} • ${d.data().mssv||""}`,semester:ev.semester});await commitInChunks([...snap.docs,...qrSnap.docs].map(d=>b=>b.delete(d.ref)));await eventRef.delete();state.events=(state.events||[]).filter(e=>e.id!==id);save();renderEvents();if($("#activitySettings"))renderSettings();await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`});toast("Đã chuyển sự kiện vào Thùng rác")}catch(e){alert("Không xóa được sự kiện: "+(e.message||e))}}
+async function deleteEventPortal(id){
+  if(!canEditModule("events"))return;
+  const ev=eventFor(id);if(!ev)return;
+  if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");
+  if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;
+  try{
+    const result=await eventCheckinApi({action:"admin-delete-event",eventId:id},30000);
+    state.events=(state.events||[]).filter(e=>e.id!==id);
+    save();renderEvents();if($("#activitySettings"))renderSettings();
+    await logAudit({action:"delete",module:"events",entityType:"event",entityId:id,summary:`Xóa sự kiện ${ev.title}`,semesterKey:ev.semester});
+    const detail=[];
+    if(Number(result?.submissions||0))detail.push(`${result.submissions} phản hồi`);
+    if(Number(result?.checkins||0))detail.push(`${result.checkins} check-in`);
+    toast(detail.length?`Đã chuyển sự kiện + ${detail.join(" + ")} vào Thùng rác`:"Đã chuyển sự kiện vào Thùng rác");
+  }catch(e){
+    console.error("deleteEventPortal",e);
+    const msg=e?.code==="osc/semester-locked"?"Học kỳ đang bị khóa nên không thể xóa sự kiện.":e?.status===404?"API xóa sự kiện chưa được deploy đúng trên Vercel. Hãy cập nhật file api/event-checkin.js rồi redeploy.":(e?.message||e);
+    alert("Không xóa được sự kiện: "+msg);
+  }
+}
 
 let eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
 async function openEventSubmissions(eventId){

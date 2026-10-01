@@ -35,6 +35,10 @@ function actorCanEditAttendance(actor) {
   if (actorIsAdmin(actor)) return true;
   return actor.profile.role === "bcn" && actor.profile.permissions?.viewAttendance === true && actor.profile.permissions?.editAttendance === true;
 }
+function actorCanEditEvents(actor) {
+  if (actorIsAdmin(actor)) return true;
+  return actor.profile.role === "bcn" && actor.profile.permissions?.viewEvents === true && actor.profile.permissions?.editEvents === true;
+}
 function actorCanViewEventCheckins(actor) {
   if (actorIsAdmin(actor)) return true;
   return actor.profile.role === "bcn" && actor.profile.permissions?.viewAttendance === true;
@@ -406,6 +410,74 @@ async function adminDeleteEventLinks(req, body) {
   return { ok:true, deleted };
 }
 
+
+async function commitBatchOps(db, ops, size = 350) {
+  for (let i = 0; i < ops.length; i += size) {
+    const batch = db.batch();
+    for (const op of ops.slice(i, i + size)) {
+      if (op.type === "set") batch.set(op.ref, op.data, { merge: false });
+      else if (op.type === "delete") batch.delete(op.ref);
+    }
+    await batch.commit();
+  }
+}
+
+function stableEventDeleteVersion(event) {
+  const ts = event?.updatedAt?.toMillis?.() || event?.createdAt?.toMillis?.();
+  return String(ts || "current");
+}
+
+async function adminDeleteEvent(req, body) {
+  const actor = await requireUser(req);
+  if (!actorCanEditEvents(actor)) throw bad("Tài khoản chưa có quyền chỉnh sửa Cổng sự kiện.", "osc/forbidden");
+  const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
+  const [{ ref:eventRef, data:event }, state] = await Promise.all([loadEvent(db, eventId), loadState(db)]);
+  if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa nên không thể xóa sự kiện.", "osc/semester-locked");
+
+  const [subSnap, qrSnap, linkSnap] = await Promise.all([
+    eventRef.collection("submissions").get(),
+    eventRef.collection("qrCheckins").get(),
+    db.collection("eventScannerLinks").where("eventId", "==", eventId).get()
+  ]);
+
+  const deletedAt = admin.firestore.Timestamp.now();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(deletedAt.toMillis() + 30 * 86400000);
+  const version = stableEventDeleteVersion(event);
+  const actorName = String(actor.profile.displayName || actor.decoded.email || "Quản trị viên").slice(0, 120);
+  const base = { semester:event.semester, deletedBy:actor.decoded.uid, deletedByName:actorName, deletedAt, expiresAt };
+  const trash = db.collection("trashBin");
+  const backupOps = [];
+  backupOps.push({ type:"set", ref:trash.doc(`event_${eventId}_${version}`), data:{
+    type:"event", sourceId:eventId, data:event, meta:{ label:String(event.title || "Sự kiện").slice(0,200), semester:event.semester }, ...base
+  }});
+  for (const d of subSnap.docs) {
+    const row = d.data() || {};
+    backupOps.push({ type:"set", ref:trash.doc(`eventSubmission_${eventId}_${d.id}_${version}`), data:{
+      type:"eventSubmission", sourceId:d.id, data:row, meta:{ eventId, label:String(row.submitterLabel || "Phản hồi").slice(0,200), semester:event.semester }, ...base
+    }});
+  }
+  for (const d of qrSnap.docs) {
+    const row = d.data() || {};
+    backupOps.push({ type:"set", ref:trash.doc(`eventQrCheckin_${eventId}_${d.id}_${version}`), data:{
+      type:"eventQrCheckin", sourceId:d.id, data:row, meta:{ eventId, label:`${String(row.memberName || "Check-in").slice(0,140)} • ${String(row.mssv || "").slice(0,30)}`, semester:event.semester }, ...base
+    }});
+  }
+
+  // Backup everything first. If this phase fails, no live event data is deleted.
+  await commitBatchOps(db, backupOps);
+
+  // Delete children / delegated scanner links in bounded batches, then delete the parent last.
+  const deleteOps = [
+    ...subSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
+    ...qrSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
+    ...linkSnap.docs.map(d => ({ type:"delete", ref:d.ref }))
+  ];
+  await commitBatchOps(db, deleteOps);
+  await eventRef.delete();
+
+  return { ok:true, deleted:true, eventId, submissions:subSnap.size, checkins:qrSnap.size, scannerLinks:linkSnap.size };
+}
+
 async function publicConfig(body) {
   const db = getDb(), token = normalizeToken(body.token);
   const linkSnap = await db.collection("eventScannerLinks").doc(token).get();
@@ -543,14 +615,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:80 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:81 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:80 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:81 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -560,6 +632,7 @@ module.exports = async function handler(req, res) {
     else if (action === "admin-create-link") result = await adminCreateLink(req, body);
     else if (action === "admin-revoke-link") result = await adminRevokeLink(req, body);
     else if (action === "admin-delete-event-links") result = await adminDeleteEventLinks(req, body);
+    else if (action === "admin-delete-event") result = await adminDeleteEvent(req, body);
     else if (action === "decision") result = await decide(req, body);
     else if (action === "undo") result = await undo(req, body);
     else throw bad("Thao tác check-in không hợp lệ.");
