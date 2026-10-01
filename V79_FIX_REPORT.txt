@@ -1,0 +1,19 @@
+OUR STAGE CLUB MANAGER V79 — QR MODAL RUNTIME FIX
+
+ROOT CAUSE
+- V78 called eventQrLinkedActivity(ev) when opening "Quét / duyệt QR".
+- That helper was accidentally dropped during the V76-V78 merge.
+- Clicking the button therefore raised ReferenceError: eventQrLinkedActivity is not defined.
+- Because the click handler is async, the global unhandledrejection handler showed the generic toast: "Có lỗi đồng bộ dữ liệu. Vui lòng thử lại." and the modal never opened.
+
+FIXED
+- Restored a defensive eventQrLinkedActivity() helper.
+- Rebuilt openEventStudentQrCheckin() with explicit try/catch so future runtime failures show the actual error instead of only the generic sync toast.
+- Linked-activity display now safely falls back if an old event references a deleted/missing activity.
+- No Firestore schema, API route, permissions, check-in data model, QR privacy model, or scanner-link behavior was changed.
+
+DEPLOY
+- If current GitHub is V78: replace only index.html from the V79 patch.
+- No Firebase Rules change is required for this specific fix.
+- No Vercel Environment Variable change is required.
+- Hard refresh after deploy.
