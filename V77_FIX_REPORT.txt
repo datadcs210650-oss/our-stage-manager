@@ -1,0 +1,20 @@
+V77 FIX REPORT
+==============
+
+FIXED
+- Member QR portal false closed / generic error state.
+- Delegated event scanner link false invalid / revoked state caused by runtime/API mismatch.
+- Admin portal/link management no longer depends on client Firestore access.
+- Public pages now distinguish missing API from real closed/revoked state.
+- Server-generated scanner tokens.
+- Server-only Firestore rule surface for member QR configuration and scanner secrets.
+- Event deletion cleans delegated scanner links through trusted API.
+
+STATIC QA
+- index.html inline JavaScript syntax: PASS
+- ma-thanh-vien.html inline JavaScript syntax: PASS
+- check-in-su-kien.html inline JavaScript syntax: PASS
+- api/member-qr.js syntax: PASS
+- api/event-checkin.js syntax: PASS
+- package.json JSON: PASS
+- vercel.json JSON: PASS
