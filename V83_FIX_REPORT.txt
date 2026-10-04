@@ -1,0 +1,14 @@
+V83 FIX REPORT
+
+PASS — Public lookup activity visibility is an explicit per-activity property (lookupVisible).
+PASS — Legacy activities default to visible; no migration data loss.
+PASS — Hidden activities are excluded only from public lookup projection, not internal scores/attendance.
+PASS — Visibility change forces public lookup sync when the portal exists.
+PASS — Failed public sync triggers rollback to prevent stale public/private mismatch.
+PASS — Attendance freeze is UI-only and stored per user + semester locally.
+PASS — Sticky columns do not mutate Firestore or score data.
+PASS — Existing V82 scanner-link behavior and APIs unchanged.
+PASS — No Firestore Rules change required.
+PASS — Inline JavaScript syntax checked with node --check.
+PASS — Server API JavaScript syntax checked.
+PASS — No service-account private key bundled.

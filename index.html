@@ -2083,6 +2083,31 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
   }
 }
 </style>
+
+<style id="v83-lookup-visibility-sticky-style">
+/* V83 — per-activity public lookup visibility + sticky attendance columns */
+.activity-setting-row{grid-template-columns:minmax(230px,1fr) 165px 140px 90px 118px 112px 100px 48px!important;min-width:1090px!important}
+.activity-lookup-btn{min-height:38px!important;white-space:nowrap!important;padding:8px 10px!important;font-size:10px!important;font-weight:850!important}
+.activity-lookup-btn.is-visible{background:#eef8f2!important;color:#176e49!important;border-color:#c9e7d5!important}
+.activity-lookup-btn.is-hidden{background:#fff1f3!important;color:#982f4a!important;border-color:#efc9d2!important}
+.activity-public-hidden-badge{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;background:#fff0f3;color:#96334d;border:1px solid #efcbd4;font-size:7px;font-weight:900;letter-spacing:.35px}
+.attendance-freeze-label{display:flex!important;align-items:center!important;gap:7px!important;margin:0!important;white-space:nowrap!important}
+.attendance-freeze-label select{min-width:180px!important;max-width:260px!important}
+#qltvTable{border-collapse:separate!important;border-spacing:0!important}
+#qltvTable .qltv-sticky-cell{position:sticky!important;background:#fff!important;background-clip:padding-box!important}
+#qltvTable thead .qltv-sticky-cell{background:#fafafa!important;z-index:16!important}
+#qltvTable thead .group.qltv-sticky-cell{background:#eef2f2!important}
+#qltvTable thead .group.support.qltv-sticky-cell{background:#eef3ef!important}
+#qltvTable tbody .qltv-sticky-cell{z-index:6!important}
+#qltvTable tbody td.name.qltv-sticky-cell{background:#fff!important}
+#qltvTable .qltv-sticky-boundary{box-shadow:8px 0 12px -10px rgba(39,48,57,.72)!important;border-right:1px solid #d8dde1!important}
+.qltv-freeze-note{display:inline-flex;align-items:center;gap:5px;margin-left:8px;color:#657079;font-size:9px;font-weight:750}
+@media(max-width:760px){
+  .activity-setting-row{grid-template-columns:minmax(220px,1fr) 165px 140px 90px 118px 112px 100px 48px!important;min-width:1060px!important}
+  .attendance-freeze-label{width:100%!important;justify-content:space-between!important}
+  .attendance-freeze-label select{flex:1!important;min-width:0!important;max-width:none!important}
+}
+</style>
 </head>
 <body class="auth-login">
 
@@ -2243,6 +2268,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
       <div class="attendance-bar">
         <label>Hoạt động cần nhập</label>
         <select id="attendanceActivitySelect"></select>
+        <label class="attendance-freeze-label">📌 Cố định đến <select id="attendanceFreezeSelect" aria-label="Cố định các cột từ trái đến cột được chọn" onchange="setAttendanceFreezeColumn(this.value)"><option value="">Không cố định</option></select></label>
         <button class="secondary" id="downloadAttendanceTemplateBtn">Tải mẫu tham gia</button>
         <button class="primary" id="uploadAttendanceBtn">Upload DS tham gia</button>
         <button class="secondary" id="qrAttendanceBtn">QR điểm danh</button>
@@ -2268,7 +2294,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button class="primary" id="addMemberBtn">+ Thêm thành viên</button>
       </div>
       <div id="continuationAttendanceSummary" class="continuation-attendance-summary hidden"></div>
-      <div class="qltv-scroll-hint">Kéo thanh ngang để xem toàn bộ các cột hoạt động.</div>
+      <div class="qltv-scroll-hint">Kéo thanh ngang để xem toàn bộ cột. Dùng <b>📌 Cố định đến</b> để giữ các cột bên trái đứng yên khi cuộn.</div>
       <div class="wide-table-scroll-wrap">
         <div class="wide-table-scrollbar" id="qltvTopScroll" aria-label="Thanh cuộn ngang bảng điểm danh">
           <div id="qltvTopScrollInner"></div>
@@ -3019,6 +3045,7 @@ function normalizeState(){
       if(!["checkbox","number"].includes(g.mode))g.mode="checkbox";
       (g.items||[]).forEach(it=>{
         if(it.locked===undefined)it.locked=false;
+        if(it.lookupVisible===undefined)it.lookupVisible=true;
         if(!["checkbox","number"].includes(it.mode))it.mode=g.mode;
         it.points=Math.max(0,Number(it.points||0));
       });
@@ -5057,6 +5084,98 @@ function renderContinuationAttendanceSummary(groups){
     <div class="continuation-mini"><span>Dừng đồng hành</span><strong>${no}</strong></div>`;
   root.classList.remove("hidden");
 }
+function attendanceColumnDescriptors(groups=sem().groups){
+  const cols=[
+    {key:"stt",label:"STT"},{key:"name",label:"Họ và tên"},{key:"mssv",label:"MSSV"},
+    {key:"total",label:"Điểm tổng"},{key:"bonus",label:"Điểm cộng"},{key:"conversion",label:"Quy đổi"}
+  ];
+  for(const g of (groups||[]))for(const it of (g.items||[])){
+    if(it.specialType==="continuation"){
+      cols.push({key:`act:${it.id}:status`,label:`${it.name} — Trạng thái`});
+      cols.push({key:`act:${it.id}:yes`,label:`${it.name} — Tiếp tục`});
+      cols.push({key:`act:${it.id}:no`,label:`${it.name} — Dừng`});
+    }else cols.push({key:`act:${it.id}`,label:it.name||"Hoạt động"});
+  }
+  cols.push({key:"fund",label:"Đóng quỹ"},{key:"actions",label:"Thao tác"});
+  return cols;
+}
+function attendanceFreezeStorageKey(){
+  const who=currentFirebaseUser?.uid||currentProfile?.email||"local";
+  return `osc_attendance_freeze_v83:${who}:${semester}`;
+}
+function getAttendanceFreezeKey(){
+  try{return localStorage.getItem(attendanceFreezeStorageKey())||""}catch{return ""}
+}
+function setAttendanceFreezeColumn(key){
+  try{key?localStorage.setItem(attendanceFreezeStorageKey(),key):localStorage.removeItem(attendanceFreezeStorageKey())}catch{}
+  applyAttendanceStickyColumns();
+  const cols=attendanceColumnDescriptors(),col=cols.find(x=>x.key===key);
+  toast(col?`Đã cố định từ ${col.label} trở về bên trái`:"Đã bỏ cố định cột");
+}
+function renderAttendanceFreezeOptions(groups=sem().groups){
+  const sel=$("#attendanceFreezeSelect");if(!sel)return;
+  const cols=attendanceColumnDescriptors(groups);let current=getAttendanceFreezeKey();
+  if(current&&!cols.some(x=>x.key===current)){
+    current="";try{localStorage.removeItem(attendanceFreezeStorageKey())}catch{}
+  }
+  sel.innerHTML=`<option value="">Không cố định</option>`+cols.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+  sel.value=current;
+}
+function annotateAttendanceTableColumns(groups=sem().groups){
+  const table=$("#qltvTable"),head=$("#qltvHead"),body=$("#qltvBody");if(!table||!head)return;
+  table.querySelectorAll("[data-col-index],[data-col-start],[data-col-end]").forEach(el=>{delete el.dataset.colIndex;delete el.dataset.colStart;delete el.dataset.colEnd});
+  const rows=head.rows;if(rows.length){
+    const first=rows[0],baseCount=6;
+    for(let i=0;i<Math.min(baseCount,first.cells.length);i++)first.cells[i].dataset.colIndex=String(i);
+    let cursor=baseCount;
+    for(let gi=0;gi<(groups||[]).length;gi++){
+      const cell=first.cells[baseCount+gi];if(!cell)break;
+      const span=groupDisplayColumnCount(groups[gi]);
+      if(span>0){cell.dataset.colStart=String(cursor);cell.dataset.colEnd=String(cursor+span-1);cursor+=span;}
+    }
+    const fundCell=first.cells[baseCount+(groups||[]).length];if(fundCell)fundCell.dataset.colIndex=String(cursor++);
+    const actionCell=first.cells[baseCount+(groups||[]).length+1];if(actionCell)actionCell.dataset.colIndex=String(cursor);
+    if(rows[1])Array.from(rows[1].cells).forEach((cell,i)=>cell.dataset.colIndex=String(baseCount+i));
+  }
+  if(body)Array.from(body.rows).forEach(row=>Array.from(row.cells).forEach((cell,i)=>cell.dataset.colIndex=String(i)));
+}
+function attendanceLeafWidths(cols){
+  const body=$("#qltvBody"),head=$("#qltvHead"),widths=new Array(cols.length).fill(0);
+  const sample=body?.rows?.[0];
+  if(sample)Array.from(sample.cells).forEach((cell,i)=>{if(i<widths.length)widths[i]=cell.getBoundingClientRect().width});
+  if(head?.rows?.length){
+    const first=head.rows[0],second=head.rows[1];
+    Array.from(first.cells).forEach(cell=>{
+      const i=Number(cell.dataset.colIndex);if(Number.isInteger(i)&&i<widths.length&&!widths[i])widths[i]=cell.getBoundingClientRect().width;
+    });
+    if(second)Array.from(second.cells).forEach(cell=>{
+      const i=Number(cell.dataset.colIndex);if(Number.isInteger(i)&&i<widths.length&&!widths[i])widths[i]=cell.getBoundingClientRect().width;
+    });
+  }
+  return widths.map((w,i)=>Math.max(1,w||([0,1,2].includes(i)?[58,210,120][i]:86)));
+}
+function clearAttendanceStickyColumns(){
+  const table=$("#qltvTable");if(!table)return;
+  table.querySelectorAll(".qltv-sticky-cell,.qltv-sticky-boundary").forEach(cell=>{
+    cell.classList.remove("qltv-sticky-cell","qltv-sticky-boundary");
+    cell.style.removeProperty("left");cell.style.removeProperty("z-index");cell.style.removeProperty("background-color");
+  });
+}
+function applyAttendanceStickyColumns(){
+  const table=$("#qltvTable");if(!table)return;
+  const groups=sem().groups||[],cols=attendanceColumnDescriptors(groups);renderAttendanceFreezeOptions(groups);annotateAttendanceTableColumns(groups);clearAttendanceStickyColumns();
+  const key=getAttendanceFreezeKey(),freezeIndex=cols.findIndex(c=>c.key===key);if(freezeIndex<0)return;
+  const widths=attendanceLeafWidths(cols),lefts=[];let x=0;for(let i=0;i<widths.length;i++){lefts[i]=x;x+=widths[i]}
+  const apply=(cell,start,end=start)=>{
+    if(start>freezeIndex||end>freezeIndex)return;
+    const bg=getComputedStyle(cell).backgroundColor;
+    cell.classList.add("qltv-sticky-cell");cell.style.left=`${lefts[start]}px`;if(bg&&bg!=="rgba(0, 0, 0, 0)")cell.style.backgroundColor=bg;
+    if(end===freezeIndex)cell.classList.add("qltv-sticky-boundary");
+  };
+  table.querySelectorAll("[data-col-index]").forEach(cell=>{const i=Number(cell.dataset.colIndex);if(Number.isInteger(i))apply(cell,i)});
+  table.querySelectorAll("[data-col-start][data-col-end]").forEach(cell=>{const a=Number(cell.dataset.colStart),b=Number(cell.dataset.colEnd);if(Number.isInteger(a)&&Number.isInteger(b))apply(cell,a,b)});
+}
+
 function renderQLTV(){
   const groups=sem().groups;
   const groupHeads=groups.map(g=>`<th class="group ${g.id==="support"?"support":""}" colspan="${groupDisplayColumnCount(g)}">${esc(g.name)}</th>`).join("");
@@ -5068,7 +5187,7 @@ function renderQLTV(){
         <th class="event-head continuation-special-head ${it.locked?"activity-column-locked":""}">TIẾP TỤC<br>ĐỒNG HÀNH<span class="date-head">${Number(it.points||0)}đ nếu Có</span></th>
         <th class="event-head continuation-special-head ${it.locked?"activity-column-locked":""}">DỪNG<br>ĐỒNG HÀNH<span class="date-head">Theo phản hồi form</span></th>`;
     }
-    return `<th class="event-head ${it.locked?"activity-column-locked":""}">${esc(it.name)}<span class="date-head">${esc(it.date||"")} • ${Number(it.points||0)}đ • ${activityMode(g,it)==="checkbox"?"Tickbox":"Nhập điểm"}</span>${it.locked?`<span class="activity-lock-state">ĐÃ KHÓA</span>`:""}</th>`;
+    return `<th class="event-head ${it.locked?"activity-column-locked":""}">${esc(it.name)}<span class="date-head">${esc(it.date||"")} • ${Number(it.points||0)}đ • ${activityMode(g,it)==="checkbox"?"Tickbox":"Nhập điểm"}</span>${it.lookupVisible===false?`<span class="activity-public-hidden-badge">ẨN TRA CỨU</span>`:""}${it.locked?`<span class="activity-lock-state">ĐÃ KHÓA</span>`:""}</th>`;
   })).join("");
   $("#qltvHead").innerHTML=`<tr><th rowspan="2">STT</th><th rowspan="2">HỌ VÀ TÊN</th><th rowspan="2">MSSV</th><th rowspan="2">ĐIỂM TỔNG</th><th rowspan="2">ĐIỂM CỘNG</th><th rowspan="2">QUY ĐỔI</th>${groupHeads}<th rowspan="2">ĐÓNG QUỸ<br>(10 điểm)</th><th rowspan="2"></th></tr><tr>${itemHeads}</tr>`;
 
@@ -5095,7 +5214,8 @@ function renderQLTV(){
   }).join("");
   $("#qltvEmpty").classList.toggle("hidden",list.length>0);
   renderContinuationAttendanceSummary(groups);
-  requestAnimationFrame(syncQLTVHorizontalScroll);
+  renderAttendanceFreezeOptions(groups);
+  requestAnimationFrame(()=>{syncQLTVHorizontalScroll();applyAttendanceStickyColumns()});
 }
 
 let qltvScrollSyncing=false;
@@ -5123,7 +5243,7 @@ function syncQLTVHorizontalScroll(){
   }
   top.scrollLeft=card.scrollLeft;
 }
-window.addEventListener("resize",()=>requestAnimationFrame(syncQLTVHorizontalScroll));
+window.addEventListener("resize",()=>requestAnimationFrame(()=>{syncQLTVHorizontalScroll();applyAttendanceStickyColumns()}));
 
 function findMember(id){return state.members.find(m=>m.id===id)}
 async function setScore(id,itemId,val){
@@ -8584,7 +8704,7 @@ async function buildLookupRecord(m,cfg){
   if(cfg.showFundPaid)record.fundPaid=!!m.fundPaid;
   if(cfg.showActivities){
     record.activities=getAllActivities()
-      .filter(a=>a.item.specialType!=="continuation"&&a.group.specialType!=="continuation")
+      .filter(a=>a.item.specialType!=="continuation"&&a.group.specialType!=="continuation"&&a.item.lookupVisible!==false)
       .map(a=>{
         const v=m.scores?.[a.item.id];
         const participated=activityJoined(a.group,a.item,v);
@@ -10055,6 +10175,39 @@ function setActivityDate(gi,ii,value){
   sem().groups[gi].items[ii].date=activityDateStoreValue(value);
 }
 
+async function toggleActivityLookupVisibility(gi,ii){
+  if(!canEditClub())return;
+  if(!ensureSemesterEditable())return;
+  const item=sem().groups?.[gi]?.items?.[ii];
+  if(!item)return;
+  if(item.specialType==="continuation")return alert("Hoạt động Đồng hành vốn không được công khai ở cổng tra cứu thành viên.");
+  const before=item.lookupVisible!==false,next=!before;
+  item.lookupVisible=next;
+  persistSafeLocalState();
+  renderSettings();
+  try{
+    const saved=await saveCloudStateNow();
+    if(!saved)throw new Error("Không lưu được thiết lập lên Firestore.");
+    const cfg=lookupConfig();
+    if(cfg.enabled){
+      const synced=await syncLookupSemester({silent:true});
+      if(!synced)throw new Error("Không đồng bộ được cổng tra cứu thành viên.");
+    }
+    renderAll();
+    toast(next?"Đã hiện hoạt động trên cổng tra cứu":"Đã ẩn hoạt động khỏi cổng tra cứu");
+  }catch(e){
+    console.error("toggleActivityLookupVisibility",e);
+    item.lookupVisible=before;
+    persistSafeLocalState();
+    try{
+      await saveCloudStateNow();
+      if(lookupConfig().enabled)await syncLookupSemester({silent:true});
+    }catch(rollbackError){console.error("lookup visibility rollback",rollbackError)}
+    renderAll();
+    alert("Không đổi được trạng thái hiển thị hoạt động. Hệ thống đã hoàn tác để tránh dữ liệu cổng tra cứu bị lệch.\n\n"+(e?.message||e));
+  }
+}
+
 function renderSettings(){
   $("#setSemesterCode").value=sem().code;
   $("#setSemesterName").value=sem().name;
@@ -10075,7 +10228,7 @@ function renderSettings(){
         <div><button class="secondary" onclick="addActivityItem(${gi})">+ Thêm hoạt động</button></div>
       </div>
       <div class="activity-setting-table">
-        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span>Cổng sự kiện</span><span></span></div>
+        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span>Cổng tra cứu</span><span>Cổng sự kiện</span><span></span></div>
         ${g.items.map((it,ii)=>`
           <div class="activity-setting-row ${it.locked?"activity-config-locked":""}" data-activity-lock-row="${gi}:${ii}">
             <input class="lock-protected-config" value="${esc(it.name)}" aria-label="Tên hoạt động" ${it.locked?"disabled":""} onchange="sem().groups[${gi}].items[${ii}].name=this.value">
@@ -10089,11 +10242,14 @@ function renderSettings(){
             </div>
             <input class="num-clear activity-max-points lock-protected-config" type="number" min="0" step="any" value="${Number(it.points||0)===0?"":Number(it.points||0)}" placeholder="0" aria-label="Điểm tối đa" ${it.locked?"disabled":""} onchange="setActivityMaxPoints(${gi},${ii},this.value)">
             <button class="activity-lock-btn ${it.locked?"locked":"unlocked"}" type="button" onclick="toggleActivityColumnLock(${gi},${ii})">${it.locked?"🔒 Đã khóa":"🔓 Đang mở"}</button>
+            ${it.specialType==="continuation"
+              ?`<button class="activity-lookup-btn secondary" type="button" disabled title="Hoạt động Đồng hành không xuất hiện ở cổng tra cứu">Không công khai</button>`
+              :`<button class="activity-lookup-btn ${it.lookupVisible===false?"is-hidden":"is-visible"}" type="button" onclick="toggleActivityLookupVisibility(${gi},${ii})">${it.lookupVisible===false?"🙈 Đang ẩn":"👁 Đang hiện"}</button>`}
             <button class="activity-portal-btn secondary" type="button" onclick="openActivityPortalManager(${gi},${ii})">Cổng${linkedEventsForActivity(it.id).length?` (${linkedEventsForActivity(it.id).length})`:""}</button>
             <button class="danger lock-protected-config" ${it.locked?"disabled":""} title="${it.locked?"Mở khóa cột trước khi xóa":"Xóa hoạt động"}" onclick="removeActivityItem(${gi},${ii})">×</button>
           </div>`).join("")}
       </div>
-      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. Với Nhập điểm, hệ thống không cho nhập vượt <b>Điểm tối đa</b>. Nút <b>Cổng</b> cho phép tạo/quản lý cổng sự kiện riêng của hoạt động và chỉnh tùy ý các trường form. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
+      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. <b>Cổng tra cứu</b> cho phép Admin ẩn/hiện riêng hoạt động đó trên trang tra cứu thành viên; việc ẩn không xóa điểm nội bộ và không ảnh hưởng bảng điểm danh. Nút <b>Cổng</b> quản lý cổng sự kiện của hoạt động. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
     </div>`).join("");
   renderUniversitySettings();
   applyZeroClearBehavior();
@@ -10406,7 +10562,7 @@ function applyActivityColumnLocksInSettings(){
     row.querySelectorAll(".lock-protected-config").forEach(el=>el.disabled=locked||semesterLocked());
   });
 }
-function addActivityItem(gi){const g=sem().groups[gi];g.items.push({id:"act_"+uid(),name:"Hoạt động mới",date:"",points:5,mode:g.mode==="number"?"number":"checkbox",locked:false});save();renderSettings()}
+function addActivityItem(gi){const g=sem().groups[gi];g.items.push({id:"act_"+uid(),name:"Hoạt động mới",date:"",points:5,mode:g.mode==="number"?"number":"checkbox",locked:false,lookupVisible:true});save();renderSettings()}
 async function removeActivityItem(gi,ii){
   if(!canEditClub())return;
   const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
