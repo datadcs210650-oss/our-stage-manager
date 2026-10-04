@@ -94,6 +94,7 @@ function rowPublic(doc){
   return {
     id:String(doc.id||d.id||""), code:String(d.code||""), name:String(d.name||""), mssv:String(d.mssv||""),
     email:String(d.email||""), ticketType:String(d.ticketType||""), seat:String(d.seat||""),
+    source:["registration","upload","manual","mixed"].includes(d.source)?d.source:"upload", sourceSubmissionId:String(d.sourceSubmissionId||""),
     status:["issued","checked_in","revoked","cancelled"].includes(d.status)?d.status:"issued",
     checkedInAt:millis(d.checkedInAt), createdAt:millis(d.createdAt), updatedAt:millis(d.updatedAt), reissuedCount:Number(d.reissuedCount||0)
   };
@@ -121,7 +122,9 @@ function normalizeImportRow(row,index){
   if(!row||typeof row!=="object") throw bad(`Dòng ${index+1} không hợp lệ.`);
   return {
     name:cleanText(row.name,160), mssv:cleanText(row.mssv,40).toUpperCase(), email:cleanText(row.email,254).toLowerCase(),
-    ticketType:cleanText(row.ticketType,80), seat:cleanText(row.seat,40), ticketCode:cleanText(row.ticketCode,40).toUpperCase()
+    ticketType:cleanText(row.ticketType,80), seat:cleanText(row.seat,40), ticketCode:cleanText(row.ticketCode,40).toUpperCase(),
+    source:(()=>{const x=String(row.source||"");return x.includes("registration")&&x.includes("upload")?"mixed":["registration","upload","manual"].includes(x)?x:"upload"})(),
+    sourceSubmissionId:cleanText(row.sourceSubmissionId,180)
   };
 }
 function numericCode(existing,digits){
@@ -132,6 +135,47 @@ function numericCode(existing,digits){
   }
   throw bad("Không thể tạo mã vé duy nhất. Hãy tăng số chữ số.","osc/ticket-code-exhausted");
 }
+function mssvTicketCode(existing,mssv){
+  const base=cleanCode(mssv);
+  if(!existing.has(base)) return base;
+  for(let n=2;n<=999;n++){
+    const suffix=String(n), head=base.slice(0,Math.max(2,40-suffix.length)), candidate=head+suffix;
+    if(!existing.has(candidate)) return candidate;
+  }
+  throw bad("MSSV này đã có quá nhiều mã vé. Hãy chuyển sang mã tự tạo.","osc/ticket-code-exhausted");
+}
+function normLabel(v){ return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+function eventField(event,{systemKeys=[],types=[],labels=[]}={}){
+  const fields=Array.isArray(event?.fields)?event.fields:[];
+  return fields.find(f=>systemKeys.includes(String(f?.systemKey||"")))
+    || fields.find(f=>types.includes(String(f?.type||"")))
+    || fields.find(f=>labels.some(x=>normLabel(f?.label).includes(x)))
+    || null;
+}
+function answerText(answers,field){
+  if(!field)return ""; const v=answers?.[field.id]; return Array.isArray(v)?v.join(", "):cleanText(v,254);
+}
+async function adminRegistrationRows(req,body){
+  const actor=await requireManager(req),db=getDb(),eventId=cleanEventId(body.eventId);
+  const {data:event}=await loadEvent(db,eventId);
+  const snap=await db.collection("eventPortals").doc(eventId).collection("submissions").get();
+  const nameF=eventField(event,{systemKeys:["memberName","name","fullName"],labels:["ho va ten","ho ten","full name","name"]});
+  const mssvF=eventField(event,{systemKeys:["mssv","studentId"],types:["mssv"],labels:["mssv","ma so sinh vien","student id"]});
+  const emailF=eventField(event,{systemKeys:["email"],types:["email"],labels:["email","e mail"]});
+  const typeF=eventField(event,{systemKeys:["ticketType"],labels:["hang ve","loai ve","ticket type"]});
+  const seatF=eventField(event,{systemKeys:["seat"],labels:["ghe","so ghe","seat"]});
+  const codeF=eventField(event,{systemKeys:["ticketCode"],labels:["ma ve","ticket code"]});
+  const rows=snap.docs.map(doc=>{
+    const d=doc.data()||{},answers=d.answers||{};
+    return {
+      name:answerText(answers,nameF)||cleanText(d.submitterLabel,160),
+      mssv:answerText(answers,mssvF).toUpperCase(), email:answerText(answers,emailF).toLowerCase(),
+      ticketType:answerText(answers,typeF), seat:answerText(answers,seatF), ticketCode:answerText(answers,codeF).toUpperCase(),
+      source:"registration", sourceSubmissionId:doc.id, submittedAt:millis(d.createdAt)
+    };
+  }).filter(r=>r.name||r.mssv||r.email).sort((a,b)=>b.submittedAt-a.submittedAt);
+  return {ok:true,version:89,eventId,rows,count:rows.length,actorRole:actor.profile.role};
+}
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanEventId(body.eventId);
   const {data:event}=await loadEvent(db,eventId);
@@ -140,7 +184,7 @@ async function adminState(req,body){
   const tickets=snap.docs.map(rowPublic);
   const stats={total:tickets.length,issued:0,checkedIn:0,revoked:0,cancelled:0};
   for(const t of tickets){ if(t.status==="checked_in")stats.checkedIn++; else if(t.status==="revoked")stats.revoked++; else if(t.status==="cancelled")stats.cancelled++; else stats.issued++; }
-  return {ok:true,version:88,event:{id:event.id,title:event.title||"",semester:event.semester||""},studio:{portalToken:studio.portalToken,portalOpen:studio.portalOpen===true,hasTemplate:!!studio.backgroundDataUrl,templateWidth:Number(studio.templateWidth||1600),templateHeight:Number(studio.templateHeight||900),layout:normalizeLayout(studio.layout),backgroundDataUrl:studio.backgroundDataUrl||""},tickets,stats,actorRole:actor.profile.role};
+  return {ok:true,version:89,event:{id:event.id,title:event.title||"",semester:event.semester||""},studio:{portalToken:studio.portalToken,portalOpen:studio.portalOpen===true,hasTemplate:!!studio.backgroundDataUrl,templateWidth:Number(studio.templateWidth||1600),templateHeight:Number(studio.templateHeight||900),layout:normalizeLayout(studio.layout),backgroundDataUrl:studio.backgroundDataUrl||""},tickets,stats,actorRole:actor.profile.role};
 }
 async function adminSaveTemplate(req,body){
   const eventId=cleanEventId(body.eventId),{actor,db,event}=await ensureManagerEditable(req,eventId);
@@ -168,7 +212,7 @@ async function adminSetPortal(req,body){
 }
 async function adminImport(req,body){
   const eventId=cleanEventId(body.eventId),{actor,db,event}=await ensureManagerEditable(req,eventId);
-  const mode=body.mode==="upload"?"upload":"auto",digits=Math.round(clamp(body.digits||8,8,14));
+  const mode=["auto","upload","mssv"].includes(body.mode)?body.mode:"auto",digits=Math.round(clamp(body.digits||8,8,14));
   const rows=Array.isArray(body.rows)?body.rows:[];
   if(!rows.length||rows.length>250) throw bad("Mỗi lượt tạo vé hỗ trợ từ 1 đến 250 dòng.");
   await loadStudio(db,eventId,{create:true,event});
@@ -179,7 +223,7 @@ async function adminImport(req,body){
     try{
       const r=normalizeImportRow(rows[i],i);
       if(!r.name) throw bad("Thiếu họ tên.");
-      let code=mode==="upload"?cleanCode(r.ticketCode):numericCode(existing,digits);
+      let code=mode==="upload"?cleanCode(r.ticketCode):mode==="mssv"?mssvTicketCode(existing,r.mssv):numericCode(existing,digits);
       if(seen.has(code)||existing.has(code)) { errors.push({row:i+1,reason:`Mã vé ${code} đã tồn tại.`}); continue; }
       seen.add(code); existing.add(code);
       prepared.push({...r,code,docId:docIdForCode(code),qrToken:randomToken()});
@@ -190,7 +234,7 @@ async function adminImport(req,body){
     const batch=db.batch();
     for(const r of prepared.slice(i,i+350)){
       const ref=ticketCol.doc(r.docId);
-      batch.create(ref,{eventId,semester:event.semester,code:r.code,name:r.name,mssv:r.mssv,email:r.email,ticketType:r.ticketType,seat:r.seat,qrToken:r.qrToken,qrVersion:1,status:"issued",reissuedCount:0,createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid});
+      batch.create(ref,{eventId,semester:event.semester,code:r.code,name:r.name,mssv:r.mssv,email:r.email,ticketType:r.ticketType,seat:r.seat,source:r.source,sourceSubmissionId:r.sourceSubmissionId,qrToken:r.qrToken,qrVersion:1,status:"issued",reissuedCount:0,createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid});
     }
     await batch.commit();
   }
@@ -222,6 +266,24 @@ async function adminTicketAction(req,body,action){
   }
   throw bad("Thao tác vé không hợp lệ.");
 }
+async function adminUpdateTicket(req,body){
+  const eventId=cleanEventId(body.eventId),{actor,db}=await ensureManagerEditable(req,eventId);
+  const {ref,data}=await findTicketByCode(db,eventId,body.code);
+  const next={
+    name:cleanText(body.name,160), mssv:cleanText(body.mssv,40).toUpperCase(), email:cleanText(body.email,254).toLowerCase(),
+    ticketType:cleanText(body.ticketType,80), seat:cleanText(body.seat,40)
+  };
+  if(!next.name) throw bad("Họ tên không được để trống.");
+  if(data.status==="checked_in" && String(next.mssv||"")!==String(data.mssv||"")) throw bad("Vé đã check-in. Hãy hoàn tác check-in trước khi đổi MSSV.","osc/ticket-checked-in");
+  await ref.set({...next,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid},{merge:true});
+  if(data.status==="checked_in"){
+    const checkRef=db.collection("eventPortals").doc(eventId).collection("qrCheckins").doc(`ticket_${data.id}`);
+    const check=await checkRef.get();
+    if(check.exists) await checkRef.set({memberName:next.name,mssv:next.mssv,ticketType:next.ticketType,seat:next.seat},{merge:true});
+  }
+  return {ok:true};
+}
+
 async function adminDeleteTicket(req,body){
   const eventId=cleanEventId(body.eventId),{db}=await ensureManagerEditable(req,eventId);
   const {ref,data}=await findTicketByCode(db,eventId,body.code);
@@ -259,12 +321,12 @@ async function adminExport(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanEventId(body.eventId);
   await loadEvent(db,eventId);
   const snap=await db.collection("ticketStudios").doc(eventId).collection("tickets").orderBy("createdAt","asc").limit(5000).get();
-  return {ok:true,version:88,tickets:snap.docs.map(rowPublic),actorRole:actor.profile.role};
+  return {ok:true,version:89,tickets:snap.docs.map(rowPublic),actorRole:actor.profile.role};
 }
 async function publicConfig(body){
   const db=getDb(),{studio,event}=await studioFromPortalToken(db,body.token);
   if(studio.portalOpen!==true) throw bad("Cổng nhận vé đang đóng.","osc/ticket-portal-closed");
-  return {ok:true,version:88,title:String(event.title||studio.title||"Vé sự kiện").slice(0,200),semester:String(event.semester||"").slice(0,30),hasTemplate:!!studio.backgroundDataUrl};
+  return {ok:true,version:89,title:String(event.title||studio.title||"Vé sự kiện").slice(0,200),semester:String(event.semester||"").slice(0,30),hasTemplate:!!studio.backgroundDataUrl};
 }
 async function publicTicket(req,body){
   const db=getDb(),token=cleanPortalToken(body.token);
@@ -275,20 +337,22 @@ async function publicTicket(req,body){
   const {data:t}=await findTicketByCode(db,event.id,body.code);
   if(t.status==="revoked") throw bad("Vé này đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.","osc/ticket-revoked");
   if(t.status==="cancelled") throw bad("Vé này đã bị hủy. Vui lòng liên hệ Ban tổ chức.","osc/ticket-cancelled");
-  return {ok:true,version:88,event:{id:event.id,title:String(event.title||"").slice(0,200),semester:String(event.semester||"").slice(0,30)},ticket:{code:String(t.code||""),name:String(t.name||"").slice(0,160),mssv:String(t.mssv||"").slice(0,40),ticketType:String(t.ticketType||"").slice(0,80),seat:String(t.seat||"").slice(0,40),status:t.status||"issued",qrValue:`OSC-TICKET:${cleanQrToken(t.qrToken)}`},template:publicTemplate(studio)};
+  return {ok:true,version:89,event:{id:event.id,title:String(event.title||"").slice(0,200),semester:String(event.semester||"").slice(0,30)},ticket:{code:String(t.code||""),name:String(t.name||"").slice(0,160),mssv:String(t.mssv||"").slice(0,40),ticketType:String(t.ticketType||"").slice(0,80),seat:String(t.seat||"").slice(0,40),status:t.status||"issued",qrValue:`OSC-TICKET:${cleanQrToken(t.qrToken)}`},template:publicTemplate(studio)};
 }
 
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET") return sendJson(res,200,{ok:true,service:"ticket-studio",version:88});
+    if(req.method==="GET") return sendJson(res,200,{ok:true,service:"ticket-studio",version:89});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."});}
     const body=readJsonBody(req),action=String(body.action||""); let result;
-    if(action==="health") result={ok:true,service:"ticket-studio",version:88};
+    if(action==="health") result={ok:true,service:"ticket-studio",version:89};
     else if(action==="admin-state") result=await adminState(req,body);
     else if(action==="admin-save-template") result=await adminSaveTemplate(req,body);
     else if(action==="admin-save-layout") result=await adminSaveLayout(req,body);
     else if(action==="admin-set-portal") result=await adminSetPortal(req,body);
     else if(action==="admin-import") result=await adminImport(req,body);
+    else if(action==="admin-registration-rows") result=await adminRegistrationRows(req,body);
+    else if(action==="admin-update-ticket") result=await adminUpdateTicket(req,body);
     else if(action==="admin-revoke") result=await adminTicketAction(req,body,"revoke");
     else if(action==="admin-cancel") result=await adminTicketAction(req,body,"cancel");
     else if(action==="admin-reissue") result=await adminTicketAction(req,body,"reissue");
