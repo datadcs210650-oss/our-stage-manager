@@ -123,7 +123,7 @@ async function writeTicketCheckin({ db, event, state, ticket, qrToken, checkedIn
   if (ticket.status === "revoked") throw bad("Vé đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-revoked");
   if (ticket.status === "cancelled") throw bad("Vé đã bị hủy. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-cancelled");
   const normalizedMssv = ticket.mssv ? mssvKey(ticket.mssv) : "";
-  const member = normalizedMssv ? await findMember(db, event.semester, normalizedMssv) : null;
+  const [member, registration] = normalizedMssv ? await Promise.all([findMember(db, event.semester, normalizedMssv),findRegistration(db, event, normalizedMssv)]) : [null,null];
   const linked = member ? linkedActivity(state, event) : null;
   const canApply = !!(member && linked && linked.item?.locked !== true);
   const appliedValue = canApply ? activityValue(linked.group, linked.item) : null;
@@ -172,7 +172,7 @@ async function writeTicketCheckin({ db, event, state, ticket, qrToken, checkedIn
       memberName:String(ticket.name || memberData?.name || "Khách có vé").slice(0,160),
       ticketId:ticket.id, ticketCode:String(ticket.code || "").slice(0,40),
       ticketType:String(ticket.ticketType || "").slice(0,80), seat:String(ticket.seat || "").slice(0,40),
-      method:"ticket_qr", registrationStatus:"ticket", registrationSubmissionId:"",
+      method:"ticket_qr", registrationStatus:registration?"registered":"ticket", registrationSubmissionId:registration?.id||"",
       checkinStatus:"approved", checkedInAt:admin.firestore.FieldValue.serverTimestamp(),
       checkedInBy:checkedInBy || "public_scanner", checkedInByName:String(checkedInByName || "Link check-in").slice(0,160),
       scannerSource:scannerSource || "delegated_link", linkedActivityId:linked?.item?.id || "",
@@ -185,18 +185,19 @@ async function writeTicketCheckin({ db, event, state, ticket, qrToken, checkedIn
       updatedAt:admin.firestore.FieldValue.serverTimestamp()
     });
   });
-  return { duplicate, duplicateData, checkinId, member, canApply, appliedValue };
+  return { duplicate, duplicateData, checkinId, member, registration, canApply, appliedValue };
 }
 async function scanTicket({ db, event, state, qrToken, checkedInBy, checkedInByName, scannerSource }) {
   const ticket = await findTicketByQr(db, event.id, qrToken);
   const result = await writeTicketCheckin({ db, event, state, ticket, qrToken, checkedInBy, checkedInByName, scannerSource });
   return {
-    ok:true, duplicate:result.duplicate, checkinId:result.checkinId, attendeeType:"ticket", registered:true,
-    registrationStatus:"ticket", memberName:String(ticket.name || "Khách có vé").slice(0,160),
+    ok:true, duplicate:result.duplicate, checkinId:result.checkinId, attendeeType:"ticket", registered:!!result.registration,
+    registrationStatus:result.registration?"registered":"ticket", memberName:String(ticket.name || "Khách có vé").slice(0,160),
     mssv:String(ticket.mssv || "").slice(0,40), ticketCode:String(ticket.code || "").slice(0,40),
     ticketType:String(ticket.ticketType || "").slice(0,80), seat:String(ticket.seat || "").slice(0,40),
     activityApplied:result.canApply, activityAppliedValue:result.appliedValue,
-    existingStatus:result.duplicateData?.checkinStatus || "approved"
+    existingStatus:result.duplicateData?.checkinStatus || "approved",
+    checkedInAt:result.duplicate?timestampMillis(result.duplicateData?.checkedInAt):Date.now()
   };
 }
 
@@ -480,7 +481,7 @@ async function adminLinks(req, body) {
   const snap = await db.collection("eventScannerLinks").where("eventId", "==", eventId).get();
   const rows = snap.docs.map(d => ({ id:d.id, ...(d.data() || {}) }))
     .sort((a,b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
-    .map(x => ({ id:x.id, active:x.active === true, semester:String(x.semester || "").slice(0,20) }));
+    .map(x => ({ id:x.id, active:x.active === true, semester:String(x.semester || "").slice(0,20), label:String(x.label || "Cổng check-in").slice(0,80) }));
   return { ok:true, rows };
 }
 async function ticketStudioReady(db, eventId) {
@@ -505,14 +506,23 @@ async function adminCreateLink(req, body) {
     }
     if (changed) await batch.commit();
   }
-  const token = scannerToken();
+  const token = scannerToken(), label=String(body.label||"Cổng check-in").trim().replace(/\s+/g," ").slice(0,80)||"Cổng check-in";
   await db.collection("eventScannerLinks").doc(token).set({
-    eventId, semester:event.semester, active:true,
+    eventId, semester:event.semester, active:true, label,
     createdAt:admin.firestore.FieldValue.serverTimestamp(),
     createdBy:actor.decoded.uid,
     createdByName:String(actor.profile.displayName || actor.decoded.email || "Admin").slice(0,120)
   }, { merge:false });
-  return { ok:true, token };
+  return { ok:true, token, label };
+}
+async function adminSetLinkLabel(req,body){
+  const actor=await requireManager(req),db=getDb(),token=normalizeToken(body.token);
+  const label=String(body.label||"").trim().replace(/\s+/g," ").slice(0,80);
+  if(!label) throw bad("Tên link không được để trống.");
+  const ref=db.collection("eventScannerLinks").doc(token),snap=await ref.get();
+  if(!snap.exists) throw bad("Link check-in không tồn tại.","osc/scanner-invalid");
+  await ref.set({label,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid},{merge:true});
+  return {ok:true,token,label};
 }
 async function adminRevokeLink(req, body) {
   const actor = await requireManager(req);
@@ -665,6 +675,7 @@ async function publicConfig(body) {
     title: String(event.title || "Check-in sự kiện").slice(0, 200),
     semester: String(event.semester || "").slice(0, 20),
     audience: event.qrCheckinAudience === "public" ? "public" : "members",
+    scannerLabel:String(link.label || "Cổng check-in").slice(0,80),
     memberQrEnabled,
     ticketQrEnabled
   };
@@ -674,14 +685,14 @@ async function publicScan(body) {
   const db = getDb(), token = normalizeToken(body.token);
   const linkSnap = await db.collection("eventScannerLinks").doc(token).get();
   if (!linkSnap.exists || linkSnap.data()?.active !== true) throw bad("Link check-in đã hết hiệu lực.", "osc/scanner-invalid");
-  const link = linkSnap.data() || {};
+  const link = linkSnap.data() || {}, scannerLabel=String(link.label||"Cổng check-in").slice(0,80);
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   const rawPayload = String(body.payload || body.mssv || "").trim();
   const ticketToken = extractTicketToken(rawPayload);
   if (ticketToken) {
-    const result = await scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:"public_scanner", checkedInByName:"Link check-in", scannerSource:"delegated_link" });
-    return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", ticketCode:result.ticketCode };
+    const result = await scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:"public_scanner", checkedInByName:scannerLabel, scannerSource:"delegated_link" });
+    return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", displayName:result.memberName, mssv:result.mssv, ticketCode:result.ticketCode, ticketType:result.ticketType, seat:result.seat, registrationStatus:result.registrationStatus, checkedInAt:result.checkedInAt, scannerLabel };
   }
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in thành viên đang tắt. Link này hiện chỉ nhận QR vé Ticket Studio.", "osc/member-qr-disabled");
   const mssv = normalizeMssv(body.mssv || rawPayload);
@@ -691,32 +702,14 @@ async function publicScan(body) {
   if (!member && audience !== "public") throw bad("MSSV không thuộc danh sách thành viên được phép check-in.", "osc/not-member");
 
   if (member && !registration) {
-    const pending = await writePendingCheckin({ db, event, member, registration, mssv, method: "public_scanner" });
+    const pending = await writePendingCheckin({ db, event, member, registration, mssv, method: "public_scanner", checkedInByName:scannerLabel });
     const status = pending.data?.checkinStatus || "pending_admin";
-    return {
-      ok: true,
-      duplicate: pending.duplicate,
-      status,
-      pendingAdmin: !pending.duplicate || status === "pending_admin",
-      mssv
-    };
+    return { ok:true, duplicate:pending.duplicate, status, pendingAdmin:!pending.duplicate || status === "pending_admin", attendeeType:"member", displayName:String(member.name||"Thành viên").slice(0,160), mssv, registrationStatus:"unregistered", checkedInAt:pending.duplicate?timestampMillis(pending.data?.checkedInAt):Date.now(), scannerLabel };
   }
 
-  const result = await writeApprovedCheckin({
-    db, event, state, member, registration, mssv,
-    method: "public_scanner",
-    checkedInBy: "public_scanner",
-    checkedInByName: "Link check-in"
-  });
-  // Privacy minimization for delegated scanners: do not reveal whether the MSSV
-  // belongs to the club or whether it had an event registration.
-  return {
-    ok: true,
-    duplicate: result.duplicate,
-    status: result.duplicateData?.checkinStatus || "approved",
-    pendingAdmin: false,
-    mssv
-  };
+  const result = await writeApprovedCheckin({ db, event, state, member, registration, mssv, method:"public_scanner", checkedInBy:"public_scanner", checkedInByName:scannerLabel });
+  const displayName=String(member?.name || registration?.submitterLabel || (member?"Thành viên":"Sinh viên ngoài CLB")).slice(0,160);
+  return { ok:true, duplicate:result.duplicate, status:result.duplicateData?.checkinStatus || "approved", pendingAdmin:false, attendeeType:member?"member":"external", displayName, mssv, registrationStatus:registration?"registered":"unregistered", checkedInAt:result.duplicate?timestampMillis(result.duplicateData?.checkedInAt):Date.now(), scannerLabel };
 }
 
 async function decide(req, body) {
@@ -802,14 +795,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:88 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:89 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:88 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:89 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -817,6 +810,7 @@ module.exports = async function handler(req, res) {
     else if (action === "admin-summary") result = await adminSummary(req, body);
     else if (action === "admin-links") result = await adminLinks(req, body);
     else if (action === "admin-create-link") result = await adminCreateLink(req, body);
+    else if (action === "admin-set-link-label") result = await adminSetLinkLabel(req, body);
     else if (action === "admin-revoke-link") result = await adminRevokeLink(req, body);
     else if (action === "admin-set-link-active") result = await adminSetLinkActive(req, body);
     else if (action === "admin-delete-event-links") result = await adminDeleteEventLinks(req, body);
