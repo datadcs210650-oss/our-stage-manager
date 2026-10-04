@@ -217,15 +217,21 @@ async function adminImport(req,body){
   if(!rows.length||rows.length>250) throw bad("Mỗi lượt tạo vé hỗ trợ từ 1 đến 250 dòng.");
   await loadStudio(db,eventId,{create:true,event});
   const ticketCol=db.collection("ticketStudios").doc(eventId).collection("tickets");
-  const existingSnap=await ticketCol.select("code").get(),existing=new Set(existingSnap.docs.map(d=>String(d.data()?.code||"")));
-  const seen=new Set(),prepared=[],errors=[];
+  const existingSnap=await ticketCol.select("code","mssv","email","sourceSubmissionId").get();
+  const existing=new Set(),existingMssv=new Set(),existingEmail=new Set(),existingSubmission=new Set();
+  for(const d of existingSnap.docs){const x=d.data()||{};if(x.code)existing.add(String(x.code));if(x.mssv)existingMssv.add(String(x.mssv).trim().toUpperCase());if(x.email)existingEmail.add(String(x.email).trim().toLowerCase());if(x.sourceSubmissionId)existingSubmission.add(String(x.sourceSubmissionId));}
+  const seen=new Set(),seenMssv=new Set(),seenEmail=new Set(),prepared=[],errors=[];
   for(let i=0;i<rows.length;i++){
     try{
       const r=normalizeImportRow(rows[i],i);
       if(!r.name) throw bad("Thiếu họ tên.");
+      const mk=String(r.mssv||"").trim().toUpperCase(),ek=String(r.email||"").trim().toLowerCase();
+      if(r.sourceSubmissionId&&existingSubmission.has(r.sourceSubmissionId)){errors.push({row:i+1,reason:"Đăng ký này đã có vé."});continue;}
+      if(mk&&(existingMssv.has(mk)||seenMssv.has(mk))){errors.push({row:i+1,reason:`MSSV ${mk} đã có vé trong sự kiện.`});continue;}
+      if(!mk&&ek&&(existingEmail.has(ek)||seenEmail.has(ek))){errors.push({row:i+1,reason:"Email này đã có vé trong sự kiện."});continue;}
       let code=mode==="upload"?cleanCode(r.ticketCode):mode==="mssv"?mssvTicketCode(existing,r.mssv):numericCode(existing,digits);
       if(seen.has(code)||existing.has(code)) { errors.push({row:i+1,reason:`Mã vé ${code} đã tồn tại.`}); continue; }
-      seen.add(code); existing.add(code);
+      seen.add(code); existing.add(code); if(mk)seenMssv.add(mk); if(ek)seenEmail.add(ek); if(r.sourceSubmissionId)existingSubmission.add(r.sourceSubmissionId);
       prepared.push({...r,code,docId:docIdForCode(code),qrToken:randomToken()});
     }catch(e){errors.push({row:i+1,reason:e.message||"Dữ liệu không hợp lệ."});}
   }
