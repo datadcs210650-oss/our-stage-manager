@@ -19,3 +19,20 @@
 #ticketStudio .ts-safety{margin-top:12px;border:1px solid #eadce1;border-radius:13px;padding:11px 12px;background:#fffafd;font-size:9px;color:#67545b;line-height:1.5}
 @media(max-width:1080px){#ticketStudio .ts-top-grid,#ticketStudio .ts-designer-grid,#ticketStudio .ts-import-grid{grid-template-columns:1fr}#ticketStudio .ts-stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){#ticketStudio .ts-hero{display:block;padding:15px}#ticketStudio .ts-event-picker{margin-top:12px;min-width:0}#ticketStudio .ts-stats{grid-template-columns:repeat(2,1fr)}#ticketStudio .ts-ticket-row{grid-template-columns:1fr}#ticketStudio .ts-ticket-actions{justify-content:flex-start}#ticketStudio .ts-list-count{width:100%;margin-left:0}#ticketStudio .ts-control-grid{grid-template-columns:1fr 1fr}.ts-portal-row{flex-wrap:wrap}.ts-portal-row input{flex-basis:100%}}
+
+
+/* V88 — configurable fields, safer QR frame & export UI */
+#ticketStudio .ts-qr{padding:5px;justify-content:center;background:rgba(255,255,255,.48);border:1.5px solid rgba(133,42,70,.52);border-radius:9px;box-shadow:0 5px 18px rgba(20,27,32,.10)}
+#ticketStudio .ts-qr-frame{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(33,41,48,.18);border-radius:7px;padding:8%;overflow:hidden}
+#ticketStudio .ts-qr #tsPreviewQr,#ticketStudio .ts-qr #tsPreviewQr>canvas,#ticketStudio .ts-qr #tsPreviewQr>img{width:100%!important;height:100%!important;object-fit:contain;display:block;image-rendering:pixelated}
+#ticketStudio .ts-control-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+#ticketStudio .ts-visible-switch{display:flex!important;align-items:center;gap:5px;font-size:8px!important;font-weight:850!important;color:#59636c!important;white-space:nowrap}
+#ticketStudio .ts-visible-switch input{width:auto!important;min-height:0!important;margin:0!important}
+#ticketStudio .ts-control-group.is-off{background:#f6f7f8;opacity:.82}
+.ts-export-overlay{position:fixed;inset:0;z-index:10050;background:rgba(19,24,29,.46);backdrop-filter:blur(5px);display:grid;place-items:center;padding:18px}
+.ts-export-dialog{width:min(620px,100%);background:#fff;border:1px solid #e3e6e8;border-radius:18px;box-shadow:0 28px 90px rgba(16,23,29,.22);padding:17px}
+.ts-export-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.ts-export-head h3{margin:0}
+.ts-export-head>button{border:0;background:#f2f4f5;border-radius:9px;width:34px;height:34px;font-size:20px;cursor:pointer}
+.ts-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.ts-export-grid label,.ts-export-scope label{border:1px solid #e6e9eb;border-radius:10px;padding:9px 10px;font-size:10px;font-weight:750}
+.ts-export-scope{display:flex;gap:8px;flex-wrap:wrap}.ts-export-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:700px){.ts-export-grid{grid-template-columns:1fr}.ts-export-scope{display:grid}.ts-export-dialog{max-height:88vh;overflow:auto}}
