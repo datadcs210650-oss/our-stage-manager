@@ -278,5 +278,13 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/email-center.js": {
+      "maxDuration": 30
+    },
+    "api/resend-webhook.js": {
+      "maxDuration": 15
+    }
+  }
 }

@@ -1,0 +1,51 @@
+OUR STAGE CLUB MANAGER V85 — EMAIL CENTER REPORT
+================================================
+
+IMPLEMENTED
+[PASS] Admin-only Email & Thông báo menu.
+[PASS] Registration-approved confirmation flow with explicit final confirmation.
+[PASS] Event reminder configuration + recipient selection + queue/send/schedule.
+[PASS] Fund-paid confirmation after manual Admin approval/change.
+[PASS] Bulk/import fund sync remains silent: no automatic email.
+[PASS] Template Email editor + system templates.
+[PASS] Email Rule Builder; rules never bypass final Admin confirmation.
+[PASS] Email Queue with Draft/Sending/Sent/Scheduled/Delivered/Delayed/Failed/Bounced/Complained/Suppressed/Canceled.
+[PASS] Cancel scheduled Resend email.
+[PASS] Retry failed email.
+[PASS] Test email.
+[PASS] Resend webhook signature verification using exact raw request body.
+[PASS] Webhook idempotency protected by atomic Firestore create.
+[PASS] Delivered/Bounced/Complained/Failed/Suppressed tracking.
+[PASS] Automatic blacklist on complaint/suppression; threshold for bounce/failed.
+[PASS] Duplicate suppression by recipient + trigger + context + template.
+[PASS] Recipient cooldown + daily recipient limit.
+[PASS] Global daily cap; scheduled email reservation uses target delivery day.
+[PASS] Resend idempotency key for send/retry request safety.
+[PASS] Stale 'sending' recovery releases leaked quota reservation.
+[PASS] Email secrets never exposed to frontend/Firestore Rules.
+[PASS] Firestore Email Center collections are server-only.
+[PASS] Vercel function max duration configured for email endpoints.
+
+BUSINESS ACTION SAFETY
+- Registration/Fund business state is written before email step.
+- Email failure cannot falsely roll back or undo the business action.
+- Admin always has “Không gửi”.
+- Imported results never automatically generate/send email.
+- Recipient list is explicitly selectable.
+
+SECURITY REVIEW
+- RESEND_API_KEY only server env.
+- RESEND_WEBHOOK_SECRET only server env.
+- Firebase ID token required for /api/email-center Admin actions.
+- Role restricted to Admin/Super Admin server-side.
+- Template output HTML-escaped; no arbitrary Admin HTML is injected into outgoing email.
+- Recipient/variable lengths bounded.
+- One queue document per recipient to isolate delivery status and retries.
+- Webhook event log stores recipient hash rather than raw recipient.
+- Source scan must show no private key/API key before deploy.
+
+KNOWN PRODUCT LIMITS
+- Resend API scheduling is limited to 30 days ahead, therefore reminders farther away should remain Draft/Queue until within that window.
+- Email Center deliberately does not auto-send from import/background result processing.
+- Queue UI keeps only the newest 200 rows in the current Admin view; Firestore retains older rows unless separately cleaned up.
+
