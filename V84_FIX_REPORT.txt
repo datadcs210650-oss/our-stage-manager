@@ -1,0 +1,15 @@
+V84 FIX REPORT
+
+FIXED
+- Freeze selector was placed in the upper attendance action bar, while users interact with the table lower on the page; this made the feature appear missing.
+- Added a dedicated visible freeze toolbar directly above the attendance table.
+- Added active-state display and explicit clear button.
+- Sticky offsets now remeasure multiple rows and recalculate after resize/render.
+- Added two-frame post-render recalculation to reduce layout-race errors.
+- Migrates the existing V83 per-user/per-semester freeze preference automatically.
+
+UNCHANGED
+- Activity visibility in public lookup.
+- Firestore Rules.
+- Vercel APIs / Firebase Admin.
+- Attendance data and score logic.

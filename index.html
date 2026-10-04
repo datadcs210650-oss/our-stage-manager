@@ -2084,28 +2084,45 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 }
 </style>
 
-<style id="v83-lookup-visibility-sticky-style">
-/* V83 — per-activity public lookup visibility + sticky attendance columns */
+<style id="v84-lookup-visibility-sticky-style">
+/* V84 — activity lookup visibility + reliable sticky attendance columns */
 .activity-setting-row{grid-template-columns:minmax(230px,1fr) 165px 140px 90px 118px 112px 100px 48px!important;min-width:1090px!important}
 .activity-lookup-btn{min-height:38px!important;white-space:nowrap!important;padding:8px 10px!important;font-size:10px!important;font-weight:850!important}
 .activity-lookup-btn.is-visible{background:#eef8f2!important;color:#176e49!important;border-color:#c9e7d5!important}
 .activity-lookup-btn.is-hidden{background:#fff1f3!important;color:#982f4a!important;border-color:#efc9d2!important}
 .activity-public-hidden-badge{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;background:#fff0f3;color:#96334d;border:1px solid #efcbd4;font-size:7px;font-weight:900;letter-spacing:.35px}
-.attendance-freeze-label{display:flex!important;align-items:center!important;gap:7px!important;margin:0!important;white-space:nowrap!important}
-.attendance-freeze-label select{min-width:180px!important;max-width:260px!important}
-#qltvTable{border-collapse:separate!important;border-spacing:0!important}
-#qltvTable .qltv-sticky-cell{position:sticky!important;background:#fff!important;background-clip:padding-box!important}
-#qltvTable thead .qltv-sticky-cell{background:#fafafa!important;z-index:16!important}
+
+/* The freeze control now lives next to the attendance table instead of being hidden in the top action bar. */
+.attendance-freeze-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:10px 0 9px;padding:11px 12px;border:1px solid #dfe5e9;border-radius:12px;background:linear-gradient(135deg,#fff,#fbfcfd);box-shadow:0 6px 18px rgba(31,43,53,.035)}
+.attendance-freeze-copy{display:flex;align-items:center;gap:9px;min-width:220px;flex:1 1 320px;color:#53606a}
+.attendance-freeze-copy strong{font-size:11px;color:#303a42;white-space:nowrap}
+.attendance-freeze-copy span{font-size:9.5px;line-height:1.45;color:#7b8790}
+.attendance-freeze-controls{display:flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0}
+.attendance-freeze-controls select{display:block!important;visibility:visible!important;opacity:1!important;width:230px!important;min-width:180px!important;max-width:320px!important;height:38px!important;padding:0 34px 0 11px!important;color:#303a42!important;background-color:#fff!important;border:1px solid #d8e0e5!important;border-radius:10px!important;box-shadow:none!important;appearance:auto!important;-webkit-appearance:menulist!important}
+.attendance-freeze-controls select:focus{border-color:#c85872!important;box-shadow:0 0 0 4px rgba(200,88,114,.09)!important}
+.attendance-freeze-clear{min-height:38px!important;padding:8px 11px!important;white-space:nowrap!important}
+.attendance-freeze-status{display:inline-flex;align-items:center;min-height:30px;padding:5px 8px;border:1px solid #e2e7ea;border-radius:999px;background:#f6f8f9;color:#69757e;font-size:8.5px;font-weight:850;white-space:nowrap}
+.attendance-freeze-status.is-active{background:#eef8f2;color:#1b704b;border-color:#cce7d7}
+
+#qltvTable{border-collapse:separate!important;border-spacing:0!important;position:relative}
+#qltvTable .qltv-sticky-cell{position:sticky!important;background-clip:padding-box!important;transform:translateZ(0);will-change:left}
+#qltvTable thead .qltv-sticky-cell{background:#f7f9fa!important;z-index:24!important}
 #qltvTable thead .group.qltv-sticky-cell{background:#eef2f2!important}
 #qltvTable thead .group.support.qltv-sticky-cell{background:#eef3ef!important}
-#qltvTable tbody .qltv-sticky-cell{z-index:6!important}
-#qltvTable tbody td.name.qltv-sticky-cell{background:#fff!important}
-#qltvTable .qltv-sticky-boundary{box-shadow:8px 0 12px -10px rgba(39,48,57,.72)!important;border-right:1px solid #d8dde1!important}
+#qltvTable tbody .qltv-sticky-cell{background:#fff!important;z-index:8!important}
+#qltvTable tbody tr:hover .qltv-sticky-cell{background:#fbfcfd!important}
+#qltvTable .qltv-sticky-boundary{box-shadow:10px 0 14px -12px rgba(31,43,53,.8)!important;border-right:1px solid #d5dde2!important}
 .qltv-freeze-note{display:inline-flex;align-items:center;gap:5px;margin-left:8px;color:#657079;font-size:9px;font-weight:750}
+.qltv-scroll-card{isolation:isolate}
+
 @media(max-width:760px){
   .activity-setting-row{grid-template-columns:minmax(220px,1fr) 165px 140px 90px 118px 112px 100px 48px!important;min-width:1060px!important}
-  .attendance-freeze-label{width:100%!important;justify-content:space-between!important}
-  .attendance-freeze-label select{flex:1!important;min-width:0!important;max-width:none!important}
+  .attendance-freeze-toolbar{align-items:stretch;padding:10px}
+  .attendance-freeze-copy{flex-basis:100%;display:block}
+  .attendance-freeze-copy strong{display:block;margin-bottom:3px}
+  .attendance-freeze-controls{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+  .attendance-freeze-controls select{width:100%!important;min-width:0!important;max-width:none!important}
+  .attendance-freeze-status{grid-column:1/-1;justify-content:center}
 }
 </style>
 </head>
@@ -2268,7 +2285,6 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
       <div class="attendance-bar">
         <label>Hoạt động cần nhập</label>
         <select id="attendanceActivitySelect"></select>
-        <label class="attendance-freeze-label">📌 Cố định đến <select id="attendanceFreezeSelect" aria-label="Cố định các cột từ trái đến cột được chọn" onchange="setAttendanceFreezeColumn(this.value)"><option value="">Không cố định</option></select></label>
         <button class="secondary" id="downloadAttendanceTemplateBtn">Tải mẫu tham gia</button>
         <button class="primary" id="uploadAttendanceBtn">Upload DS tham gia</button>
         <button class="secondary" id="qrAttendanceBtn">QR điểm danh</button>
@@ -2294,7 +2310,15 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button class="primary" id="addMemberBtn">+ Thêm thành viên</button>
       </div>
       <div id="continuationAttendanceSummary" class="continuation-attendance-summary hidden"></div>
-      <div class="qltv-scroll-hint">Kéo thanh ngang để xem toàn bộ cột. Dùng <b>📌 Cố định đến</b> để giữ các cột bên trái đứng yên khi cuộn.</div>
+      <div class="attendance-freeze-toolbar" id="attendanceFreezeToolbar">
+        <div class="attendance-freeze-copy"><strong>📌 Cố định cột</strong><span>Chọn một cột để giữ cột đó và toàn bộ các cột bên trái đứng yên khi bạn kéo ngang.</span></div>
+        <div class="attendance-freeze-controls">
+          <select id="attendanceFreezeSelect" aria-label="Cố định các cột từ trái đến cột được chọn" onchange="setAttendanceFreezeColumn(this.value)"><option value="">Không cố định</option></select>
+          <button type="button" class="secondary attendance-freeze-clear" id="attendanceFreezeClearBtn" onclick="setAttendanceFreezeColumn('')">Bỏ cố định</button>
+          <span id="attendanceFreezeStatus" class="attendance-freeze-status">Không cố định</span>
+        </div>
+      </div>
+      <div class="qltv-scroll-hint">↔ Kéo ngang để xem các cột bên phải. Khi đã cố định, phần cột bên trái sẽ luôn đứng yên.</div>
       <div class="wide-table-scroll-wrap">
         <div class="wide-table-scrollbar" id="qltvTopScroll" aria-label="Thanh cuộn ngang bảng điểm danh">
           <div id="qltvTopScrollInner"></div>
@@ -5101,16 +5125,39 @@ function attendanceColumnDescriptors(groups=sem().groups){
 }
 function attendanceFreezeStorageKey(){
   const who=currentFirebaseUser?.uid||currentProfile?.email||"local";
-  return `osc_attendance_freeze_v83:${who}:${semester}`;
+  return `osc_attendance_freeze_v84:${who}:${semester}`;
 }
 function getAttendanceFreezeKey(){
-  try{return localStorage.getItem(attendanceFreezeStorageKey())||""}catch{return ""}
+  try{
+    const fresh=localStorage.getItem(attendanceFreezeStorageKey());
+    if(fresh!==null)return fresh||"";
+    const who=currentFirebaseUser?.uid||currentProfile?.email||"local";
+    const legacy=localStorage.getItem(`osc_attendance_freeze_v83:${who}:${semester}`)||"";
+    if(legacy)localStorage.setItem(attendanceFreezeStorageKey(),legacy);
+    return legacy;
+  }catch{return ""}
+}
+function updateAttendanceFreezeStatus(){
+  const status=$("#attendanceFreezeStatus"),clear=$("#attendanceFreezeClearBtn"),sel=$("#attendanceFreezeSelect");
+  const cols=attendanceColumnDescriptors(),key=getAttendanceFreezeKey(),col=cols.find(x=>x.key===key);
+  if(sel&&sel.value!==key)sel.value=key;
+  if(status){status.textContent=col?`Đang cố định đến: ${col.label}`:"Không cố định";status.classList.toggle("is-active",!!col)}
+  if(clear)clear.disabled=!col;
+}
+let attendanceStickyFrame=0;
+function scheduleAttendanceStickyApply(){
+  cancelAnimationFrame(attendanceStickyFrame);
+  attendanceStickyFrame=requestAnimationFrame(()=>{
+    applyAttendanceStickyColumns();
+    requestAnimationFrame(()=>applyAttendanceStickyColumns());
+  });
 }
 function setAttendanceFreezeColumn(key){
   try{key?localStorage.setItem(attendanceFreezeStorageKey(),key):localStorage.removeItem(attendanceFreezeStorageKey())}catch{}
-  applyAttendanceStickyColumns();
+  updateAttendanceFreezeStatus();
+  scheduleAttendanceStickyApply();
   const cols=attendanceColumnDescriptors(),col=cols.find(x=>x.key===key);
-  toast(col?`Đã cố định từ ${col.label} trở về bên trái`:"Đã bỏ cố định cột");
+  toast(col?`Đã cố định đến cột ${col.label}`:"Đã bỏ cố định cột");
 }
 function renderAttendanceFreezeOptions(groups=sem().groups){
   const sel=$("#attendanceFreezeSelect");if(!sel)return;
@@ -5120,6 +5167,7 @@ function renderAttendanceFreezeOptions(groups=sem().groups){
   }
   sel.innerHTML=`<option value="">Không cố định</option>`+cols.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
   sel.value=current;
+  updateAttendanceFreezeStatus();
 }
 function annotateAttendanceTableColumns(groups=sem().groups){
   const table=$("#qltvTable"),head=$("#qltvHead"),body=$("#qltvBody");if(!table||!head)return;
@@ -5140,19 +5188,22 @@ function annotateAttendanceTableColumns(groups=sem().groups){
   if(body)Array.from(body.rows).forEach(row=>Array.from(row.cells).forEach((cell,i)=>cell.dataset.colIndex=String(i)));
 }
 function attendanceLeafWidths(cols){
-  const body=$("#qltvBody"),head=$("#qltvHead"),widths=new Array(cols.length).fill(0);
-  const sample=body?.rows?.[0];
-  if(sample)Array.from(sample.cells).forEach((cell,i)=>{if(i<widths.length)widths[i]=cell.getBoundingClientRect().width});
+  const table=$("#qltvTable"),body=$("#qltvBody"),head=$("#qltvHead"),widths=new Array(cols.length).fill(0);
+  const take=(cell,i)=>{
+    if(!cell||i<0||i>=widths.length)return;
+    const rect=cell.getBoundingClientRect();
+    const w=Math.max(rect.width||0,cell.offsetWidth||0);
+    if(w>widths[i])widths[i]=w;
+  };
+  // Measure several body rows because controls can make activity columns wider than the first row.
+  if(body)Array.from(body.rows).slice(0,5).forEach(row=>Array.from(row.cells).forEach((cell,i)=>take(cell,i)));
   if(head?.rows?.length){
     const first=head.rows[0],second=head.rows[1];
-    Array.from(first.cells).forEach(cell=>{
-      const i=Number(cell.dataset.colIndex);if(Number.isInteger(i)&&i<widths.length&&!widths[i])widths[i]=cell.getBoundingClientRect().width;
-    });
-    if(second)Array.from(second.cells).forEach(cell=>{
-      const i=Number(cell.dataset.colIndex);if(Number.isInteger(i)&&i<widths.length&&!widths[i])widths[i]=cell.getBoundingClientRect().width;
-    });
+    Array.from(first.cells).forEach(cell=>{const i=Number(cell.dataset.colIndex);if(Number.isInteger(i))take(cell,i)});
+    if(second)Array.from(second.cells).forEach(cell=>{const i=Number(cell.dataset.colIndex);if(Number.isInteger(i))take(cell,i)});
   }
-  return widths.map((w,i)=>Math.max(1,w||([0,1,2].includes(i)?[58,210,120][i]:86)));
+  // Last fallback keeps the first identity columns readable even before body rows render.
+  return widths.map((w,i)=>Math.max(1,w||([0,1,2].includes(i)?[70,230,130][i]:92)));
 }
 function clearAttendanceStickyColumns(){
   const table=$("#qltvTable");if(!table)return;
@@ -5163,17 +5214,35 @@ function clearAttendanceStickyColumns(){
 }
 function applyAttendanceStickyColumns(){
   const table=$("#qltvTable");if(!table)return;
-  const groups=sem().groups||[],cols=attendanceColumnDescriptors(groups);renderAttendanceFreezeOptions(groups);annotateAttendanceTableColumns(groups);clearAttendanceStickyColumns();
-  const key=getAttendanceFreezeKey(),freezeIndex=cols.findIndex(c=>c.key===key);if(freezeIndex<0)return;
-  const widths=attendanceLeafWidths(cols),lefts=[];let x=0;for(let i=0;i<widths.length;i++){lefts[i]=x;x+=widths[i]}
+  const groups=sem().groups||[],cols=attendanceColumnDescriptors(groups);
+  renderAttendanceFreezeOptions(groups);
+  annotateAttendanceTableColumns(groups);
+  clearAttendanceStickyColumns();
+  const key=getAttendanceFreezeKey(),freezeIndex=cols.findIndex(c=>c.key===key);
+  updateAttendanceFreezeStatus();
+  if(freezeIndex<0)return;
+  const widths=attendanceLeafWidths(cols),lefts=[];let x=0;
+  for(let i=0;i<widths.length;i++){lefts[i]=Math.round(x);x+=widths[i]}
   const apply=(cell,start,end=start)=>{
     if(start>freezeIndex||end>freezeIndex)return;
-    const bg=getComputedStyle(cell).backgroundColor;
-    cell.classList.add("qltv-sticky-cell");cell.style.left=`${lefts[start]}px`;if(bg&&bg!=="rgba(0, 0, 0, 0)")cell.style.backgroundColor=bg;
+    cell.classList.add("qltv-sticky-cell");
+    cell.style.left=`${lefts[start]}px`;
     if(end===freezeIndex)cell.classList.add("qltv-sticky-boundary");
   };
   table.querySelectorAll("[data-col-index]").forEach(cell=>{const i=Number(cell.dataset.colIndex);if(Number.isInteger(i))apply(cell,i)});
   table.querySelectorAll("[data-col-start][data-col-end]").forEach(cell=>{const a=Number(cell.dataset.colStart),b=Number(cell.dataset.colEnd);if(Number.isInteger(a)&&Number.isInteger(b))apply(cell,a,b)});
+}
+let attendanceStickyResizeBound=false;
+function bindAttendanceStickyResize(){
+  if(attendanceStickyResizeBound)return;attendanceStickyResizeBound=true;
+  let timer=0;
+  const refresh=()=>{clearTimeout(timer);timer=setTimeout(()=>scheduleAttendanceStickyApply(),80)};
+  window.addEventListener("resize",refresh,{passive:true});
+  if("ResizeObserver" in window){
+    const ro=new ResizeObserver(refresh);
+    const card=$("#qltvScrollCard"),table=$("#qltvTable");if(card)ro.observe(card);if(table)ro.observe(table);
+    window.__oscAttendanceStickyResizeObserver=ro;
+  }
 }
 
 function renderQLTV(){
@@ -5215,7 +5284,7 @@ function renderQLTV(){
   $("#qltvEmpty").classList.toggle("hidden",list.length>0);
   renderContinuationAttendanceSummary(groups);
   renderAttendanceFreezeOptions(groups);
-  requestAnimationFrame(()=>{syncQLTVHorizontalScroll();applyAttendanceStickyColumns()});
+  requestAnimationFrame(()=>{syncQLTVHorizontalScroll();bindAttendanceStickyResize();scheduleAttendanceStickyApply()});
 }
 
 let qltvScrollSyncing=false;
