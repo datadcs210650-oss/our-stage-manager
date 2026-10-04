@@ -21,13 +21,12 @@ body{padding:28px 16px 48px}.shell{width:min(960px,100%);margin:auto}.brand{disp
     <div id="mainContent">
       <div class="hero"><div class="eyebrow">TICKET STUDIO</div><h1 id="eventTitle">Đang tải sự kiện…</h1><p>Nhập chính xác mã vé do Ban tổ chức cung cấp để tạo vé cá nhân và tải về thiết bị.</p></div>
       <div class="lookup"><input id="ticketCode" autocomplete="off" spellcheck="false" maxlength="40" placeholder="Nhập mã vé"><button id="lookupBtn">Tạo vé</button></div>
-      <div id="status" class="status">Mã vé chỉ dùng để truy xuất đúng vé của bạn. Hệ thống không yêu cầu đăng nhập.</div>
+      <div id="status" class="status hidden"></div>
       <div id="ticketArea" class="ticket-area hidden">
         <div class="ticket-wrap"><canvas id="ticketCanvas"></canvas></div>
         <div id="ticketMeta" class="ticket-meta"></div>
         <div class="actions"><button id="downloadBtn">Tải vé PNG</button><button id="clearBtn" class="secondary">Nhập mã khác</button></div>
       </div>
-      <div class="privacy"><b>QR trên vé là mã check-in riêng.</b> Khi đến sự kiện, đưa QR này cho bộ phận check-in. Nếu vé đã bị thu hồi/hủy hoặc đã check-in trước đó, máy quét sẽ thông báo và không tạo lượt trùng.</div>
     </div>
     <div id="closedContent" class="closed hidden"><h2>Cổng nhận vé đang đóng</h2><p>Vui lòng liên hệ Ban tổ chức nếu bạn cần hỗ trợ.</p></div>
   </div>
@@ -49,7 +48,7 @@ async function renderTicket(data){const canvas=$("#ticketCanvas"),tpl=data.templ
 async function lookup(){const code=$("#ticketCode").value.trim();if(!code)return setStatus("error","Hãy nhập mã vé.");const btn=$("#lookupBtn");btn.disabled=true;setStatus("","Đang tạo vé…","Hệ thống đang xác thực mã vé và dựng QR check-in riêng.");try{const d=await api({action:"public-ticket",token:portalToken,code,clientId});await renderTicket(d);setStatus("ok","Đã tạo vé thành công","Bạn có thể tải vé xuống và dùng QR trên vé để check-in.")}catch(e){$("#ticketArea").classList.add("hidden");if(["osc/ticket-portal-closed","osc/ticket-portal-invalid"].includes(e.code))return showClosed();setStatus("error",e.message||"Không tạo được vé.",e.code==="osc/rate-limited"?"Hãy đợi vài phút rồi thử lại.":"")}finally{btn.disabled=false}}
 function showClosed(){ $("#mainContent").classList.add("hidden");$("#closedContent").classList.remove("hidden") }
 async function init(){const hp=hashParams();portalToken=hp.get("event")||"";const preset=hp.get("code")||"";if(preset)$("#ticketCode").value=preset;if(!portalToken)return showClosed();try{const d=await api({action:"public-config",token:portalToken});$("#eventTitle").textContent=d.title||"Vé sự kiện";document.title=`${d.title||"Vé sự kiện"} • Our Stage`;if(!d.hasTemplate)setStatus("error","Ban tổ chức chưa hoàn tất mẫu vé.","Vui lòng quay lại sau.");else if(preset)lookup()}catch(e){showClosed()}}
-$("#lookupBtn").onclick=lookup;$("#ticketCode").addEventListener("keydown",e=>{if(e.key==="Enter")lookup()});$("#clearBtn").onclick=()=>{$("#ticketArea").classList.add("hidden");$("#ticketCode").value="";$("#ticketCode").focus();setStatus("","Sẵn sàng","Nhập mã vé khác để tiếp tục.")};$("#downloadBtn").onclick=()=>{if(!currentTicket)return;const c=$("#ticketCanvas");c.toBlob(blob=>{if(!blob)return;const a=document.createElement("a");if(currentBlobUrl)URL.revokeObjectURL(currentBlobUrl);currentBlobUrl=URL.createObjectURL(blob);a.href=currentBlobUrl;a.download=`Ve_${String(currentTicket.ticket.code||"ticket").replace(/[^A-Za-z0-9_-]/g,"_")}.png`;a.click()},"image/png")};
+$("#lookupBtn").onclick=lookup;$("#ticketCode").addEventListener("keydown",e=>{if(e.key==="Enter")lookup()});$("#clearBtn").onclick=()=>{$("#ticketArea").classList.add("hidden");$("#status").classList.add("hidden");$("#ticketCode").value="";$("#ticketCode").focus();};$("#downloadBtn").onclick=()=>{if(!currentTicket)return;const c=$("#ticketCanvas");c.toBlob(blob=>{if(!blob)return;const a=document.createElement("a");if(currentBlobUrl)URL.revokeObjectURL(currentBlobUrl);currentBlobUrl=URL.createObjectURL(blob);a.href=currentBlobUrl;a.download=`Ve_${String(currentTicket.ticket.code||"ticket").replace(/[^A-Za-z0-9_-]/g,"_")}.png`;a.click()},"image/png")};
 init();
 </script>
 </body>
