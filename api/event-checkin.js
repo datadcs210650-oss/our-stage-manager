@@ -325,13 +325,13 @@ async function adminScan(req, body) {
   if (!actorCanEditAttendance(actor)) throw bad("Tài khoản chưa có quyền chỉnh sửa Điểm danh / điểm.", "osc/forbidden");
   const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
   const [{ data: event }, state] = await Promise.all([loadEvent(db, eventId), loadState(db)]);
-  if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   const rawPayload = String(body.payload || body.mssv || "").trim();
   const ticketToken = extractTicketToken(rawPayload);
   if (ticketToken) {
     return scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:actor.decoded.uid, checkedInByName:actor.profile.displayName || actor.decoded.email || "BCN", scannerSource:"internal_bcn" });
   }
+  if (event.qrCheckinEnabled !== true) throw bad("QR check-in thành viên của sự kiện đang tắt. Máy quét vẫn nhận QR vé Ticket Studio.", "osc/member-qr-disabled");
   const mssv = normalizeMssv(body.mssv || rawPayload);
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
@@ -483,11 +483,19 @@ async function adminLinks(req, body) {
     .map(x => ({ id:x.id, active:x.active === true, semester:String(x.semester || "").slice(0,20) }));
   return { ok:true, rows };
 }
+async function ticketStudioReady(db, eventId) {
+  const studio = await db.collection("ticketStudios").doc(eventId).get();
+  if (!studio.exists) return false;
+  const one = await db.collection("ticketStudios").doc(eventId).collection("tickets").limit(1).get();
+  return !one.empty;
+}
+
 async function adminCreateLink(req, body) {
   const actor = await requireManager(req);
   const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
   const [{ data:event }, state] = await Promise.all([loadEvent(db,eventId), loadState(db)]);
-  if (event.qrCheckinEnabled !== true) throw bad("Hãy bật QR check-in cho sự kiện trước.");
+  const ticketReady = await ticketStudioReady(db, eventId);
+  if (event.qrCheckinEnabled !== true && !ticketReady) throw bad("Hãy bật QR check-in hoặc tạo vé Ticket Studio trước.");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   if (body.replaceOld === true) {
     const old = await db.collection("eventScannerLinks").where("eventId", "==", eventId).get();
@@ -522,7 +530,10 @@ async function adminSetLinkActive(req, body) {
   if (!snap.exists) throw bad("Link check-in không tồn tại.", "osc/scanner-invalid");
   const link = snap.data() || {};
   const [{ data:event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
-  if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.");
+  if (active) {
+    const ticketReady = await ticketStudioReady(db, event.id);
+    if (event.qrCheckinEnabled !== true && !ticketReady) throw bad("QR check-in thành viên đang tắt và sự kiện chưa có vé Ticket Studio.");
+  }
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
 
   // Keep at most one delegated scanner link active per event. This is independent
@@ -643,15 +654,19 @@ async function publicConfig(body) {
   if (!linkSnap.exists || linkSnap.data()?.active !== true) throw bad("Link check-in đã hết hiệu lực.", "osc/scanner-invalid");
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
-  if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
+  const ticketQrEnabled = await ticketStudioReady(db, event.id);
+  const memberQrEnabled = event.qrCheckinEnabled === true;
+  if (!memberQrEnabled && !ticketQrEnabled) throw bad("Sự kiện hiện không có kênh QR check-in đang hoạt động.", "osc/scanner-invalid");
   return {
     ok: true,
     service: "event-checkin",
     eventId: event.id,
     title: String(event.title || "Check-in sự kiện").slice(0, 200),
     semester: String(event.semester || "").slice(0, 20),
-    audience: event.qrCheckinAudience === "public" ? "public" : "members"
+    audience: event.qrCheckinAudience === "public" ? "public" : "members",
+    memberQrEnabled,
+    ticketQrEnabled
   };
 }
 
@@ -661,7 +676,6 @@ async function publicScan(body) {
   if (!linkSnap.exists || linkSnap.data()?.active !== true) throw bad("Link check-in đã hết hiệu lực.", "osc/scanner-invalid");
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
-  if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
   const rawPayload = String(body.payload || body.mssv || "").trim();
   const ticketToken = extractTicketToken(rawPayload);
@@ -669,6 +683,7 @@ async function publicScan(body) {
     const result = await scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:"public_scanner", checkedInByName:"Link check-in", scannerSource:"delegated_link" });
     return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", ticketCode:result.ticketCode };
   }
+  if (event.qrCheckinEnabled !== true) throw bad("QR check-in thành viên đang tắt. Link này hiện chỉ nhận QR vé Ticket Studio.", "osc/member-qr-disabled");
   const mssv = normalizeMssv(body.mssv || rawPayload);
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
@@ -787,14 +802,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:87 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:88 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:87 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:88 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -812,9 +827,9 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 200, result);
   } catch (error) {
     const code = String(error?.code || "");
-    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/ticket-invalid", "osc/ticket-revoked", "osc/ticket-cancelled"]);
+    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/ticket-invalid", "osc/ticket-revoked", "osc/ticket-cancelled", "osc/member-qr-disabled"]);
     if (clientCodes.has(code)) {
-      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" || code === "osc/ticket-invalid" ? 404 : ["osc/semester-locked","osc/ticket-revoked","osc/ticket-cancelled"].includes(code) ? 409 : 400;
+      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" || code === "osc/ticket-invalid" ? 404 : ["osc/semester-locked","osc/ticket-revoked","osc/ticket-cancelled","osc/member-qr-disabled"].includes(code) ? 409 : 400;
       return sendJson(res, status, { ok: false, error: error.message, code });
     }
     return handleError(res, error);
