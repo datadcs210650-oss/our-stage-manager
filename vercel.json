@@ -23,6 +23,10 @@
     {
       "source": "/check-in-su-kien",
       "destination": "/check-in-su-kien.html"
+    },
+    {
+      "source": "/ve-su-kien",
+      "destination": "/ve-su-kien.html"
     }
   ],
   "headers": [
@@ -277,14 +281,32 @@
           "value": "no-cache"
         }
       ]
-    }
-  ],
-  "functions": {
-    "api/email-center.js": {
-      "maxDuration": 30
     },
-    "api/resend-webhook.js": {
-      "maxDuration": 15
+    {
+      "source": "/ve-su-kien",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/ve-su-kien.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
     }
-  }
+  ]
 }

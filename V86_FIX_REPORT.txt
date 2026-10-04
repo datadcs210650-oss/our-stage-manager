@@ -1,0 +1,14 @@
+V86 STATIC FIX REPORT
+
+Scope:
+- Reverted V85 Email Center/Resend feature to V84 baseline.
+- Added transient QR success UX.
+- Added transaction-safe duplicate protection for pending check-ins.
+- Kept approved check-in transaction behavior.
+
+Expected duplicate behavior:
+- Device A and Device B scan the same already-approved QR: both API calls target the same deterministic check-in document ID; no second row is created.
+- Device A and Device B scan a new QR simultaneously: one transaction creates the row, the other transaction retries and returns duplicate=true.
+- Same principle now applies to pending_admin check-ins.
+
+No Resend code or API routes are included in the V86 full package.

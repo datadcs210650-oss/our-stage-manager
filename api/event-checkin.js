@@ -107,6 +107,99 @@ async function ensureQrNotRevoked(db, semester, mssv) {
 }
 function checkinIdFor(member, mssv) { return member ? member.id : `external_${mssv}`; }
 
+function extractTicketToken(value) {
+  const text = String(value || "").trim();
+  const m = text.match(/^OSC-TICKET:([A-Za-z0-9_-]{20,120})$/i);
+  return m ? m[1] : "";
+}
+async function findTicketByQr(db, eventId, qrToken) {
+  const snap = await db.collection("ticketStudios").doc(eventId).collection("tickets").where("qrToken", "==", qrToken).limit(1).get();
+  if (snap.empty) throw bad("QR vé không hợp lệ cho sự kiện này.", "osc/ticket-invalid");
+  const doc = snap.docs[0], data = doc.data() || {};
+  if (String(data.qrToken || "") !== qrToken) throw bad("QR vé không hợp lệ cho sự kiện này.", "osc/ticket-invalid");
+  return { id: doc.id, ref: doc.ref, ...data };
+}
+async function writeTicketCheckin({ db, event, state, ticket, qrToken, checkedInBy, checkedInByName, scannerSource }) {
+  if (ticket.status === "revoked") throw bad("Vé đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-revoked");
+  if (ticket.status === "cancelled") throw bad("Vé đã bị hủy. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-cancelled");
+  const normalizedMssv = ticket.mssv ? mssvKey(ticket.mssv) : "";
+  const member = normalizedMssv ? await findMember(db, event.semester, normalizedMssv) : null;
+  const linked = member ? linkedActivity(state, event) : null;
+  const canApply = !!(member && linked && linked.item?.locked !== true);
+  const appliedValue = canApply ? activityValue(linked.group, linked.item) : null;
+  const checkinId = `ticket_${ticket.id}`;
+  const checkRef = db.collection("eventPortals").doc(event.id).collection("qrCheckins").doc(checkinId);
+  const memberCheckRef = member ? db.collection("eventPortals").doc(event.id).collection("qrCheckins").doc(member.id) : null;
+  const memberRef = member ? db.collection("members").doc(member.id) : null;
+  let duplicate = false, duplicateData = null, previousActivityValue = null, previousActivityHadValue = false;
+
+  await db.runTransaction(async tx => {
+    const refs = [tx.get(checkRef), tx.get(ticket.ref)];
+    if (memberCheckRef) refs.push(tx.get(memberCheckRef));
+    if (memberRef) refs.push(tx.get(memberRef));
+    const snaps = await Promise.all(refs);
+    const checkSnap = snaps[0], ticketSnap = snaps[1];
+    let offset = 2, memberCheckSnap = null, memberSnap = null;
+    if (memberCheckRef) memberCheckSnap = snaps[offset++];
+    if (memberRef) memberSnap = snaps[offset++];
+    if (!ticketSnap.exists) throw bad("Vé không còn tồn tại.", "osc/ticket-invalid");
+    const liveTicket = ticketSnap.data() || {};
+    if (String(liveTicket.qrToken || "") !== qrToken) throw bad("QR vé đã được cấp lại và mã cũ không còn hiệu lực.", "osc/ticket-revoked");
+    if (liveTicket.status === "revoked") throw bad("Vé đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-revoked");
+    if (liveTicket.status === "cancelled") throw bad("Vé đã bị hủy. Vui lòng liên hệ Ban tổ chức.", "osc/ticket-cancelled");
+    if (checkSnap.exists || liveTicket.status === "checked_in" || (memberCheckSnap && memberCheckSnap.exists)) {
+      duplicate = true;
+      duplicateData = checkSnap.exists ? (checkSnap.data() || {}) : memberCheckSnap?.exists ? (memberCheckSnap.data() || {}) : { checkinStatus:"approved", ticketCode:liveTicket.code || ticket.code || "" };
+      return;
+    }
+    let memberData = member || null;
+    if (memberRef) {
+      if (!memberSnap?.exists) throw bad("Hồ sơ thành viên không còn tồn tại.", "osc/member-not-found");
+      memberData = { id:memberSnap.id, ...(memberSnap.data() || {}) };
+      if (canApply) {
+        previousActivityHadValue = Object.prototype.hasOwnProperty.call(memberData.scores || {}, linked.item.id);
+        previousActivityValue = previousActivityHadValue ? (memberData.scores || {})[linked.item.id] : null;
+        tx.update(memberRef, {
+          [`scores.${linked.item.id}`]: appliedValue,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedBy: checkedInBy || "ticket_scanner"
+        });
+      }
+    }
+    tx.set(checkRef, {
+      eventId:event.id, semester:event.semester, attendeeType:"ticket",
+      memberId:member ? member.id : "", mssv:normalizedMssv,
+      memberName:String(ticket.name || memberData?.name || "Khách có vé").slice(0,160),
+      ticketId:ticket.id, ticketCode:String(ticket.code || "").slice(0,40),
+      ticketType:String(ticket.ticketType || "").slice(0,80), seat:String(ticket.seat || "").slice(0,40),
+      method:"ticket_qr", registrationStatus:"ticket", registrationSubmissionId:"",
+      checkinStatus:"approved", checkedInAt:admin.firestore.FieldValue.serverTimestamp(),
+      checkedInBy:checkedInBy || "public_scanner", checkedInByName:String(checkedInByName || "Link check-in").slice(0,160),
+      scannerSource:scannerSource || "delegated_link", linkedActivityId:linked?.item?.id || "",
+      activityApplied:canApply, activityAppliedValue:canApply ? appliedValue : null,
+      previousActivityHadValue, previousActivityValue:previousActivityHadValue ? previousActivityValue : null
+    }, { merge:false });
+    tx.update(ticket.ref, {
+      status:"checked_in", checkedInAt:admin.firestore.FieldValue.serverTimestamp(),
+      checkedInBy:checkedInBy || "public_scanner", checkedInByName:String(checkedInByName || "Link check-in").slice(0,160),
+      updatedAt:admin.firestore.FieldValue.serverTimestamp()
+    });
+  });
+  return { duplicate, duplicateData, checkinId, member, canApply, appliedValue };
+}
+async function scanTicket({ db, event, state, qrToken, checkedInBy, checkedInByName, scannerSource }) {
+  const ticket = await findTicketByQr(db, event.id, qrToken);
+  const result = await writeTicketCheckin({ db, event, state, ticket, qrToken, checkedInBy, checkedInByName, scannerSource });
+  return {
+    ok:true, duplicate:result.duplicate, checkinId:result.checkinId, attendeeType:"ticket", registered:true,
+    registrationStatus:"ticket", memberName:String(ticket.name || "Khách có vé").slice(0,160),
+    mssv:String(ticket.mssv || "").slice(0,40), ticketCode:String(ticket.code || "").slice(0,40),
+    ticketType:String(ticket.ticketType || "").slice(0,80), seat:String(ticket.seat || "").slice(0,40),
+    activityApplied:result.canApply, activityAppliedValue:result.appliedValue,
+    existingStatus:result.duplicateData?.checkinStatus || "approved"
+  };
+}
+
 async function writeApprovedCheckin({ db, event, state, member, registration, mssv, method, checkedInBy, checkedInByName }) {
   const linked = member ? linkedActivity(state, event) : null;
   const canApply = !!(member && linked && linked.item?.locked !== true);
@@ -164,9 +257,7 @@ async function writeApprovedCheckin({ db, event, state, member, registration, ms
 async function writePendingCheckin({ db, event, member, registration, mssv, method, checkedInBy = "public_scanner", checkedInByName = "Link check-in", scannerSource = "delegated_link" }) {
   const checkinId = checkinIdFor(member, mssv);
   const ref = db.collection("eventPortals").doc(event.id).collection("qrCheckins").doc(checkinId);
-  const snap = await ref.get();
-  if (snap.exists) return { duplicate: true, checkinId, data: snap.data() || {} };
-  await ref.set({
+  const payload = {
     eventId: event.id,
     semester: event.semester,
     attendeeType: "member",
@@ -186,20 +277,39 @@ async function writePendingCheckin({ db, event, member, registration, mssv, meth
     activityAppliedValue: null,
     previousActivityHadValue: false,
     previousActivityValue: null
-  }, { merge: false });
-  await db.collection("systemNotifications").add({
-    title: "Check-in chờ xác nhận",
-    message: `${mssv} là thành viên CLB nhưng chưa đăng ký sự kiện ${String(event.title || "").slice(0, 140)}.`,
-    type: "approval",
-    targetRoles: ["admin", "superadmin"],
-    targetUid: "",
-    linkTab: "events",
-    semester: event.semester,
-    readBy: [],
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    createdBy: "public_scanner"
+  };
+
+  // Atomic duplicate protection: simultaneous scans of the same QR resolve
+  // to one check-in document. Firestore retries the second transaction and it
+  // returns duplicate=true instead of creating a second row.
+  const outcome = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (snap.exists) return { duplicate: true, data: snap.data() || {} };
+    tx.set(ref, payload, { merge: false });
+    return { duplicate: false, data: null };
   });
-  return { duplicate: false, checkinId };
+
+  if (!outcome.duplicate) {
+    // A notification write must not turn an already-saved check-in into an API failure.
+    try {
+      await db.collection("systemNotifications").add({
+        title: "Check-in chờ xác nhận",
+        message: `${mssv} là thành viên CLB nhưng chưa đăng ký sự kiện ${String(event.title || "").slice(0, 140)}.`,
+        type: "approval",
+        targetRoles: ["admin", "superadmin"],
+        targetUid: "",
+        linkTab: "events",
+        semester: event.semester,
+        readBy: [],
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: "public_scanner"
+      });
+    } catch (error) {
+      console.error("check-in notification failed", error);
+    }
+  }
+
+  return { duplicate: outcome.duplicate, checkinId, data: outcome.data || null };
 }
 
 async function resolveCandidate(db, event, mssv) {
@@ -213,10 +323,16 @@ async function resolveCandidate(db, event, mssv) {
 async function adminScan(req, body) {
   const actor = await requireUser(req);
   if (!actorCanEditAttendance(actor)) throw bad("Tài khoản chưa có quyền chỉnh sửa Điểm danh / điểm.", "osc/forbidden");
-  const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện"), mssv = normalizeMssv(body.mssv);
+  const db = getDb(), eventId = normalizeId(body.eventId, "Sự kiện");
   const [{ data: event }, state] = await Promise.all([loadEvent(db, eventId), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
+  const rawPayload = String(body.payload || body.mssv || "").trim();
+  const ticketToken = extractTicketToken(rawPayload);
+  if (ticketToken) {
+    return scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:actor.decoded.uid, checkedInByName:actor.profile.displayName || actor.decoded.email || "BCN", scannerSource:"internal_bcn" });
+  }
+  const mssv = normalizeMssv(body.mssv || rawPayload);
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
   const audience = event.qrCheckinAudience === "public" ? "public" : "members";
@@ -291,16 +407,20 @@ function publicCheckinRow(doc) {
     id: String(doc.id || d.id || "").slice(0, 180),
     eventId: String(d.eventId || "").slice(0, 180),
     semester: String(d.semester || "").slice(0, 20),
-    attendeeType: d.attendeeType === "external" ? "external" : "member",
+    attendeeType: d.attendeeType === "external" ? "external" : d.attendeeType === "ticket" ? "ticket" : "member",
     memberId: String(d.memberId || "").slice(0, 180),
     mssv: String(d.mssv || "").slice(0, 30),
     memberName: String(d.memberName || "").slice(0, 160),
-    method: ["manual_mssv", "public_scanner", "school_qr"].includes(d.method) ? d.method : "school_qr",
-    registrationStatus: d.registrationStatus === "registered" ? "registered" : "unregistered",
+    method: ["manual_mssv", "public_scanner", "school_qr", "ticket_qr"].includes(d.method) ? d.method : "school_qr",
+    registrationStatus: d.registrationStatus === "registered" ? "registered" : d.registrationStatus === "ticket" ? "ticket" : "unregistered",
     checkinStatus: ["approved", "pending_admin", "rejected"].includes(d.checkinStatus) ? d.checkinStatus : "approved",
     checkedInAt: timestampMillis(d.checkedInAt),
     checkedInByName: String(d.checkedInByName || "").slice(0, 160),
     scannerSource: String(d.scannerSource || "").slice(0, 60),
+    ticketId: String(d.ticketId || "").slice(0, 180),
+    ticketCode: String(d.ticketCode || "").slice(0, 40),
+    ticketType: String(d.ticketType || "").slice(0, 80),
+    seat: String(d.seat || "").slice(0, 40),
     activityApplied: d.activityApplied === true,
     activityAppliedValue: d.activityAppliedValue === true ? true : (d.activityAppliedValue === null || d.activityAppliedValue === undefined || d.activityAppliedValue === "" ? null : (Number.isFinite(Number(d.activityAppliedValue)) ? Number(d.activityAppliedValue) : null))
   };
@@ -536,13 +656,20 @@ async function publicConfig(body) {
 }
 
 async function publicScan(body) {
-  const db = getDb(), token = normalizeToken(body.token), mssv = normalizeMssv(body.mssv);
+  const db = getDb(), token = normalizeToken(body.token);
   const linkSnap = await db.collection("eventScannerLinks").doc(token).get();
   if (!linkSnap.exists || linkSnap.data()?.active !== true) throw bad("Link check-in đã hết hiệu lực.", "osc/scanner-invalid");
   const link = linkSnap.data() || {};
   const [{ data: event }, state] = await Promise.all([loadEvent(db, normalizeId(link.eventId, "Sự kiện")), loadState(db)]);
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in của sự kiện đang tắt.", "osc/scanner-invalid");
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa.", "osc/semester-locked");
+  const rawPayload = String(body.payload || body.mssv || "").trim();
+  const ticketToken = extractTicketToken(rawPayload);
+  if (ticketToken) {
+    const result = await scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:"public_scanner", checkedInByName:"Link check-in", scannerSource:"delegated_link" });
+    return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", ticketCode:result.ticketCode };
+  }
+  const mssv = normalizeMssv(body.mssv || rawPayload);
   await ensureQrNotRevoked(db, event.semester, mssv);
   const { member, registration } = await resolveCandidate(db, event, mssv);
   const audience = event.qrCheckinAudience === "public" ? "public" : "members";
@@ -631,19 +758,27 @@ async function undo(req, body) {
   const snap = await ref.get(); if (!snap.exists) return { ok: true, deleted: false };
   const row = snap.data() || {};
   const memberRef = row.memberId ? db.collection("members").doc(row.memberId) : null;
+  const ticketRef = row.ticketId ? db.collection("ticketStudios").doc(eventId).collection("tickets").doc(row.ticketId) : null;
   await db.runTransaction(async tx => {
-    const cSnap = await tx.get(ref); if (!cSnap.exists) return;
+    const reads = [tx.get(ref)];
+    if (memberRef) reads.push(tx.get(memberRef));
+    if (ticketRef) reads.push(tx.get(ticketRef));
+    const snaps = await Promise.all(reads);
+    const cSnap = snaps[0]; if (!cSnap.exists) return;
     const c = cSnap.data() || {};
-    if (memberRef && c.activityApplied === true && c.linkedActivityId) {
-      const mSnap = await tx.get(memberRef);
-      if (mSnap.exists) {
-        const md = mSnap.data() || {}, current = (md.scores || {})[c.linkedActivityId];
-        if (current === c.activityAppliedValue) {
-          const patch = { updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: actor.decoded.uid };
-          patch[`scores.${c.linkedActivityId}`] = c.previousActivityHadValue ? c.previousActivityValue : admin.firestore.FieldValue.delete();
-          tx.update(memberRef, patch);
-        }
+    let i = 1, mSnap = null, tSnap = null;
+    if (memberRef) mSnap = snaps[i++];
+    if (ticketRef) tSnap = snaps[i++];
+    if (memberRef && mSnap?.exists && c.activityApplied === true && c.linkedActivityId) {
+      const md = mSnap.data() || {}, current = (md.scores || {})[c.linkedActivityId];
+      if (current === c.activityAppliedValue) {
+        const patch = { updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: actor.decoded.uid };
+        patch[`scores.${c.linkedActivityId}`] = c.previousActivityHadValue ? c.previousActivityValue : admin.firestore.FieldValue.delete();
+        tx.update(memberRef, patch);
       }
+    }
+    if (ticketRef && tSnap?.exists && tSnap.data()?.status === "checked_in") {
+      tx.update(ticketRef, { status:"issued", checkedInAt:admin.firestore.FieldValue.delete(), checkedInBy:admin.firestore.FieldValue.delete(), checkedInByName:admin.firestore.FieldValue.delete(), updatedAt:admin.firestore.FieldValue.serverTimestamp() });
     }
     tx.delete(ref);
   });
@@ -652,14 +787,14 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:82 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:87 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:82 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:87 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
     else if (action === "admin-scan") result = await adminScan(req, body);
@@ -677,9 +812,9 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 200, result);
   } catch (error) {
     const code = String(error?.code || "");
-    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found"]);
+    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/ticket-invalid", "osc/ticket-revoked", "osc/ticket-cancelled"]);
     if (clientCodes.has(code)) {
-      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" ? 404 : code === "osc/semester-locked" ? 409 : 400;
+      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" || code === "osc/ticket-invalid" ? 404 : ["osc/semester-locked","osc/ticket-revoked","osc/ticket-cancelled"].includes(code) ? 409 : 400;
       return sendJson(res, status, { ok: false, error: error.message, code });
     }
     return handleError(res, error);

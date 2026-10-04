@@ -1,12 +1,11 @@
 {
   "name": "our-stage-club-manager",
-  "version": "85.0.0",
+  "version": "87.0.0",
   "private": true,
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
-    "firebase-admin": "^13.0.0",
-    "resend": "^6.32.0"
+    "firebase-admin": "^13.0.0"
   }
 }

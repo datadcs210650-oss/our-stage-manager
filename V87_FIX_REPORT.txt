@@ -1,0 +1,37 @@
+V87 TICKET STUDIO — IMPLEMENTATION REPORT
+==========================================
+
+NEW
+- Ticket Studio Admin module.
+- Ticket template uploader + drag/coordinate designer.
+- Numeric-only system ticket code generator (6–14 digits).
+- Uploaded ticket-code or MSSV-as-code modes.
+- Import preview before commit, chunked creation up to 250 rows/request.
+- Public ticket claim/render/download page at /ve-su-kien.
+- Opaque per-ticket QR token; visible code is not the QR secret.
+- Ticket QR support in internal event scanner and delegated scanner link.
+- Atomic duplicate prevention using Firestore transactions.
+- Ticket stats, search/filter, ticket type + seat.
+- Revoke, cancel, reissue (rotates QR token), delete.
+- Undo event check-in returns ticket to issued state.
+- Server-only Firestore rules for Ticket Studio and lookup rate-limit documents.
+
+HARDENING
+- Public ticket portal token stored in URL fragment.
+- Public code lookup rate-limited per browser/session + IP.
+- Ticket template is optimized client-side and server-size limited.
+- Layout coordinates are clamped so overlays stay inside the ticket canvas.
+- Designer responds to resize for smoother visual positioning.
+- Async Admin state requests are event-bound to avoid stale responses overwriting a newly selected event.
+- Portal cannot be opened until a template is saved.
+- Uploaded visible ticket codes are restricted to safe A-Z / 0-9 / . _ - characters.
+- No active Resend/Email Center code was reintroduced.
+
+STATIC VALIDATION PERFORMED
+- node --check: all inline HTML JavaScript, ticket-studio-admin.js, all /api JS, all /lib JS.
+- package.json and vercel.json JSON validation.
+- HTML parser smoke check on all pages.
+- secret-like source scan: no private key / Resend credential embedded in active source.
+
+NOT CLAIMED
+- No live Firebase/Vercel end-to-end test was performed from the local build environment because production credentials/services are not executed during static packaging.
