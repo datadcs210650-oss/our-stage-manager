@@ -425,6 +425,10 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
+    match /eventSeatRateLimits/{id} {
+      allow read, create, update, delete: if false;
+    }
+
     // ===== V90 Ticket Studio =====
     // Ticket templates, portal tokens, ticket QR tokens and public lookup rate limits
     // are server-only. Admin UI and public ticket pages use trusted Vercel APIs.
