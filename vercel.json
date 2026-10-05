@@ -27,6 +27,10 @@
     {
       "source": "/ve-su-kien",
       "destination": "/ve-su-kien.html"
+    },
+    {
+      "source": "/staff-checkin",
+      "destination": "/staff-checkin.html"
     }
   ],
   "headers": [
@@ -297,6 +301,32 @@
     },
     {
       "source": "/ve-su-kien.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/staff-checkin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/staff-checkin.html",
       "headers": [
         {
           "key": "Cache-Control",
