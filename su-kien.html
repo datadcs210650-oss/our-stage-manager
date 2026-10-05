@@ -1181,5 +1181,6 @@ $("#eventForm").addEventListener("submit",async e=>{
 });
 window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(eventSeatPollTimer)clearInterval(eventSeatPollTimer)});init();
 </script>
+<script src="event-routing-public.js"></script>
 </body>
 </html>
