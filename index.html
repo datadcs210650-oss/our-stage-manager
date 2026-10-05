@@ -4339,7 +4339,7 @@ async function validateAccess(user){
   return true;
 }
 initV40Shell();
-const SESSION_IDLE_LIMIT=30*60*1000,SESSION_WARN_AT=28*60*1000;
+const SESSION_IDLE_LIMIT=4*60*60*1000,SESSION_WARN_AT=(4*60-5)*60*1000;
 let lastUserActivity=Date.now(),sessionWarned=false,sessionWatchTimer=null,loginFailCount=0;
 function touchUserActivity(){lastUserActivity=Date.now();sessionWarned=false;$("#sessionWarning")?.remove()}
 ["pointerdown","keydown","touchstart","wheel"].forEach(evt=>window.addEventListener(evt,touchUserActivity,{passive:true}));document.addEventListener("visibilitychange",()=>{if(!document.hidden)touchUserActivity()});
