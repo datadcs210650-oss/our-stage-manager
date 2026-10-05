@@ -692,7 +692,11 @@ async function adminStaffLinks(req,body){
 async function adminCreateStaffLink(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=normalizeId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const token=staffLinkToken(),label=String(body.label||"Tra cứu Staff").trim().replace(/\s+/g," ").slice(0,80)||"Tra cứu Staff",fields=normalizeStaffFields(body.fields);
-  await db.collection("eventStaffLinks").doc(token).set({eventId,semester:event.semester,label,fields,active:true,createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid},{merge:false});
+  const old=await db.collection("eventStaffLinks").where("eventId","==",eventId).get();
+  const batch=db.batch();
+  for(const d of old.docs)if(d.data()?.active===true)batch.set(d.ref,{active:false,disabledAt:admin.firestore.FieldValue.serverTimestamp(),disabledBy:actor.decoded.uid},{merge:true});
+  batch.set(db.collection("eventStaffLinks").doc(token),{eventId,semester:event.semester,label,fields,active:true,createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid},{merge:false});
+  await batch.commit();
   return{ok:true,token,label,fields}
 }
 async function adminUpdateStaffLink(req,body){
