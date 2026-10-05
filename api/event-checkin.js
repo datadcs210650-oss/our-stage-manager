@@ -722,12 +722,12 @@ async function publicStaffConfig(body){
   return{ok:true,version:90,title:String(event.title||"Sự kiện").slice(0,200),label:String(link.label||"Tra cứu Staff").slice(0,80),fields:normalizeStaffFields(link.fields)}
 }
 async function publicStaffLookup(req,body){
-  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"lookup",60);
+  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"lookup",180);
   const link=snap.data()||{},{data:event}=await loadEvent(db,normalizeId(link.eventId,"Sự kiện")),person=await resolveStaffPerson(db,event,body.query);
   return{ok:true,version:90,person:staffPublicInfo(person,link.fields),kind:person.kind,identity:person.kind==="ticket"?(person.ticketCode||person.mssv):person.mssv}
 }
 async function publicStaffCheckin(req,body){
-  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"checkin",100);
+  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"checkin",300);
   const link=snap.data()||{},label=String(link.label||"Tra cứu Staff").slice(0,80),[{data:event},state]=await Promise.all([loadEvent(db,normalizeId(link.eventId,"Sự kiện")),loadState(db)]);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const person=await resolveStaffPerson(db,event,body.query);
   if(person.kind==="ticket"){const result=await scanTicket({db,event,state,qrToken:String(person.ticket.qrToken||""),checkedInBy:"staff_lookup",checkedInByName:label,scannerSource:"staff_lookup"});return{ok:true,duplicate:result.duplicate,pendingAdmin:false,name:result.memberName,identity:result.ticketCode||result.mssv||"",kind:"ticket"}}
