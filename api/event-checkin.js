@@ -705,11 +705,16 @@ async function adminCreateStaffLink(req,body){
 }
 async function adminUpdateStaffLink(req,body){
   const actor=await requireManager(req),db=getDb(),token=normalizeToken(body.token),ref=db.collection("eventStaffLinks").doc(token),snap=await ref.get();if(!snap.exists)throw bad("Link tra cứu Staff không tồn tại.","osc/staff-link-invalid");
-  const patch={updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid};
+  const current=snap.data()||{},patch={updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid};
   if(body.label!==undefined){const label=String(body.label||"").trim().replace(/\s+/g," ").slice(0,80);if(!label)throw bad("Tên link không được để trống.");patch.label=label}
   if(body.fields!==undefined)patch.fields=normalizeStaffFields(body.fields);
   if(body.active!==undefined)patch.active=body.active===true;
-  await ref.set(patch,{merge:true});return{ok:true}
+  if(body.active===true&&current.eventId){
+    const all=await db.collection("eventStaffLinks").where("eventId","==",current.eventId).get(),batch=db.batch();
+    for(const d of all.docs)if(d.id!==token&&d.data()?.active===true)batch.set(d.ref,{active:false,disabledAt:admin.firestore.FieldValue.serverTimestamp(),disabledBy:actor.decoded.uid},{merge:true});
+    batch.set(ref,patch,{merge:true});await batch.commit();
+  }else await ref.set(patch,{merge:true});
+  return{ok:true}
 }
 async function publicStaffConfig(body){
   const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");
