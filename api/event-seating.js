@@ -151,6 +151,17 @@ async function adminRelease(req,body){
   const batch=db.batch();batch.delete(ref);if(claim.submissionId)batch.set(subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});await batch.commit();
   return{ok:true,released:true}
 }
+async function adminReleaseSubmissionSeat(req,body){
+  const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),submissionId=cleanId(body.submissionId,"Phản hồi"),subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),subSnap=await subRef.get();
+  if(!subSnap.exists)return{ok:true,released:false};
+  const sub=subSnap.data()||{},seatId=String(sub.seatId||"");
+  if(!seatId)return{ok:true,released:false};
+  const seatRef=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),seatSnap=await seatRef.get();
+  const batch=db.batch();
+  if(seatSnap.exists&&String(seatSnap.data()?.submissionId||"")===submissionId)batch.delete(seatRef);
+  batch.set(subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});
+  await batch.commit();return{ok:true,released:true}
+}
 function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken"].includes(code))return 409;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
@@ -162,6 +173,7 @@ module.exports=async function handler(req,res){
     else if(action==="public-claim-seat")out=await claimSeat(body);
     else if(action==="admin-state")out=await adminState(req,body);
     else if(action==="admin-release-seat")out=await adminRelease(req,body);
+    else if(action==="admin-release-submission-seat")out=await adminReleaseSubmissionSeat(req,body);
     else throw bad("Thao tác sơ đồ ghế không hợp lệ.");
     return sendJson(res,200,out)
   }catch(e){const code=String(e?.code||"osc/server-error");console.error("event-seating",code,e?.message);return sendJson(res,status(code),{ok:false,error:code.startsWith("osc/")?String(e.message||"Yêu cầu không thành công."):"Máy chủ không thể hoàn tất yêu cầu.",code:code.startsWith("osc/")?code:"osc/server-error"})}
