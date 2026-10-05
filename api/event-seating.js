@@ -87,7 +87,7 @@ function requestIp(req){return String(req.headers["x-forwarded-for"]||req.header
 function rateKey(parts){return crypto.createHash("sha256").update(parts.join("|")).digest("hex")}
 async function enforceCreateRate(req,db,eventId){
   const now=Date.now(),windowMs=10*60*1000,ref=db.collection("eventSeatRateLimits").doc(rateKey([eventId,requestIp(req)]));
-  await db.runTransaction(async tx=>{const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=millis(d.windowStart);if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}const count=Number(d.count||0);if(count>=12)throw bad("Thiết bị này đã gửi quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau.","osc/rate-limited");tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()})})
+  await db.runTransaction(async tx=>{const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=millis(d.windowStart);if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}const count=Number(d.count||0);if(count>=300)throw bad("Mạng này đã gửi quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau.","osc/rate-limited");tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()})})
 }
 async function createSubmission(req,body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
