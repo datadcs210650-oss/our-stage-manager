@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.12/build/pdfmake.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.12/build/vfs_fonts.js"></script>
 <link rel="stylesheet" href="/ticket-studio.css">
+<link rel="stylesheet" href="/seat-studio.css">
 <style>
 
 .logo-chip{display:flex;align-items:center;gap:12px;margin-bottom:14px}.logo-chip img{width:58px;height:58px;object-fit:contain;border-radius:12px;background:#fff}
@@ -7707,11 +7708,13 @@ async function openEventBuilder(eventId=""){
       </div>
     </div>
     <div id="eventFieldEditor"></div>
+    <div id="eventSeatStudio"></div>
     <div class="free-mode-note"><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Cổng sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file. Với sự kiện đóng quỹ, nên có trường loại MSSV và dùng chế độ Admin duyệt.</div>
     <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveEventBuilder()">Lưu cổng sự kiện</button></div>
   </div></div>`;
   $("#modalWrap").classList.remove("hidden");
   renderEventFieldEditor();
+  if(window.seatStudioMount)seatStudioMount(ev?.seating||tpl?.seating||{enabled:false});
 }
 
 async function compressEventImage(file){
@@ -8283,6 +8286,11 @@ async function saveEventBuilder(){
     if("imageData" in x)x.imageData="";
     return x;
   });
+  const seating=window.seatStudioRead?seatStudioRead():{enabled:false,title:"Chọn ghế",stageLabel:"SÂN KHẤU",canvasHeight:640,sections:[]};
+  if(seating.enabled&&!Array.isArray(seating.sections))return alert("Cấu hình sơ đồ ghế không hợp lệ.");
+  if(seating.enabled&&!seating.sections.length)return alert("Đã bật chọn ghế nhưng chưa có khu ghế nào.");
+  const seatCount=(seating.sections||[]).reduce((n,x)=>n+(Array.isArray(x.rows)?x.rows.length:0)*Number(x.seatsPerRow||0),0);
+  if(seating.enabled&&seatCount>2500)return alert("Sơ đồ ghế tối đa 2.500 ghế.");
   const linkedActivityId=String($("#eventLinkedActivity")?.value||"");
   const linkedActivity=linkedActivityId?activityItemById(linkedActivityId,lockedSemester):null;
   const fullEvent={
@@ -8303,6 +8311,7 @@ async function saveEventBuilder(){
     qrCheckinEnabled:$("#eventQrCheckinEnabled")?.value==="1",
     qrCheckinAudience:$("#eventQrCheckinAudience")?.value==="public"?"public":"members",
     qrCheckinVersion:2,
+    seating,
     fieldSchemaVersion:4,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
@@ -10763,6 +10772,7 @@ function renderAll(){
   applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess();
 }
 </script>
+<script src="/seat-studio-admin.js"></script>
 <script src="/ticket-studio-admin.js"></script>
 </body>
 </html>
