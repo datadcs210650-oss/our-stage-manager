@@ -294,6 +294,33 @@ async function adminUpdateTicket(req,body){
   return {ok:true};
 }
 
+async function adminRecodeTicket(req,body){
+  const eventId=cleanEventId(body.eventId),{actor,db}=await ensureManagerEditable(req,eventId);
+  const current=await findTicketByCode(db,eventId,body.code),data=current.data;
+  if(data.status==="checked_in") throw bad("Vé đã check-in. Hãy hoàn tác check-in trước khi đổi mã vé.","osc/ticket-checked-in");
+  const mode=["auto","mssv","upload"].includes(String(body.mode||""))?String(body.mode):"auto";
+  const ticketCol=db.collection("ticketStudios").doc(eventId).collection("tickets");
+  const snap=await ticketCol.select("code").get(),existing=new Set(snap.docs.map(d=>String(d.data()?.code||"")));
+  existing.delete(String(data.code||""));
+  const digits=Math.round(clamp(body.digits||8,8,14));
+  const newCode=mode==="mssv"?mssvTicketCode(existing,data.mssv):mode==="upload"?cleanCode(body.newCode):numericCode(existing,digits);
+  if(newCode===String(data.code||"")){
+    await current.ref.set({codeMode:mode,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid},{merge:true});
+    return {ok:true,code:newCode,codeMode:mode,changed:false};
+  }
+  const newRef=ticketCol.doc(docIdForCode(newCode));
+  await db.runTransaction(async tx=>{
+    const [oldSnap,newSnap]=await Promise.all([tx.get(current.ref),tx.get(newRef)]);
+    if(!oldSnap.exists) throw bad("Vé không còn tồn tại.","osc/ticket-not-found");
+    if(newSnap.exists) throw bad("Mã vé mới đã tồn tại.","osc/ticket-code-invalid");
+    const live=oldSnap.data()||{};
+    if(live.status==="checked_in") throw bad("Vé đã check-in. Hãy hoàn tác check-in trước khi đổi mã vé.","osc/ticket-checked-in");
+    tx.create(newRef,{...live,code:newCode,codeMode:mode,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid,recodedAt:admin.firestore.FieldValue.serverTimestamp(),recodedBy:actor.decoded.uid,previousCode:String(live.code||"")});
+    tx.delete(current.ref);
+  });
+  return {ok:true,code:newCode,codeMode:mode,changed:true,previousCode:String(data.code||"")};
+}
+
 async function adminDeleteTicket(req,body){
   const eventId=cleanEventId(body.eventId),{db}=await ensureManagerEditable(req,eventId);
   const {ref,data}=await findTicketByCode(db,eventId,body.code);
@@ -381,6 +408,7 @@ module.exports=async function handler(req,res){
     else if(action==="admin-import") result=await adminImport(req,body);
     else if(action==="admin-registration-rows") result=await adminRegistrationRows(req,body);
     else if(action==="admin-update-ticket") result=await adminUpdateTicket(req,body);
+    else if(action==="admin-recode-ticket") result=await adminRecodeTicket(req,body);
     else if(action==="admin-revoke") result=await adminTicketAction(req,body,"revoke");
     else if(action==="admin-cancel") result=await adminTicketAction(req,body,"cancel");
     else if(action==="admin-reissue") result=await adminTicketAction(req,body,"reissue");
