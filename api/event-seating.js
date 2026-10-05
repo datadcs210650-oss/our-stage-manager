@@ -16,28 +16,52 @@ function tokenHash(v){return crypto.createHash("sha256").update(cleanToken(v)).d
 function clamp(n,a,b){const x=Number(n);return Math.min(b,Math.max(a,Number.isFinite(x)?x:a))}
 function cleanPart(v,max=40){return String(v||"").trim().replace(/[^A-Za-z0-9_-]/g,"_").slice(0,max)}
 function normalizeRows(v){const src=Array.isArray(v)?v:String(v||"").split(",");return src.map(x=>cleanText(x,12)).filter(Boolean).slice(0,40)}
+function normalizeRowSpecs(section,seatsPerRow){
+  const raw=Array.isArray(section?.rowSpecs)?section.rowSpecs:[];
+  const out=[],seen=new Set();
+  for(const item of raw){
+    const label=cleanText(item?.label??item?.row??"",12);
+    if(!label)continue;
+    const key=label.toUpperCase();if(seen.has(key))throw bad("Một khu ghế không được có hai hàng trùng tên.","osc/seat-config-invalid");
+    seen.add(key);out.push({label,seats:Math.round(clamp(item?.seats??item?.count??seatsPerRow,1,80))});
+  }
+  if(out.length)return out.slice(0,60);
+  const labels=normalizeRows(section?.rows||section?.rowLabels||[]);
+  return (labels.length?labels:["A"]).map(label=>({label,seats:seatsPerRow}));
+}
+function normalizeStage(src={}){
+  return{
+    x:clamp(src.x??20,0,95),y:clamp(src.y??3,0,90),
+    w:clamp(src.w??60,10,100),h:clamp(src.h??7,3,30)
+  }
+}
 function normalizeConfig(raw){
   const src=raw&&typeof raw==="object"?raw:{};
   const sections=(Array.isArray(src.sections)?src.sections:[]).slice(0,30).map((s,i)=>{
-    const id=cleanPart(s.id||("section_"+(i+1)),48)||("section_"+(i+1)),rows=normalizeRows(s.rows||s.rowLabels||[]);
+    const id=cleanPart(s.id||("section_"+(i+1)),48)||("section_"+(i+1));
+    const seatsPerRow=Math.round(clamp(s.seatsPerRow||10,1,80));
+    const rowSpecs=normalizeRowSpecs(s,seatsPerRow);
     return{
       id,name:cleanText(s.name||("Khu "+(i+1)),60),
-      x:clamp(s.x,0,92),y:clamp(s.y,0,92),w:clamp(s.w||32,12,90),
-      rows:rows.length?rows:["A"],seatsPerRow:Math.round(clamp(s.seatsPerRow||10,1,60)),
+      x:clamp(s.x,0,94),y:clamp(s.y,0,94),w:clamp(s.w||32,12,94),
+      rowSpecs,rows:rowSpecs.map(x=>x.label),seatsPerRow,
       startNumber:Math.round(clamp(s.startNumber||1,1,999)),reverse:s.reverse===true
     }
   });
+  const stage=normalizeStage(src.stage||{x:src.stageX,y:src.stageY,w:src.stageW,h:src.stageH});
   return{
     enabled:src.enabled===true,title:cleanText(src.title||"Chọn ghế",100),
-    stageLabel:cleanText(src.stageLabel||"SÂN KHẤU",80),canvasHeight:Math.round(clamp(src.canvasHeight||640,360,1200)),sections
+    stageLabel:cleanText(src.stageLabel||"SÂN KHẤU",80),canvasHeight:Math.round(clamp(src.canvasHeight||640,360,1400)),
+    stage,sections
   }
 }
 function seatsFromConfig(config){
   const out=[],seen=new Set();
   for(const sec of config.sections){
-    for(const row of sec.rows){
-      for(let i=0;i<sec.seatsPerRow;i++){
-        const num=sec.startNumber+(sec.reverse?(sec.seatsPerRow-1-i):i);
+    for(const spec of sec.rowSpecs||[]){
+      const row=spec.label,count=Math.round(clamp(spec.seats,1,80));
+      for(let i=0;i<count;i++){
+        const num=sec.startNumber+(sec.reverse?(count-1-i):i);
         const raw=sec.id+"|"+row+"|"+num,id=crypto.createHash("sha256").update(raw).digest("hex").slice(0,28);
         if(seen.has(id))throw bad("Sơ đồ ghế có ghế trùng.","osc/seat-config-invalid");
         seen.add(id);out.push({id,sectionId:sec.id,sectionName:sec.name,row,number:num,label:`${row}${num}`});
@@ -47,12 +71,17 @@ function seatsFromConfig(config){
   if(out.length>2500)throw bad("Sơ đồ ghế vượt quá 2.500 ghế.","osc/seat-config-invalid");
   return out
 }
-function publicConfig(event){const cfg=normalizeConfig(event.seating);return{enabled:cfg.enabled,title:cfg.title,stageLabel:cfg.stageLabel,canvasHeight:cfg.canvasHeight,sections:cfg.sections.map(s=>({...s}))}}
+function publicConfig(event){
+  const cfg=normalizeConfig(event.seating);
+  return{enabled:cfg.enabled,title:cfg.title,stageLabel:cfg.stageLabel,canvasHeight:cfg.canvasHeight,stage:cfg.stage,sections:cfg.sections.map(s=>({...s,rowSpecs:s.rowSpecs.map(r=>({...r}))}))}
+}
 async function verifySeatSession(db,eventId,submissionId,claimToken){
   const subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(cleanId(submissionId,"Phản hồi")),snap=await subRef.get();
   if(!snap.exists)throw bad("Không tìm thấy phản hồi đăng ký.","osc/seat-session-invalid");
   const data=snap.data()||{},hash=tokenHash(claimToken);
-  if(!data.seatClaimHash||data.seatClaimHash!==hash)throw bad("Phiên chọn ghế không hợp lệ hoặc đã hết hạn.","osc/seat-session-invalid");
+  if(!data.seatClaimHash||data.seatClaimHash!==hash)throw bad("Phiên chọn ghế không hợp lệ.","osc/seat-session-invalid");
+  const expires=millis(data.seatSessionExpiresAt);
+  if(expires&&Date.now()>expires&&data.seatStatus!=="confirmed")throw bad("Phiên chọn ghế đã hết hạn. Vui lòng gửi lại form đăng ký.","osc/seat-session-expired");
   return{subRef,data}
 }
 function answerEmpty(v){return Array.isArray(v)?v.length===0:String(v??"").trim()===""}
@@ -85,9 +114,22 @@ function deriveSubmitterLabel(event,answers,fallback){
 }
 function requestIp(req){return String(req.headers["x-forwarded-for"]||req.headers["x-real-ip"]||"unknown").split(",")[0].trim().slice(0,80)}
 function rateKey(parts){return crypto.createHash("sha256").update(parts.join("|")).digest("hex")}
-async function enforceCreateRate(req,db,eventId){
-  const now=Date.now(),windowMs=10*60*1000,ref=db.collection("eventSeatRateLimits").doc(rateKey([eventId,requestIp(req)]));
-  await db.runTransaction(async tx=>{const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=millis(d.windowStart);if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}const count=Number(d.count||0);if(count>=300)throw bad("Mạng này đã gửi quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau.","osc/rate-limited");tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()})})
+function cleanClientId(v){
+  const s=String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,80);
+  return s||"unknown";
+}
+async function bumpRate(db,ref,now,windowMs,max,message){
+  await db.runTransaction(async tx=>{
+    const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=millis(d.windowStart);
+    if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}
+    const count=Number(d.count||0);if(count>=max)throw bad(message,"osc/rate-limited");
+    tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()});
+  })
+}
+async function enforceCreateRate(req,db,eventId,clientId){
+  const now=Date.now(),windowMs=10*60*1000,col=db.collection("eventSeatRateLimits"),ip=requestIp(req),cid=cleanClientId(clientId);
+  await bumpRate(db,col.doc(rateKey(["client",eventId,ip,cid])),now,windowMs,8,"Thiết bị này đã gửi quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau.");
+  await bumpRate(db,col.doc(rateKey(["ip",eventId,ip])),now,windowMs,300,"Mạng này đang có quá nhiều đăng ký cùng lúc. Vui lòng thử lại sau.");
 }
 async function createSubmission(req,body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
@@ -95,17 +137,19 @@ async function createSubmission(req,body){
   const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   if(!eventOpen(event))throw bad("Cổng sự kiện hiện không nhận đăng ký.","osc/event-closed");
   seatsFromConfig(cfg);
-  await enforceCreateRate(req,db,eventId);
+  await enforceCreateRate(req,db,eventId,body.clientId);
   const answers=validateAnswers(event,body.answers);
   const submitterLabel=deriveSubmitterLabel(event,answers,body.submitterLabel);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
-  const claimToken=cleanToken(body.claimToken),submissionId="sub_"+crypto.randomBytes(16).toString("hex");
+  const claimToken=cleanToken(body.claimToken),submissionId="sub_"+crypto.randomBytes(16).toString("hex"),now=Date.now();
   const ref=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
   await ref.create({
     eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,
     seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
+    seatSessionCreatedAt:admin.firestore.Timestamp.fromMillis(now),
+    seatSessionExpiresAt:admin.firestore.Timestamp.fromMillis(now+2*60*60*1000),
     createdAt:admin.firestore.FieldValue.serverTimestamp()
   });
-  return{ok:true,version:91,submissionId,seating:publicConfig(event)}
+  return{ok:true,version:92,submissionId,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
 }
 async function publicState(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
@@ -113,7 +157,7 @@ async function publicState(body){
   const session=await verifySeatSession(db,eventId,body.submissionId,body.claimToken),seats=seatsFromConfig(cfg);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
   const occupied=snap.docs.map(d=>String(d.id));
-  return{ok:true,version:91,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
+  return{ok:true,version:92,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
 }
 async function claimSeat(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
@@ -126,8 +170,9 @@ async function claimSeat(body){
   let changed=false;
   await db.runTransaction(async tx=>{
     const subSnap=await tx.get(subRef);if(!subSnap.exists)throw bad("Không tìm thấy phản hồi đăng ký.","osc/seat-session-invalid");
-    const sub=subSnap.data()||{};if(sub.seatClaimHash!==claimHash)throw bad("Phiên chọn ghế không hợp lệ hoặc đã hết hạn.","osc/seat-session-invalid");
-    if(sub.seatStatus==="confirmed"&&String(sub.seatId||"")===seat.id)return;
+    const sub=subSnap.data()||{};if(sub.seatClaimHash!==claimHash)throw bad("Phiên chọn ghế không hợp lệ.","osc/seat-session-invalid");
+    const expires=millis(sub.seatSessionExpiresAt);if(expires&&Date.now()>expires&&sub.seatStatus!=="confirmed")throw bad("Phiên chọn ghế đã hết hạn. Vui lòng gửi lại form đăng ký.","osc/seat-session-expired");
+    if(sub.seatStatus==="confirmed"){if(String(sub.seatId||"")===seat.id)return;throw bad("Ghế đã được xác nhận. Muốn đổi ghế, vui lòng liên hệ Ban tổ chức.","osc/seat-already-confirmed");}
     const newSnap=await tx.get(newRef);
     if(newSnap.exists&&String(newSnap.data()?.submissionId||"")!==submissionId)throw bad("Ghế này vừa có người khác chọn. Vui lòng chọn ghế khác.","osc/seat-taken");
     let oldRef=null,oldSnap=null;
@@ -137,12 +182,12 @@ async function claimSeat(body){
     tx.update(subRef,{seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp()});
     changed=true;
   });
-  return{ok:true,version:91,seat,changed}
+  return{ok:true,version:92,seat,changed}
 }
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
-  return{ok:true,version:91,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
+  return{ok:true,version:92,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
 }
 async function adminRelease(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),seatId=cleanId(body.seatId,"Ghế"),ref=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),snap=await ref.get();
@@ -172,10 +217,10 @@ async function adminReleaseManySubmissionSeats(req,body){
   for(let i=0;i<pairs.length;i++){const p=pairs[i],seatSnap=seatSnaps[i];if(seatSnap?.exists&&String(seatSnap.data()?.submissionId||"")===p.submissionId)batch.delete(seatSnap.ref);batch.set(p.subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});released++}
   await batch.commit();return{ok:true,released}
 }
-function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken"].includes(code))return 409;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
+function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:91});
+    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:92});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="public-create-submission")out=await createSubmission(req,body);
