@@ -562,6 +562,25 @@ body.v41-event-page #successMessage{white-space:pre-line!important;overflow-wrap
   body.v41-event-page .head .brand>img{width:44px!important;height:44px!important}
   body.v41-event-page .head .brand>span{font-size:10px!important;letter-spacing:1.6px!important}
 }
+
+/* ===== V90 PUBLIC SEAT SELECTOR ===== */
+#seatView{display:none}
+.seat-public-card{border:1px solid var(--v41-line);border-radius:18px;background:#fff;box-shadow:var(--v41-shadow);overflow:hidden}
+.seat-public-head{padding:22px 24px;border-bottom:1px solid var(--v41-line);background:linear-gradient(135deg,#fff,#fff8fb)}
+.seat-public-head h1{margin:0 0 7px;font-size:clamp(26px,4vw,38px);letter-spacing:-1px}.seat-public-head p{margin:0;color:#74808a;line-height:1.5}
+.seat-public-body{padding:18px 20px 22px}.seat-public-status{padding:11px 13px;border-radius:11px;background:#f4f6f7;color:#59666f;font-size:11px;margin-bottom:12px}.seat-public-status.error{background:#fff0f2;color:#8d2638}.seat-public-status.ok{background:#edf9f4;color:#116747}
+.seat-public-scroll{overflow:auto;border:1px solid #dde4e8;border-radius:14px;background:linear-gradient(180deg,#f8f9fb,#eef1f5)}
+.seat-public-map{position:relative;min-width:760px;isolation:isolate}
+.seat-public-stage{position:absolute;left:20%;right:20%;top:18px;height:44px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,#dce5ff,#cbd7ff);color:#32456e;font-weight:900;letter-spacing:2px;font-size:13px}
+.seat-public-section{position:absolute;min-width:140px;border:1px solid #d9e0e5;border-radius:10px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(31,41,50,.07);overflow:hidden}
+.seat-public-section-title{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 8px;background:#7f2940;color:#fff}.seat-public-section-title b{font-size:9px}.seat-public-section-title span{font-size:7px;opacity:.8}
+.seat-public-section-body{padding:7px;overflow:auto}.seat-public-row{display:flex;align-items:center;gap:5px;margin:4px 0}.seat-public-row-label{width:18px;flex:0 0 18px;font-size:8px;font-weight:900;color:#59656f}
+.seat-public-grid{display:grid;gap:3px;grid-template-columns:repeat(var(--seat-cols),26px);min-width:max-content}
+.seat-public-seat{width:26px;height:26px;border:1px solid #ccd6dd;border-radius:5px;background:#fff;color:#4c5962;font-size:8px;font-weight:800;display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:none!important}
+.seat-public-seat:hover:not(:disabled){border-color:#a9526e;background:#fff6f9}.seat-public-seat.selected{background:#7f2940!important;border-color:#7f2940!important;color:#fff!important}.seat-public-seat.occupied{background:#d8dde1!important;color:#929aa0!important;border-color:#d8dde1!important;cursor:not-allowed;text-decoration:line-through}
+.seat-public-actions{display:flex;gap:9px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}.seat-public-actions .seat-choice{margin-right:auto;color:#5b6670;font-size:10px}.seat-public-actions .seat-choice b{color:#6f1d38}
+@media(max-width:680px){.seat-public-body{padding:14px}.seat-public-scroll{margin:0 -2px}.seat-public-actions{align-items:stretch}.seat-public-actions button{flex:1 1 160px}.seat-public-actions .seat-choice{flex-basis:100%}}
+
 </style>
 </head>
 <body class="v41-public-shell v41-event-page"><header class="v41-public-topbar"><div class="v41-public-topbar-inner"><div class="v41-public-brand"><img src="/logo-ui-centered.png" alt="OUR STAGE CLUB"><div><b>OUR STAGE</b><small>PUBLIC PORTAL</small></div></div><div class="v41-public-status"><i></i><span>KẾT NỐI AN TOÀN</span></div></div></header>
@@ -585,6 +604,24 @@ body.v41-event-page #successMessage{white-space:pre-line!important;overflow-wrap
     </form>
     <div id="formError" class="message error" style="display:none;margin-top:12px"></div>
     <div id="eventSubmitState" class="event-submit-state" aria-live="polite"></div>
+  </div>
+  <div id="seatView">
+    <div class="seat-public-card">
+      <div class="seat-public-head">
+        <div class="brand"><img src="/logo-ui-centered.png"><span>OUR STAGE</span></div>
+        <h1 id="seatViewTitle">Chọn ghế</h1>
+        <p>Thông tin đăng ký đã được ghi nhận. Chọn một ghế còn trống và xác nhận để hoàn tất.</p>
+      </div>
+      <div class="seat-public-body">
+        <div id="seatPublicStatus" class="seat-public-status">Đang tải sơ đồ ghế…</div>
+        <div class="seat-public-scroll"><div id="seatPublicMap" class="seat-public-map"></div></div>
+        <div class="seat-public-actions">
+          <div class="seat-choice">Ghế đang chọn: <b id="seatSelectedLabel">Chưa chọn</b></div>
+          <button id="seatRefreshBtn" class="btn" type="button" style="background:#fff!important;color:#4e5962!important;border:1px solid #dce3e7!important;box-shadow:none!important">Làm mới ghế</button>
+          <button id="seatConfirmBtn" class="btn" type="button" disabled>Xác nhận ghế</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div id="successView" class="head success" style="display:none">
     <div class="brand"><img src="/logo-ui-centered.png"><span>OUR STAGE</span></div>
