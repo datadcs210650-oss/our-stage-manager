@@ -173,7 +173,7 @@ async function adminRegistrationRows(req,body){
     return {
       name:answerText(answers,nameF)||cleanText(d.submitterLabel,160),
       mssv:answerText(answers,mssvF).toUpperCase(), email:answerText(answers,emailF).toLowerCase(),
-      ticketType:answerText(answers,typeF), seat:answerText(answers,seatF), ticketCode:answerText(answers,codeF).toUpperCase(),
+      ticketType:answerText(answers,typeF), seat:cleanText(d.seatLabel,40)||answerText(answers,seatF), ticketCode:answerText(answers,codeF).toUpperCase(),
       source:"registration", sourceSubmissionId:doc.id, submittedAt:millis(d.createdAt)
     };
   }).filter(r=>r.name||r.mssv||r.email).sort((a,b)=>b.submittedAt-a.submittedAt);
@@ -391,7 +391,7 @@ async function publicTicket(req,body){
   const {ref:ticketRef,data:t}=await findTicketByCode(db,event.id,body.code);
   if(t.status==="revoked") throw bad("Vé này đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.","osc/ticket-revoked");
   if(t.status==="cancelled") throw bad("Vé này đã bị hủy. Vui lòng liên hệ Ban tổ chức.","osc/ticket-cancelled");
-  await ticketRef.set({claimedAt:admin.firestore.FieldValue.serverTimestamp(),claimCount:admin.firestore.FieldValue.increment(1),updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  if(body.preview!==true) await ticketRef.set({claimedAt:admin.firestore.FieldValue.serverTimestamp(),claimCount:admin.firestore.FieldValue.increment(1),updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
   return {ok:true,version:90,event:{id:event.id,title:String(event.title||"").slice(0,200),semester:String(event.semester||"").slice(0,30)},ticket:{code:String(t.code||""),name:String(t.name||"").slice(0,160),mssv:String(t.mssv||"").slice(0,40),ticketType:String(t.ticketType||"").slice(0,80),seat:String(t.seat||"").slice(0,40),status:t.status||"issued",qrValue:`OSC-TICKET:${cleanQrToken(t.qrToken)}`},template:publicTemplate(studio)};
 }
 
