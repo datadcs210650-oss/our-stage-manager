@@ -8635,7 +8635,7 @@ async function deleteSingleEventSubmission(eventId,submissionId){
     const ev=eventFor(eventId),ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),s=await ref.get();
     if(!s.exists)return;
     const data=s.data(),mssv=ev?.specialType==="continuation"?continuationSubmissionMssv(ev,{id:s.id,...data}):"";
-    if(data.seatId)await eventSeatingAdminApi({action:"admin-release-submission-seat",eventId,submissionId});
+    if(data.seatId){await eventSeatingAdminApi({action:"admin-release-submission-seat",eventId,submissionId});Object.assign(data,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:""})}
     await moveToTrash("eventSubmission",submissionId,data,{eventId,label:data.submitterLabel||"Phản hồi",semester:ev?.semester||semester});
     await ref.delete();
     if(ev?.specialType==="continuation"&&mssv)await reconcileContinuationMember(ev,mssv,{silent:true});
