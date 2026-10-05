@@ -105,7 +105,7 @@ async function createSubmission(req,body){
     seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
     createdAt:admin.firestore.FieldValue.serverTimestamp()
   });
-  return{ok:true,version:90,submissionId,seating:publicConfig(event)}
+  return{ok:true,version:91,submissionId,seating:publicConfig(event)}
 }
 async function publicState(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
@@ -113,7 +113,7 @@ async function publicState(body){
   const session=await verifySeatSession(db,eventId,body.submissionId,body.claimToken),seats=seatsFromConfig(cfg);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
   const occupied=snap.docs.map(d=>String(d.id));
-  return{ok:true,version:90,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
+  return{ok:true,version:91,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
 }
 async function claimSeat(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
@@ -137,12 +137,12 @@ async function claimSeat(body){
     tx.update(subRef,{seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp()});
     changed=true;
   });
-  return{ok:true,version:90,seat,changed}
+  return{ok:true,version:91,seat,changed}
 }
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
-  return{ok:true,version:90,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
+  return{ok:true,version:91,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
 }
 async function adminRelease(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),seatId=cleanId(body.seatId,"Ghế"),ref=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),snap=await ref.get();
@@ -175,7 +175,7 @@ async function adminReleaseManySubmissionSeats(req,body){
 function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken"].includes(code))return 409;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:90});
+    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:91});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="public-create-submission")out=await createSubmission(req,body);
