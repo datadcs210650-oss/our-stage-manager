@@ -614,10 +614,12 @@ async function adminDeleteEvent(req, body) {
   const [{ ref:eventRef, data:event }, state] = await Promise.all([loadEvent(db, eventId), loadState(db)]);
   if (semesterLocked(state, event.semester)) throw bad("Học kỳ đang bị khóa nên không thể xóa sự kiện.", "osc/semester-locked");
 
-  const [subSnap, qrSnap, linkSnap] = await Promise.all([
+  const [subSnap, qrSnap, linkSnap, staffLinkSnap, seatSnap] = await Promise.all([
     eventRef.collection("submissions").get(),
     eventRef.collection("qrCheckins").get(),
-    db.collection("eventScannerLinks").where("eventId", "==", eventId).get()
+    db.collection("eventScannerLinks").where("eventId", "==", eventId).get(),
+    db.collection("eventStaffLinks").where("eventId", "==", eventId).get(),
+    db.collection("eventSeatClaims").doc(eventId).collection("seats").get()
   ]);
 
   const deletedAt = admin.firestore.Timestamp.now();
@@ -650,12 +652,14 @@ async function adminDeleteEvent(req, body) {
   const deleteOps = [
     ...subSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
     ...qrSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
-    ...linkSnap.docs.map(d => ({ type:"delete", ref:d.ref }))
+    ...linkSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
+    ...staffLinkSnap.docs.map(d => ({ type:"delete", ref:d.ref })),
+    ...seatSnap.docs.map(d => ({ type:"delete", ref:d.ref }))
   ];
   await commitBatchOps(db, deleteOps);
   await eventRef.delete();
 
-  return { ok:true, deleted:true, eventId, submissions:subSnap.size, checkins:qrSnap.size, scannerLinks:linkSnap.size };
+  return { ok:true, deleted:true, eventId, submissions:subSnap.size, checkins:qrSnap.size, scannerLinks:linkSnap.size, staffLinks:staffLinkSnap.size, seatClaims:seatSnap.size };
 }
 
 const STAFF_SAFE_FIELDS=new Set(["name","mssv","ticketCode","ticketType","seat","registrationStatus"]);
