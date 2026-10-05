@@ -743,6 +743,7 @@ let eventRenderedSchemaSignature="";
 let eventLastRemoteSignature="";
 let eventSubmitting=false;
 let eventSubmissionComplete=false;
+let eventSeatSelecting=false,eventSeatSession=null,eventSeatState=null,eventSeatSelected="",eventSeatPollTimer=null;
 
 function publicDomKey(index){
   return `ef_${index}`;
@@ -801,7 +802,7 @@ function setSubmitState(text="",kind=""){
 function eventTs(v){return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(v?new Date(v).getTime():0)||0}
 function scheduleEventRecheck(){if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(!eventConfig)return;const now=Date.now(),times=[eventTs(eventConfig.openAt),eventTs(eventConfig.closeAt)].filter(x=>x>now);if(times.length)eventScheduleTimer=setTimeout(()=>applyPublicEventState(),Math.min(...times)-now+150)}
 function applyPublicEventState({forceRender=false}={}){
-  if(eventSubmissionComplete)return;
+  if(eventSubmissionComplete||eventSeatSelecting)return;
   if(!eventConfig){showClosed("Cổng sự kiện không tồn tại.");return}
   const now=Date.now(),start=eventTs(eventConfig.openAt),end=eventTs(eventConfig.closeAt);
 
@@ -814,6 +815,7 @@ function applyPublicEventState({forceRender=false}={}){
 
   $("#closed").style.display="none";
   $("#loading").style.display="none";
+  if(eventConfig?.seating?.enabled===true){const resumed=(()=>{try{return !!sessionStorage.getItem(seatSessionKey())}catch{return false}})();if(resumed&&!eventSeatSelecting){maybeResumeSeatSession();return}}
   $("#formView").style.display="block";
   $("#title").textContent=eventConfig.title||"Cổng sự kiện";
   $("#description").textContent=eventConfig.description||"";
@@ -986,7 +988,21 @@ function successTitleForEvent(){
   return custom;
 }
 
-function showSubmissionSuccess(){
+function seatSessionKey(){return "osc_event_seat_session_"+eventId}
+function randomSeatToken(){const a=new Uint8Array(32);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(16).padStart(2,"0")).join("")}
+async function seatApi(body,timeoutMs=18000){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeoutMs);try{const r=await fetch("/api/event-seating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store",signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(d.error||`API ghế lỗi ${r.status}`);e.code=d.code||"";throw e}return d}finally{clearTimeout(t)}}
+function saveSeatSession(){try{if(eventSeatSession)sessionStorage.setItem(seatSessionKey(),JSON.stringify(eventSeatSession))}catch{}}
+function clearSeatSession(){try{sessionStorage.removeItem(seatSessionKey())}catch{}eventSeatSession=null;if(eventSeatPollTimer){clearInterval(eventSeatPollTimer);eventSeatPollTimer=null}}
+function seatStatus(kind,text){const box=$("#seatPublicStatus");if(!box)return;box.className=`seat-public-status ${kind||""}`;box.textContent=text||""}
+function seatGroupRows(state,sec){const all=Array.isArray(state?.seats)?state.seats:[],map=new Map();for(const seat of all.filter(x=>x.sectionId===sec.id)){const k=String(seat.row||"");if(!map.has(k))map.set(k,[]);map.get(k).push(seat)}return map}
+function renderSeatPublicMap(){const map=$("#seatPublicMap");if(!map||!eventSeatState)return;const cfg=eventSeatState.seating||{},occupied=new Set(eventSeatState.occupied||[]);map.style.height=Math.max(360,Number(cfg.canvasHeight||640))+"px";map.innerHTML=`<div class="seat-public-stage">${esc(cfg.stageLabel||"SÂN KHẤU")}</div>`+(cfg.sections||[]).map(sec=>{const rowMap=seatGroupRows(eventSeatState,sec);const body=(sec.rows||[]).map(row=>{const seats=(rowMap.get(String(row))||[]);return `<div class="seat-public-row"><span class="seat-public-row-label">${esc(row)}</span><div class="seat-public-grid" style="--seat-cols:${Math.max(1,seats.length)}">${seats.map(seat=>{const occ=occupied.has(seat.id)&&seat.id!==eventSeatState.currentSeatId,sel=seat.id===eventSeatSelected||seat.id===eventSeatState.currentSeatId;return `<button type="button" class="seat-public-seat ${occ?"occupied":""} ${sel?"selected":""}" ${occ?"disabled":""} onclick="selectPublicSeat('${esc(seat.id)}','${esc(seat.label)}')">${esc(seat.number)}</button>`}).join("")}</div></div>`}).join("");return `<div class="seat-public-section" style="left:${Number(sec.x||0)}%;top:${Number(sec.y||0)}%;width:${Number(sec.w||30)}%"><div class="seat-public-section-title"><b>${esc(sec.name||"Khu ghế")}</b><span>${(sec.rows||[]).length*Number(sec.seatsPerRow||0)} ghế</span></div><div class="seat-public-section-body">${body}</div></div>`}).join("");$("#seatSelectedLabel").textContent=eventSeatState.currentSeatLabel||eventSeatState.seats?.find(x=>x.id===eventSeatSelected)?.label||"Chưa chọn";$("#seatConfirmBtn").disabled=!(eventSeatSelected||eventSeatState.currentSeatId)}
+window.selectPublicSeat=(id,label)=>{eventSeatSelected=String(id||"");$("#seatSelectedLabel").textContent=label||"Đã chọn";renderSeatPublicMap()};
+async function refreshSeatState({silent=false}={}){if(!eventSeatSession)return;try{const d=await seatApi({action:"public-state",eventId,submissionId:eventSeatSession.submissionId,claimToken:eventSeatSession.claimToken});eventSeatState=d;if(!eventSeatSelected&&d.currentSeatId)eventSeatSelected=d.currentSeatId;$("#seatViewTitle").textContent=d.seating?.title||"Chọn ghế";renderSeatPublicMap();if(!silent)seatStatus("",d.currentSeatLabel?`Ghế hiện tại: ${d.currentSeatLabel}. Bạn có thể đổi sang ghế còn trống khác.`:"Chọn một ghế còn trống rồi bấm Xác nhận ghế.")}catch(e){seatStatus("error",e.message||"Không tải được sơ đồ ghế.")}}
+async function beginSeatSelection(session){eventSeatSession=session;eventSeatSelecting=true;saveSeatSession();secureClearSubmittedForm();$("#formView").style.setProperty("display","none","important");$("#successView").style.setProperty("display","none","important");$("#seatView").style.display="block";$("#seatView").scrollIntoView({behavior:"smooth",block:"start"});await refreshSeatState();if(eventSeatPollTimer)clearInterval(eventSeatPollTimer);eventSeatPollTimer=setInterval(()=>refreshSeatState({silent:true}),5000)}
+async function maybeResumeSeatSession(){if(eventSeatSelecting||eventSubmissionComplete||eventConfig?.seating?.enabled!==true)return false;try{const raw=sessionStorage.getItem(seatSessionKey());if(!raw)return false;const x=JSON.parse(raw);if(!x?.submissionId||!x?.claimToken)return false;await beginSeatSelection(x);return true}catch{return false}}
+async function confirmPublicSeat(){if(!eventSeatSession||!eventSeatSelected)return;const btn=$("#seatConfirmBtn");btn.disabled=true;seatStatus("","Đang xác nhận ghế…");try{const d=await seatApi({action:"public-claim-seat",eventId,submissionId:eventSeatSession.submissionId,claimToken:eventSeatSession.claimToken,seatId:eventSeatSelected});eventSeatState.currentSeatId=d.seat.id;eventSeatState.currentSeatLabel=d.seat.label;clearSeatSession();eventSeatSelecting=false;$("#seatView").style.display="none";showSubmissionSuccess(`Ghế của bạn: ${d.seat.sectionName?d.seat.sectionName+" • ":""}${d.seat.label}`)}catch(e){if(e.code==="osc/seat-taken"){seatStatus("error","Ghế này vừa có người khác chọn trước. Sơ đồ đã được cập nhật, vui lòng chọn ghế khác.");eventSeatSelected="";await refreshSeatState({silent:true})}else seatStatus("error",e.message||"Không xác nhận được ghế.")}finally{btn.disabled=false}}
+
+function showSubmissionSuccess(extraMessage=""){
   eventSubmissionComplete=true;
   eventFormDirty=false;
 
@@ -1006,6 +1022,8 @@ function showSubmissionSuccess(){
 
   const formView=$("#formView");
   const successView=$("#successView");
+  const seatView=$("#seatView");
+  if(seatView)seatView.style.setProperty("display","none","important");
   if(formView){
     formView.hidden=true;
     formView.setAttribute("aria-hidden","true");
@@ -1018,7 +1036,7 @@ function showSubmissionSuccess(){
   }
 
   $("#successTitle").textContent=successTitleForEvent();
-  $("#successMessage").textContent=eventConfig?.successMessage||"CLB đã ghi nhận thông tin của bạn.";
+  $("#successMessage").textContent=(eventConfig?.successMessage||"CLB đã ghi nhận thông tin của bạn.")+(extraMessage?`\n${extraMessage}`:"");
 
   // Do not leave the temporary green submit status visible.
   setSubmitState("");
@@ -1027,6 +1045,9 @@ function showSubmissionSuccess(){
     successView?.scrollIntoView({behavior:"smooth",block:"start"});
   }catch{}
 }
+
+$("#seatRefreshBtn")?.addEventListener("click",()=>refreshSeatState());
+$("#seatConfirmBtn")?.addEventListener("click",confirmPublicSeat);
 
 $("#eventForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -1094,16 +1115,23 @@ $("#eventForm").addEventListener("submit",async e=>{
     const mssvField=mssvIndex>=0?fields[mssvIndex]:null;
     const nameField=nameIndex>=0?fields[nameIndex]:null;
 
-    await db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).set({
-      eventId,
-      semester:eventConfig.semester||"",
-      answers,
-      submitterLabel:(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||"Phản hồi",
-      actionApplied:false,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    showSubmissionSuccess();
+    const submitterLabel=(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||"Phản hồi";
+    if(eventConfig?.seating?.enabled===true){
+      const claimToken=randomSeatToken();
+      const d=await seatApi({action:"public-create-submission",eventId,answers,submitterLabel,claimToken});
+      setSubmitState("");
+      await beginSeatSelection({submissionId:d.submissionId,claimToken});
+    }else{
+      await db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).set({
+        eventId,
+        semester:eventConfig.semester||"",
+        answers,
+        submitterLabel,
+        actionApplied:false,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showSubmissionSuccess();
+    }
   }catch(err){
     console.error("event submit",err);
     const code=String(err?.code||"");
@@ -1126,7 +1154,7 @@ $("#eventForm").addEventListener("submit",async e=>{
     btn.disabled=false;
   }
 });
-window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}if(eventScheduleTimer)clearTimeout(eventScheduleTimer)});init();
+window.addEventListener("beforeunload",()=>{try{eventUnsub&&eventUnsub()}catch{}if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(eventSeatPollTimer)clearInterval(eventSeatPollTimer)});init();
 </script>
 </body>
 </html>
