@@ -255,6 +255,24 @@ async function findTicketByCode(db,eventId,code){
   if(!snap.exists||String(snap.data()?.code||"")!==c) throw bad("Không tìm thấy mã vé.","osc/ticket-not-found");
   return {ref,snap,data:{id:snap.id,...(snap.data()||{})}};
 }
+async function findTicketByPublicKey(db,eventId,value){
+  const raw=String(value||"").trim().replace(/\s+/g,"").toUpperCase();
+  if(!raw)throw bad("Hãy nhập mã vé hoặc MSSV.","osc/ticket-code-invalid");
+  try{
+    const direct=await findTicketByCode(db,eventId,raw);
+    if(direct)return direct;
+  }catch(e){
+    if(e?.code!=="osc/ticket-not-found"&&e?.code!=="osc/ticket-code-invalid")throw e;
+  }
+  const mssv=raw.replace(/[^A-Z0-9_-]/g,"");
+  if(mssv.length>=4&&mssv.length<=40){
+    const snap=await db.collection("ticketStudios").doc(eventId).collection("tickets").where("mssv","==",mssv).limit(2).get();
+    if(snap.size===1){const doc=snap.docs[0];return{ref:doc.ref,snap:doc,data:{id:doc.id,...(doc.data()||{})}}}
+    if(snap.size>1)throw bad("MSSV có nhiều vé. Vui lòng dùng mã vé cụ thể.","osc/ticket-code-ambiguous");
+  }
+  throw bad("Không tìm thấy mã vé hoặc MSSV.","osc/ticket-not-found");
+}
+
 async function adminTicketAction(req,body,action){
   const eventId=cleanEventId(body.eventId),{actor,db}=await ensureManagerEditable(req,eventId);
   const {ref,data}=await findTicketByCode(db,eventId,body.code);
@@ -388,7 +406,7 @@ async function publicTicket(req,body){
   const {studio,event}=await studioFromPortalToken(db,token);
   if(studio.portalOpen!==true) throw bad("Cổng nhận vé đang đóng.","osc/ticket-portal-closed");
   if(!studio.backgroundDataUrl) throw bad("Ban tổ chức chưa thiết lập mẫu vé.","osc/ticket-template-missing");
-  const {ref:ticketRef,data:t}=await findTicketByCode(db,event.id,body.code);
+  const {ref:ticketRef,data:t}=await findTicketByPublicKey(db,event.id,body.code);
   if(t.status==="revoked") throw bad("Vé này đã bị thu hồi. Vui lòng liên hệ Ban tổ chức.","osc/ticket-revoked");
   if(t.status==="cancelled") throw bad("Vé này đã bị hủy. Vui lòng liên hệ Ban tổ chức.","osc/ticket-cancelled");
   if(body.preview!==true) await ticketRef.set({claimedAt:admin.firestore.FieldValue.serverTimestamp(),claimCount:admin.firestore.FieldValue.increment(1),updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
@@ -423,7 +441,7 @@ module.exports=async function handler(req,res){
     const code=String(error?.code||"");
     const map={
       "osc/bad-request":400,"osc/ticket-code-invalid":400,"osc/ticket-template-invalid":400,"osc/ticket-template-too-large":413,
-      "osc/event-not-found":404,"osc/ticket-not-found":404,"osc/ticket-portal-invalid":404,"osc/ticket-portal-closed":409,
+      "osc/event-not-found":404,"osc/ticket-not-found":404,"osc/ticket-code-ambiguous":409,"osc/ticket-portal-invalid":404,"osc/ticket-portal-closed":409,
       "osc/ticket-template-missing":409,"osc/ticket-revoked":409,"osc/ticket-cancelled":409,"osc/ticket-checked-in":409,
       "osc/semester-locked":409,"osc/rate-limited":429,"osc/ticket-code-exhausted":409
     };
