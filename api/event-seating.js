@@ -105,6 +105,36 @@ function validateAnswers(event,raw){
   if(Object.keys(out).length>60)throw bad("Biểu mẫu có quá nhiều trường trả lời.");
   return out
 }
+function routeText(value){
+  return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+function normalizeSubmissionDestination(value){
+  const v=String(value||"").trim().toLowerCase();
+  return v==="seat"||v==="submit"?v:"";
+}
+function optionDestinationFor(field,answer){
+  const map=(field?.optionDestinations&&typeof field.optionDestinations==="object"&&!Array.isArray(field.optionDestinations))
+    ?field.optionDestinations
+    :((field?.destinations&&typeof field.destinations==="object"&&!Array.isArray(field.destinations))?field.destinations:{});
+  return normalizeSubmissionDestination(map?.[String(answer??"")]);
+}
+function isDeclinedParticipation(field,answer){
+  const label=routeText(field?.label);
+  const value=routeText(Array.isArray(answer)?answer[0]:answer);
+  if(!label.includes("tham gia"))return false;
+  return value==="khong"||value.startsWith("khong ")||value.includes("khong tham gia")||value.includes("khong the tham gia")||value.includes("tu choi");
+}
+function resolveSubmissionDestination(event,answers){
+  const fields=Array.isArray(event?.fields)?event.fields:[];
+  for(const field of fields){
+    if(String(field?.type||"")!=="radio")continue;
+    const answer=answers?.[String(field?.id||"")];
+    const explicit=optionDestinationFor(field,answer);
+    if(explicit)return explicit;
+    if(isDeclinedParticipation(field,answer))return "submit";
+  }
+  return "seat";
+}
 function deriveSubmitterLabel(event,answers,fallback){
   const fields=Array.isArray(event?.fields)?event.fields:[];
   const norm=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
@@ -140,16 +170,28 @@ async function createSubmission(req,body){
   await enforceCreateRate(req,db,eventId,body.clientId);
   const answers=validateAnswers(event,body.answers);
   const submitterLabel=deriveSubmitterLabel(event,answers,body.submitterLabel);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
-  const claimToken=cleanToken(body.claimToken),submissionId="sub_"+crypto.randomBytes(16).toString("hex"),now=Date.now();
+  const nextDestination=resolveSubmissionDestination(event,answers);
+  const submissionId="sub_"+crypto.randomBytes(16).toString("hex"),now=Date.now();
   const ref=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
+
+  if(nextDestination==="submit"){
+    await ref.create({
+      eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,
+      submissionDestination:"submit",seatSelectionRequired:false,seatStatus:"not-required",
+      createdAt:admin.firestore.FieldValue.serverTimestamp()
+    });
+    return{ok:true,version:93,submissionId,nextDestination:"submit",seatSelectionRequired:false}
+  }
+
+  const claimToken=cleanToken(body.claimToken);
   await ref.create({
     eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,
-    seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
+    submissionDestination:"seat",seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
     seatSessionCreatedAt:admin.firestore.Timestamp.fromMillis(now),
     seatSessionExpiresAt:admin.firestore.Timestamp.fromMillis(now+2*60*60*1000),
     createdAt:admin.firestore.FieldValue.serverTimestamp()
   });
-  return{ok:true,version:92,submissionId,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
+  return{ok:true,version:93,submissionId,nextDestination:"seat",seatSelectionRequired:true,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
 }
 async function publicState(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
@@ -157,7 +199,7 @@ async function publicState(body){
   const session=await verifySeatSession(db,eventId,body.submissionId,body.claimToken),seats=seatsFromConfig(cfg);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
   const occupied=snap.docs.map(d=>String(d.id));
-  return{ok:true,version:92,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
+  return{ok:true,version:93,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
 }
 async function claimSeat(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
@@ -170,7 +212,9 @@ async function claimSeat(body){
   let changed=false;
   await db.runTransaction(async tx=>{
     const subSnap=await tx.get(subRef);if(!subSnap.exists)throw bad("Không tìm thấy phản hồi đăng ký.","osc/seat-session-invalid");
-    const sub=subSnap.data()||{};if(sub.seatClaimHash!==claimHash)throw bad("Phiên chọn ghế không hợp lệ.","osc/seat-session-invalid");
+    const sub=subSnap.data()||{};
+    if(sub.seatSelectionRequired!==true||sub.submissionDestination==="submit")throw bad("Phản hồi này không thuộc luồng chọn ghế.","osc/seat-not-required");
+    if(sub.seatClaimHash!==claimHash)throw bad("Phiên chọn ghế không hợp lệ.","osc/seat-session-invalid");
     const expires=millis(sub.seatSessionExpiresAt);if(expires&&Date.now()>expires&&sub.seatStatus!=="confirmed")throw bad("Phiên chọn ghế đã hết hạn. Vui lòng gửi lại form đăng ký.","osc/seat-session-expired");
     if(sub.seatStatus==="confirmed"){if(String(sub.seatId||"")===seat.id)return;throw bad("Ghế đã được xác nhận. Muốn đổi ghế, vui lòng liên hệ Ban tổ chức.","osc/seat-already-confirmed");}
     const newSnap=await tx.get(newRef);
@@ -182,12 +226,12 @@ async function claimSeat(body){
     tx.update(subRef,{seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp()});
     changed=true;
   });
-  return{ok:true,version:92,seat,changed}
+  return{ok:true,version:93,seat,changed}
 }
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
-  return{ok:true,version:92,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
+  return{ok:true,version:93,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
 }
 async function adminRelease(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),seatId=cleanId(body.seatId,"Ghế"),ref=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),snap=await ref.get();
@@ -220,7 +264,7 @@ async function adminReleaseManySubmissionSeats(req,body){
 function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:92});
+    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:93});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="public-create-submission")out=await createSubmission(req,body);
