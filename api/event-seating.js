@@ -55,15 +55,49 @@ async function verifySeatSession(db,eventId,submissionId,claimToken){
   if(!data.seatClaimHash||data.seatClaimHash!==hash)throw bad("Phiên chọn ghế không hợp lệ hoặc đã hết hạn.","osc/seat-session-invalid");
   return{subRef,data}
 }
-async function createSubmission(body){
+function answerEmpty(v){return Array.isArray(v)?v.length===0:String(v??"").trim()===""}
+function cleanAnswer(v){
+  if(Array.isArray(v))return v.slice(0,50).map(x=>cleanText(x,300));
+  return String(v??"").slice(0,4000)
+}
+function validateAnswers(event,raw){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))throw bad("Dữ liệu phản hồi không hợp lệ.");
+  if(JSON.stringify(raw).length>60000)throw bad("Dữ liệu phản hồi quá lớn.");
+  const fields=Array.isArray(event?.fields)?event.fields:[],out={};
+  for(const f of fields){
+    const type=String(f?.type||"text"),id=String(f?.id||"").slice(0,180);
+    if(!id||["image","content","section"].includes(type))continue;
+    const v=cleanAnswer(raw[id]);
+    if(f?.required===true&&answerEmpty(v))throw bad("Vui lòng trả lời câu bắt buộc: "+cleanText(f?.label||"Thông tin",120));
+    if(type==="email"&&!answerEmpty(v)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))throw bad("Email không hợp lệ.");
+    if(type==="mssv"&&!answerEmpty(v)&&!/^[A-Za-z0-9_-]{4,30}$/.test(String(v).trim()))throw bad("MSSV không hợp lệ.");
+    out[id]=v;
+  }
+  if(Object.keys(out).length>60)throw bad("Biểu mẫu có quá nhiều trường trả lời.");
+  return out
+}
+function deriveSubmitterLabel(event,answers,fallback){
+  const fields=Array.isArray(event?.fields)?event.fields:[];
+  const norm=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  const name=fields.find(f=>{const l=norm(f?.label);return !["image","content","section"].includes(String(f?.type||""))&&((l.includes("ho")&&l.includes("ten"))||l.includes("full name"))});
+  const mssv=fields.find(f=>String(f?.type||"")==="mssv");
+  return cleanText((name&&answers?.[name.id])||(mssv&&answers?.[mssv.id])||fallback||"Phản hồi",200)
+}
+function requestIp(req){return String(req.headers["x-forwarded-for"]||req.headers["x-real-ip"]||"unknown").split(",")[0].trim().slice(0,80)}
+function rateKey(parts){return crypto.createHash("sha256").update(parts.join("|")).digest("hex")}
+async function enforceCreateRate(req,db,eventId){
+  const now=Date.now(),windowMs=10*60*1000,ref=db.collection("eventSeatRateLimits").doc(rateKey([eventId,requestIp(req)]));
+  await db.runTransaction(async tx=>{const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=millis(d.windowStart);if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}const count=Number(d.count||0);if(count>=12)throw bad("Thiết bị này đã gửi quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau.","osc/rate-limited");tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()})})
+}
+async function createSubmission(req,body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
   if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   if(!eventOpen(event))throw bad("Cổng sự kiện hiện không nhận đăng ký.","osc/event-closed");
   seatsFromConfig(cfg);
-  const answers=body.answers&&typeof body.answers==="object"&&!Array.isArray(body.answers)?body.answers:null;
-  if(!answers||Object.keys(answers).length>60)throw bad("Dữ liệu phản hồi không hợp lệ.");
-  const submitterLabel=cleanText(body.submitterLabel,200);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
+  await enforceCreateRate(req,db,eventId);
+  const answers=validateAnswers(event,body.answers);
+  const submitterLabel=deriveSubmitterLabel(event,answers,body.submitterLabel);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
   const claimToken=cleanToken(body.claimToken),submissionId="sub_"+crypto.randomBytes(16).toString("hex");
   const ref=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
   await ref.create({
@@ -117,13 +151,13 @@ async function adminRelease(req,body){
   const batch=db.batch();batch.delete(ref);if(claim.submissionId)batch.set(subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});await batch.commit();
   return{ok:true,released:true}
 }
-function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken"].includes(code))return 409;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;return 400}
+function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken"].includes(code))return 409;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
     if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:90});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
-    if(action==="public-create-submission")out=await createSubmission(body);
+    if(action==="public-create-submission")out=await createSubmission(req,body);
     else if(action==="public-state")out=await publicState(body);
     else if(action==="public-claim-seat")out=await claimSeat(body);
     else if(action==="admin-state")out=await adminState(req,body);
