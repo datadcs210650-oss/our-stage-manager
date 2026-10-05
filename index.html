@@ -4340,13 +4340,18 @@ async function validateAccess(user){
   return true;
 }
 initV40Shell();
-const SESSION_IDLE_LIMIT=4*60*60*1000,SESSION_WARN_AT=(4*60-5)*60*1000;
-let lastUserActivity=Date.now(),sessionWarned=false,sessionWatchTimer=null,loginFailCount=0;
-function touchUserActivity(){lastUserActivity=Date.now();sessionWarned=false;$("#sessionWarning")?.remove()}
-["pointerdown","keydown","touchstart","wheel"].forEach(evt=>window.addEventListener(evt,touchUserActivity,{passive:true}));document.addEventListener("visibilitychange",()=>{if(!document.hidden)touchUserActivity()});
-function showSessionWarning(){if($("#sessionWarning"))return;const box=document.createElement("div");box.id="sessionWarning";box.className="session-warning";box.innerHTML=`<b>Phiên làm việc sắp hết hạn</b><p>Hệ thống sẽ tự đăng xuất nếu không có thao tác. Hãy tương tác với trang để tiếp tục phiên bảo mật.</p>`;document.body.appendChild(box)}
-function startSecureSessionWatch(){clearInterval(sessionWatchTimer);touchUserActivity();sessionWatchTimer=setInterval(async()=>{if(!currentFirebaseUser)return;const idle=Date.now()-lastUserActivity;if(idle>=SESSION_IDLE_LIMIT){clearInterval(sessionWatchTimer);try{await fbAuth.signOut()}catch{}setLoginError("Phiên làm việc đã kết thúc do không hoạt động. Vui lòng đăng nhập lại.");return}if(idle>=SESSION_WARN_AT&&!sessionWarned){sessionWarned=true;showSessionWarning()}},30000)}
-function stopSecureSessionWatch(){clearInterval(sessionWatchTimer);sessionWatchTimer=null;$("#sessionWarning")?.remove()}
+const SESSION_IDLE_LIMIT=4*60*60*1000,SESSION_WARN_AT=SESSION_IDLE_LIMIT-(5*60*1000),SESSION_ACTIVITY_KEY="osc_admin_last_activity_v91";
+let lastUserActivity=Date.now(),sessionWarned=false,sessionWatchTimer=null,loginFailCount=0,lastActivityPersistAt=0;
+function readStoredActivity(){try{const n=Number(sessionStorage.getItem(SESSION_ACTIVITY_KEY)||0);return Number.isFinite(n)&&n>0?n:0}catch{return 0}}
+function persistUserActivity(ts=Date.now()){lastUserActivity=ts;try{sessionStorage.setItem(SESSION_ACTIVITY_KEY,String(ts))}catch{}}
+function touchUserActivity(){const now=Date.now();lastUserActivity=now;sessionWarned=false;$("#sessionWarning")?.remove();if(now-lastActivityPersistAt>15000){lastActivityPersistAt=now;persistUserActivity(now)}}
+async function enforceSessionIdleNow(){if(!currentFirebaseUser)return false;const stored=readStoredActivity();if(stored>lastUserActivity)lastUserActivity=stored;const idle=Date.now()-lastUserActivity;if(idle>=SESSION_IDLE_LIMIT){clearInterval(sessionWatchTimer);sessionWatchTimer=null;try{sessionStorage.removeItem(SESSION_ACTIVITY_KEY)}catch{}try{await fbAuth.signOut()}catch{}setLoginError("Phiên làm việc đã kết thúc sau 4 giờ không hoạt động. Vui lòng đăng nhập lại.");return true}if(idle>=SESSION_WARN_AT&&!sessionWarned){sessionWarned=true;showSessionWarning()}return false}
+["pointerdown","keydown","touchstart","wheel","input"].forEach(evt=>window.addEventListener(evt,touchUserActivity,{passive:true}));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)enforceSessionIdleNow().catch(()=>{})});
+window.addEventListener("focus",()=>enforceSessionIdleNow().catch(()=>{}));
+function showSessionWarning(){if($("#sessionWarning"))return;const box=document.createElement("div");box.id="sessionWarning";box.className="session-warning";box.innerHTML=`<b>Phiên làm việc sắp hết hạn</b><p>Hệ thống chỉ tự đăng xuất sau 4 giờ không có thao tác. Hãy tương tác với trang để tiếp tục phiên.</p>`;document.body.appendChild(box)}
+function startSecureSessionWatch(){clearInterval(sessionWatchTimer);const stored=readStoredActivity(),now=Date.now();lastUserActivity=stored&&now-stored<SESSION_IDLE_LIMIT?stored:now;persistUserActivity(lastUserActivity);sessionWarned=false;sessionWatchTimer=setInterval(()=>{enforceSessionIdleNow().catch(()=>{})},30000);enforceSessionIdleNow().catch(()=>{})}
+function stopSecureSessionWatch(){clearInterval(sessionWatchTimer);sessionWatchTimer=null;$("#sessionWarning")?.remove();try{sessionStorage.removeItem(SESSION_ACTIVITY_KEY)}catch{}}
 
 fbAuth.onAuthStateChanged(async user=>{
   if(authFlowHold)return;
