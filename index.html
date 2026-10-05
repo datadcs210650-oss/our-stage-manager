@@ -8407,6 +8407,7 @@ async function deleteEventPortal(id){
   }
 }
 
+async function eventSeatingAdminApi(body,timeoutMs=18000){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-seating",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},timeoutMs);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||`API sơ đồ ghế lỗi ${res.status}`);e.code=data.code||"";throw e}return data}
 let eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
 async function openEventSubmissions(eventId){
   const ev=eventFor(eventId);if(!ev)return;currentEventSubmissionEventId=eventId;eventResultFilter={q:"",status:"all",points:"all",continuation:"all"};
@@ -8425,7 +8426,7 @@ async function openEventSubmissions(eventId){
   }catch(e){console.error(e);alert("Không tải được kết quả: "+(e.message||e))}
 }
 function filteredEventSubmissionRows(ev){
-  const q=normalizeText(eventResultFilter.q||"");return (currentEventSubmissionRows||[]).filter(s=>{const text=normalizeText([s.submitterLabel,s.id,...Object.values(s.answers||{}).flat()].join(" "));if(q&&!text.includes(q))return false;if(eventResultFilter.status==="pending"&&s.actionApplied)return false;if(eventResultFilter.status==="applied"&&!s.actionApplied)return false;if(eventResultFilter.points==="pending"&&s.pointsApplied)return false;if(eventResultFilter.points==="applied"&&!s.pointsApplied)return false;if(ev.specialType==="continuation"&&eventResultFilter.continuation!=="all"){const yes=s.continuationDecision==="yes"||continuationDecision(ev,s);if(eventResultFilter.continuation==="yes"&&!yes)return false;if(eventResultFilter.continuation==="no"&&yes)return false}return true});
+  const q=normalizeText(eventResultFilter.q||"");return (currentEventSubmissionRows||[]).filter(s=>{const text=normalizeText([s.submitterLabel,s.id,s.seatLabel,s.seatSectionName,...Object.values(s.answers||{}).flat()].join(" "));if(q&&!text.includes(q))return false;if(eventResultFilter.status==="pending"&&s.actionApplied)return false;if(eventResultFilter.status==="applied"&&!s.actionApplied)return false;if(eventResultFilter.points==="pending"&&s.pointsApplied)return false;if(eventResultFilter.points==="applied"&&!s.pointsApplied)return false;if(ev.specialType==="continuation"&&eventResultFilter.continuation!=="all"){const yes=s.continuationDecision==="yes"||continuationDecision(ev,s);if(eventResultFilter.continuation==="yes"&&!yes)return false;if(eventResultFilter.continuation==="no"&&yes)return false}return true});
 }
 function renderFilteredEventSubmissions(eventId){const ev=eventFor(eventId);if(!ev)return;const rows=filteredEventSubmissionRows(ev),root=$("#eventSubmissionList");if(root)root.innerHTML=rows.length?rows.map(s=>renderSubmissionCard(ev,s)).join(""):`<div class="event-result-empty">Không có phản hồi phù hợp bộ lọc.</div>`;const count=$("#eventVisibleCount");if(count)count.textContent=`Đang hiển thị ${rows.length}/${currentEventSubmissionRows.length}`;updateEventSubmissionSelection()}
 
@@ -8450,6 +8451,7 @@ function renderSubmissionCard(ev,s){
         ${s.pointsApplied?`<span class="event-point-status">+${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm</span>`:s.pointsStatus?`<span class="small-help">${esc(s.pointsStatus)}</span>`:""}
         ${ev.specialType==="continuation"?(isContinuationLatest?`<span class="continuation-latest-badge">✓ Kết quả mới nhất</span>`:`<span class="continuation-old-badge">Đã bị thay thế</span>`):""}
         ${ev.specialType==="continuation"&&s.continuationStatus?`<span class="companion-badge">${esc(s.continuationStatus)}</span>`:""}
+        ${s.seatLabel?`<span class="event-point-status">Ghế ${esc(s.seatSectionName?s.seatSectionName+" • "+s.seatLabel:s.seatLabel)}</span>`:ev.seating?.enabled===true?`<span class="small-help">Chưa chọn ghế</span>`:""}
         <span class="submission-id">${esc(s.id)}</span>
       </div>
     </div>
@@ -8557,6 +8559,7 @@ function eventSubmissionExportRows(ev,rows){
       const v=s.answers?.[f.id];
       row[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"");
     }
+    if(ev.seating?.enabled===true){row["Khu ghế"]=s.seatSectionName||"";row["Ghế"]=s.seatLabel||"";row["Trạng thái ghế"]=s.seatStatus==="confirmed"?"Đã chọn":(s.seatStatus||"Chưa chọn")}
     row["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");
     row["Điểm cổng sự kiện"]=eventPointsValue(ev)||"";
     row["Trạng thái điểm"]=s.pointsApplied?`Đã cộng ${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm`:(s.pointsStatus||"Chưa cộng");
@@ -8566,11 +8569,11 @@ function eventSubmissionExportRows(ev,rows){
 
 function openCustomEventExport(eventId){
   const ev=eventFor(eventId);if(!ev)return;const fields=(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type));
-  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="customExportOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(720px,100%)"><div class="modal-head"><div><h2>Xuất Excel tùy chọn</h2><div class="small-help">Chọn các cột muốn xuất. Bộ lọc hiện tại cũng được áp dụng.</div></div><button onclick="document.getElementById('customExportOverlay')?.remove()">×</button></div><div class="toggle-grid"><label><input class="custom-export-field" type="checkbox" value="__time" checked> Thời gian gửi</label><label><input class="custom-export-field" type="checkbox" value="__submitter" checked> Người gửi</label><label><input class="custom-export-field" type="checkbox" value="__status" checked> Trạng thái xử lý</label>${fields.map(f=>`<label><input class="custom-export-field" type="checkbox" value="${esc(f.id)}" checked> ${esc(f.label)}</label>`).join("")}</div><div class="modal-actions"><button class="primary" onclick="exportEventSubmissionsCustom('${eventId}')">Xuất Excel</button></div></div></div>`);
+  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="customExportOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(720px,100%)"><div class="modal-head"><div><h2>Xuất Excel tùy chọn</h2><div class="small-help">Chọn các cột muốn xuất. Bộ lọc hiện tại cũng được áp dụng.</div></div><button onclick="document.getElementById('customExportOverlay')?.remove()">×</button></div><div class="toggle-grid"><label><input class="custom-export-field" type="checkbox" value="__time" checked> Thời gian gửi</label><label><input class="custom-export-field" type="checkbox" value="__submitter" checked> Người gửi</label><label><input class="custom-export-field" type="checkbox" value="__status" checked> Trạng thái xử lý</label>${ev.seating?.enabled===true?`<label><input class="custom-export-field" type="checkbox" value="__seat" checked> Ghế đã chọn</label>`:""}${fields.map(f=>`<label><input class="custom-export-field" type="checkbox" value="${esc(f.id)}" checked> ${esc(f.label)}</label>`).join("")}</div><div class="modal-actions"><button class="primary" onclick="exportEventSubmissionsCustom('${eventId}')">Xuất Excel</button></div></div></div>`);
 }
 function exportEventSubmissionsCustom(eventId){
   const ev=eventFor(eventId);if(!ev)return;const selected=new Set($$('.custom-export-field:checked').map(x=>x.value));const rows=filteredEventSubmissionRows(ev);if(!rows.length)return alert("Không có dữ liệu phù hợp bộ lọc.");
-  const fields=(ev.fields||[]).filter(f=>selected.has(f.id));const data=rows.map((s,i)=>{const o={STT:i+1};if(selected.has("__time"))o["Thời gian gửi"]=s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"";if(selected.has("__submitter"))o["Người gửi"]=s.submitterLabel||"";for(const f of fields){const v=s.answers?.[f.id];o[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"")}if(selected.has("__status"))o["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");return o});
+  const fields=(ev.fields||[]).filter(f=>selected.has(f.id));const data=rows.map((s,i)=>{const o={STT:i+1};if(selected.has("__time"))o["Thời gian gửi"]=s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"";if(selected.has("__submitter"))o["Người gửi"]=s.submitterLabel||"";for(const f of fields){const v=s.answers?.[f.id];o[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"")}if(selected.has("__seat")){o["Khu ghế"]=s.seatSectionName||"";o["Ghế"]=s.seatLabel||""}if(selected.has("__status"))o["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");return o});
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);ws["!autofilter"]={ref:ws["!ref"]};XLSX.utils.book_append_sheet(wb,ws,"KET QUA");XLSX.writeFile(wb,`Ket_qua_tuy_chon_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`);document.getElementById('customExportOverlay')?.remove();toast("Đã xuất Excel tùy chọn");
 }
 async function exportNonContinuingMembers(eventId){
@@ -8625,6 +8628,7 @@ async function deleteSingleEventSubmission(eventId,submissionId){
     const ev=eventFor(eventId),ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),s=await ref.get();
     if(!s.exists)return;
     const data=s.data(),mssv=ev?.specialType==="continuation"?continuationSubmissionMssv(ev,{id:s.id,...data}):"";
+    if(data.seatId)await eventSeatingAdminApi({action:"admin-release-submission-seat",eventId,submissionId});
     await moveToTrash("eventSubmission",submissionId,data,{eventId,label:data.submitterLabel||"Phản hồi",semester:ev?.semester||semester});
     await ref.delete();
     if(ev?.specialType==="continuation"&&mssv)await reconcileContinuationMember(ev,mssv,{silent:true});
@@ -8640,6 +8644,7 @@ async function deleteSelectedEventSubmissions(eventId){
   if(!confirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nCác phản hồi đồng hành sẽ tự đồng bộ lại Điểm danh theo kết quả còn lại mới nhất.`))return;
   try{
     const ev=eventFor(eventId),affected=new Set();
+    if((currentEventSubmissionRows||[]).some(x=>ids.includes(x.id)&&x.seatId))await eventSeatingAdminApi({action:"admin-release-submission-seats",eventId,submissionIds:ids},30000);
     for(const id of ids){
       const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id),snap=await ref.get();
       if(snap.exists){
