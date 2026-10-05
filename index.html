@@ -8299,6 +8299,15 @@ async function saveEventBuilder(){
   if(seating.enabled&&!seating.sections.length)return alert("Đã bật chọn ghế nhưng chưa có khu ghế nào.");
   const seatCount=(seating.sections||[]).reduce((n,x)=>n+(Array.isArray(x.rows)?x.rows.length:0)*Number(x.seatsPerRow||0),0);
   if(seating.enabled&&seatCount>2500)return alert("Sơ đồ ghế tối đa 2.500 ghế.");
+  if(eventBuilderId){
+    const oldSeating=eventFor(eventBuilderId)?.seating||{enabled:false,title:"Chọn ghế",stageLabel:"SÂN KHẤU",canvasHeight:640,sections:[]};
+    if(JSON.stringify(oldSeating)!==JSON.stringify(seating)){
+      try{
+        const seatState=await eventSeatingAdminApi({action:"admin-state",eventId:eventBuilderId});
+        if(Number(seatState.claimed||0)>0)return alert(`Sơ đồ đang có ${seatState.claimed} ghế đã được chọn. Để tránh trùng/mất ghế, hệ thống khóa thay đổi sơ đồ sau khi đã có người chọn. Hãy xử lý/giải phóng các ghế trước.`);
+      }catch(e){return alert("Không kiểm tra được trạng thái ghế nên chưa thể thay đổi sơ đồ: "+(e.message||e))}
+    }
+  }
   const linkedActivityId=String($("#eventLinkedActivity")?.value||"");
   const linkedActivity=linkedActivityId?activityItemById(linkedActivityId,lockedSemester):null;
   const fullEvent={
