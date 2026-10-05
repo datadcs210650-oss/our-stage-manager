@@ -761,7 +761,7 @@ async function publicScan(body) {
   const ticketToken = extractTicketToken(rawPayload);
   if (ticketToken) {
     const result = await scanTicket({ db, event, state, qrToken:ticketToken, checkedInBy:"public_scanner", checkedInByName:scannerLabel, scannerSource:"delegated_link" });
-    return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", displayName:result.memberName, mssv:result.mssv, ticketCode:result.ticketCode, ticketType:result.ticketType, seat:result.seat, registrationStatus:result.registrationStatus, checkedInAt:result.checkedInAt, scannerLabel };
+    return { ok:true, duplicate:result.duplicate, status:result.existingStatus || "approved", pendingAdmin:false, attendeeType:"ticket", displayName:result.memberName, ticketCode:result.ticketCode };
   }
   if (event.qrCheckinEnabled !== true) throw bad("QR check-in thành viên đang tắt. Link này hiện chỉ nhận QR vé Ticket Studio.", "osc/member-qr-disabled");
   const mssv = normalizeMssv(body.mssv || rawPayload);
@@ -773,12 +773,12 @@ async function publicScan(body) {
   if (member && !registration) {
     const pending = await writePendingCheckin({ db, event, member, registration, mssv, method: "public_scanner", checkedInByName:scannerLabel });
     const status = pending.data?.checkinStatus || "pending_admin";
-    return { ok:true, duplicate:pending.duplicate, status, pendingAdmin:!pending.duplicate || status === "pending_admin", attendeeType:"member", displayName:String(member.name||"Thành viên").slice(0,160), mssv, registrationStatus:"unregistered", checkedInAt:pending.duplicate?timestampMillis(pending.data?.checkedInAt):Date.now(), scannerLabel };
+    return { ok:true, duplicate:pending.duplicate, status, pendingAdmin:!pending.duplicate || status === "pending_admin", attendeeType:"member", displayName:String(member.name||"Thành viên").slice(0,160), mssv };
   }
 
   const result = await writeApprovedCheckin({ db, event, state, member, registration, mssv, method:"public_scanner", checkedInBy:"public_scanner", checkedInByName:scannerLabel });
   const displayName=String(member?.name || registration?.submitterLabel || (member?"Thành viên":"Sinh viên ngoài CLB")).slice(0,160);
-  return { ok:true, duplicate:result.duplicate, status:result.duplicateData?.checkinStatus || "approved", pendingAdmin:false, attendeeType:member?"member":"external", displayName, mssv, registrationStatus:registration?"registered":"unregistered", checkedInAt:result.duplicate?timestampMillis(result.duplicateData?.checkedInAt):Date.now(), scannerLabel };
+  return { ok:true, duplicate:result.duplicate, status:result.duplicateData?.checkinStatus || "approved", pendingAdmin:false, attendeeType:member?"member":"external", displayName, mssv };
 }
 
 async function decide(req, body) {
