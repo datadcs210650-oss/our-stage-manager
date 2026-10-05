@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Tra cứu check-in Staff • Our Stage</title>
+<link rel="icon" href="/favicon.png">
+<style>
+:root{--ink:#18222b;--muted:#6c7780;--line:#e1e6e9;--wine:#8d2949;--wine2:#b44769;--bg:#f4f6f8;--ok:#117a55;--bad:#9d2b3f}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(circle at 12% 0%,rgba(180,71,105,.10),transparent 30%),var(--bg)}
+body{padding:24px 14px 44px}.shell{width:min(760px,100%);margin:auto}.brand{display:flex;align-items:center;gap:11px;margin-bottom:17px}.brand img{width:50px;height:50px;object-fit:contain;background:#fff;border-radius:14px;padding:3px;box-shadow:0 8px 24px rgba(31,39,46,.08)}.brand b{font-size:17px}.brand small{display:block;color:var(--muted);margin-top:3px}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 60px rgba(27,36,43,.08);overflow:hidden}.hero{padding:23px 24px 18px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#fff,#fff8fb)}.eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:900;color:var(--wine)}.hero h1{font-size:26px;margin:7px 0 5px;letter-spacing:-.7px}.hero p{margin:0;color:var(--muted);line-height:1.5}
+.lookup{padding:20px 24px;display:grid;grid-template-columns:1fr auto;gap:9px}.lookup input{height:48px;border:1px solid #d9dfe3;border-radius:12px;padding:0 14px;font-size:16px;font-weight:750;outline:none;text-transform:uppercase}.lookup input:focus{border-color:#bb617e;box-shadow:0 0 0 4px rgba(180,71,105,.09)}
+button{height:48px;border:0;border-radius:12px;padding:0 19px;font-weight:850;cursor:pointer;background:linear-gradient(135deg,var(--wine),var(--wine2));color:#fff}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#fff;color:#4f5b64;border:1px solid var(--line)}
+.status{margin:0 24px 18px;padding:12px 13px;border-radius:11px;background:#f4f6f7;color:#58646d;font-size:11px;line-height:1.45}.status.error{background:#fff0f2;color:#8d2638}.status.ok{background:#edf9f4;color:#116747}.hidden{display:none!important}
+.person{margin:0 24px 22px;border:1px solid var(--line);border-radius:15px;padding:15px}.person h2{font-size:20px;margin:0 0 11px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.field{padding:10px;border:1px solid #e7eaec;border-radius:10px;background:#fafbfc}.field span{display:block;color:#7b858d;font-size:8px;font-weight:850;text-transform:uppercase;letter-spacing:.5px}.field b{display:block;margin-top:4px;font-size:12px;overflow-wrap:anywhere}.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.privacy{margin:0 24px 22px;padding:10px 12px;border:1px solid #e3e8eb;border-radius:11px;background:#fbfcfd;color:#77818a;font-size:9px;line-height:1.5}
+.closed{padding:26px;text-align:center}.closed h2{margin:0 0 7px}.closed p{margin:0;color:var(--muted)}
+@media(max-width:620px){body{padding:12px 9px 28px}.lookup{grid-template-columns:1fr;padding:17px}.lookup button{width:100%}.status,.person,.privacy{margin-left:17px;margin-right:17px}.fields{grid-template-columns:1fr}.actions{display:grid}.actions button{width:100%}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="brand"><img src="/logo-ui-centered.png" alt="Our Stage"><div><b>OUR STAGE</b><small>STAFF CHECK-IN</small></div></div>
+  <div class="card">
+    <div id="main">
+      <div class="hero"><div class="eyebrow" id="linkLabel">TRA CỨU STAFF</div><h1 id="title">Đang tải sự kiện…</h1><p>Nhập mã vé hoặc MSSV khi không thể quét QR.</p></div>
+      <div class="lookup"><input id="query" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Mã vé hoặc MSSV"><button id="lookupBtn">Tra cứu</button></div>
+      <div id="status" class="status">Chỉ thông tin được Admin cho phép mới xuất hiện trên trang này.</div>
+      <div id="person" class="person hidden"><h2 id="personName">—</h2><div id="fields" class="fields"></div><div class="actions"><button id="clearBtn" class="secondary">Nhập mã khác</button><button id="checkinBtn">Xác nhận check-in</button></div></div>
+      <div class="privacy">Link này không cung cấp danh sách người tham dự. Staff chỉ có thể tra cứu từng mã cụ thể và hệ thống giới hạn số lần thử để giảm nguy cơ dò thông tin.</div>
+    </div>
+    <div id="closed" class="closed hidden"><h2>Link đã đóng</h2><p>Vui lòng liên hệ Admin để được cấp link mới.</p></div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s),hp=new URLSearchParams(String(location.hash||"").replace(/^#/,"")),token=(hp.get("token")||"").trim();let currentQuery="",currentPerson=null,fieldsAllowed=[];
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+class ApiError extends Error{constructor(message,code=""){super(message);this.code=code}}
+async function api(body){const c=new AbortController(),t=setTimeout(()=>c.abort(),16000);try{const r=await fetch("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store",signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok)throw new ApiError(d.error||`API lỗi ${r.status}`,d.code||"");return d}finally{clearTimeout(t)}}
+function status(kind,text){const b=$("#status");b.className=`status ${kind||""}`;b.textContent=text||""}
+function closePage(){ $("#main").classList.add("hidden");$("#closed").classList.remove("hidden") }
+const labels={mssv:"MSSV",ticketCode:"Mã vé",ticketType:"Hạng vé",seat:"Ghế",registrationStatus:"Đăng ký"};
+function valueLabel(k,v){if(k==="registrationStatus")return v==="registered"?"Có đăng ký":v==="ticket"?"Vé Ticket Studio":"Chưa đăng ký";return String(v||"—")}
+function renderPerson(person){currentPerson=person||{};$("#personName").textContent=person?.name||"Người tham dự";const list=fieldsAllowed.filter(k=>k!=="name"&&person&&Object.prototype.hasOwnProperty.call(person,k));$("#fields").innerHTML=list.map(k=>`<div class="field"><span>${esc(labels[k]||k)}</span><b>${esc(valueLabel(k,person[k]))}</b></div>`).join("")||'<div class="field"><span>Thông tin</span><b>Admin chỉ cho phép hiển thị tên.</b></div>';$("#person").classList.remove("hidden")}
+async function lookup(){const q=$("#query").value.trim();if(!q)return status("error","Hãy nhập mã vé hoặc MSSV.");const btn=$("#lookupBtn");btn.disabled=true;status("","Đang tra cứu…");$("#person").classList.add("hidden");try{const d=await api({action:"public-staff-lookup",token,query:q});currentQuery=q;renderPerson(d.person||{});status("ok","Đã tìm thấy. Kiểm tra đúng người rồi bấm Xác nhận check-in.")}catch(e){currentQuery="";currentPerson=null;if(["osc/staff-link-invalid"].includes(e.code))return closePage();status("error",e.message||"Không tìm thấy.")}finally{btn.disabled=false}}
+async function checkin(){if(!currentQuery)return;const btn=$("#checkinBtn");btn.disabled=true;status("","Đang check-in…");try{const d=await api({action:"public-staff-checkin",token,query:currentQuery});const name=d.name||currentPerson?.name||"Người tham dự",id=d.identity||currentQuery;if(d.pendingAdmin)status("","Đã gửi Admin xác nhận • "+name+" • "+id);else if(d.duplicate)status("","Đã check-in trước đó • "+name+" • "+id);else status("ok","✓ Check-in thành công • "+name+" • "+id);$("#person").classList.add("hidden");currentQuery="";currentPerson=null;$("#query").value="";$("#query").focus()}catch(e){if(e.code==="osc/staff-link-invalid")return closePage();status("error",e.message||"Không check-in được.")}finally{btn.disabled=false}}
+async function init(){if(!token)return closePage();try{const d=await api({action:"public-staff-config",token});$("#title").textContent=d.title||"Sự kiện";$("#linkLabel").textContent=d.label||"TRA CỨU STAFF";fieldsAllowed=Array.isArray(d.fields)?d.fields:["name"];document.title=`${d.label||"Staff check-in"} • Our Stage`}catch{closePage()}}
+$("#lookupBtn").onclick=lookup;$("#query").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();lookup()}});$("#checkinBtn").onclick=checkin;$("#clearBtn").onclick=()=>{currentQuery="";currentPerson=null;$("#person").classList.add("hidden");$("#query").value="";$("#query").focus();status("","Sẵn sàng tra cứu mã tiếp theo.")};init();
+</script>
+</body>
+</html>
