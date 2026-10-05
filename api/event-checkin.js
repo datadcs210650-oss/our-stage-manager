@@ -658,6 +658,71 @@ async function adminDeleteEvent(req, body) {
   return { ok:true, deleted:true, eventId, submissions:subSnap.size, checkins:qrSnap.size, scannerLinks:linkSnap.size };
 }
 
+const STAFF_SAFE_FIELDS=new Set(["name","mssv","ticketCode","ticketType","seat","registrationStatus"]);
+function normalizeStaffFields(v){const arr=Array.isArray(v)?v:[];return ["name",...arr.filter(x=>STAFF_SAFE_FIELDS.has(String(x))&&String(x)!=="name")].filter((x,i,a)=>a.indexOf(x)===i).slice(0,6)}
+function staffLinkToken(){return crypto.randomBytes(30).toString("base64url")}
+function requestIp(req){return String(req.headers["x-forwarded-for"]||req.headers["x-real-ip"]||"unknown").split(",")[0].trim().slice(0,80)}
+function rateId(parts){return crypto.createHash("sha256").update(parts.join("|")).digest("hex")}
+async function enforceStaffRate(req,db,token,kind,max=60){
+  const now=Date.now(),windowMs=5*60*1000,ref=db.collection("eventStaffRateLimits").doc(rateId([kind,token,requestIp(req)]));
+  await db.runTransaction(async tx=>{const snap=await tx.get(ref),d=snap.exists?snap.data()||{}:{},start=timestampMillis(d.windowStart);if(!start||now-start>=windowMs){tx.set(ref,{windowStart:admin.firestore.Timestamp.fromMillis(now),count:1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:false});return}const count=Number(d.count||0);if(count>=max)throw bad("Bạn đã tra cứu quá nhiều lần. Vui lòng đợi vài phút.","osc/rate-limited");tx.update(ref,{count:count+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()})})
+}
+function cleanStaffQuery(v){const s=String(v||"").trim().toUpperCase().replace(/\s+/g,"");if(!/^[A-Z0-9._-]{2,40}$/.test(s))throw bad("Mã vé/MSSV không hợp lệ.");return s}
+function ticketDocIdByCode(code){return crypto.createHash("sha256").update(code).digest("hex").slice(0,48)}
+async function ticketByCodeOrMssv(db,eventId,query){
+  const q=cleanStaffQuery(query),col=db.collection("ticketStudios").doc(eventId).collection("tickets"),direct=await col.doc(ticketDocIdByCode(q)).get();
+  if(direct.exists&&String(direct.data()?.code||"").toUpperCase()===q)return{id:direct.id,ref:direct.ref,...(direct.data()||{})};
+  const byMssv=await col.where("mssv","==",q).limit(1).get();if(!byMssv.empty){const d=byMssv.docs[0];return{id:d.id,ref:d.ref,...(d.data()||{})}}
+  return null
+}
+async function resolveStaffPerson(db,event,query){
+  const q=cleanStaffQuery(query),ticket=await ticketByCodeOrMssv(db,event.id,q);
+  if(ticket){const mk=ticket.mssv?mssvKey(ticket.mssv):"",registration=mk?await findRegistration(db,event,mk):null;return{kind:"ticket",ticket,name:String(ticket.name||"Khách có vé").slice(0,160),mssv:String(ticket.mssv||"").slice(0,30),ticketCode:String(ticket.code||"").slice(0,40),ticketType:String(ticket.ticketType||"").slice(0,80),seat:String(ticket.seat||"").slice(0,40),registrationStatus:registration?"registered":"ticket"}}
+  let mssv;try{mssv=normalizeMssv(q)}catch{throw bad("Không tìm thấy mã vé hoặc MSSV.","osc/staff-not-found")}
+  const {member,registration}=await resolveCandidate(db,event,mssv);if(!member&&!registration)throw bad("Không tìm thấy mã vé hoặc MSSV.","osc/staff-not-found");
+  return{kind:"mssv",member,registration,name:String(member?.name||registration?.submitterLabel||"Người tham dự").slice(0,160),mssv,ticketCode:"",ticketType:"",seat:"",registrationStatus:registration?"registered":"unregistered"}
+}
+function staffPublicInfo(person,fields){const out={};for(const f of normalizeStaffFields(fields)){if(f==="name")out.name=person.name;else out[f]=person[f]||""}return out}
+async function adminStaffLinks(req,body){
+  await requireManager(req);const db=getDb(),eventId=normalizeId(body.eventId,"Sự kiện");await loadEvent(db,eventId);
+  const snap=await db.collection("eventStaffLinks").where("eventId","==",eventId).get();
+  const rows=snap.docs.map(d=>({id:d.id,...(d.data()||{})})).sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).map(x=>({id:x.id,active:x.active===true,label:String(x.label||"Tra cứu Staff").slice(0,80),fields:normalizeStaffFields(x.fields)}));
+  return{ok:true,rows}
+}
+async function adminCreateStaffLink(req,body){
+  const actor=await requireManager(req),db=getDb(),eventId=normalizeId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  const token=staffLinkToken(),label=String(body.label||"Tra cứu Staff").trim().replace(/\s+/g," ").slice(0,80)||"Tra cứu Staff",fields=normalizeStaffFields(body.fields);
+  await db.collection("eventStaffLinks").doc(token).set({eventId,semester:event.semester,label,fields,active:true,createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid},{merge:false});
+  return{ok:true,token,label,fields}
+}
+async function adminUpdateStaffLink(req,body){
+  const actor=await requireManager(req),db=getDb(),token=normalizeToken(body.token),ref=db.collection("eventStaffLinks").doc(token),snap=await ref.get();if(!snap.exists)throw bad("Link tra cứu Staff không tồn tại.","osc/staff-link-invalid");
+  const patch={updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid};
+  if(body.label!==undefined){const label=String(body.label||"").trim().replace(/\s+/g," ").slice(0,80);if(!label)throw bad("Tên link không được để trống.");patch.label=label}
+  if(body.fields!==undefined)patch.fields=normalizeStaffFields(body.fields);
+  if(body.active!==undefined)patch.active=body.active===true;
+  await ref.set(patch,{merge:true});return{ok:true}
+}
+async function publicStaffConfig(body){
+  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");
+  const link=snap.data()||{},{data:event}=await loadEvent(db,normalizeId(link.eventId,"Sự kiện")),state=await loadState(db);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  return{ok:true,version:90,title:String(event.title||"Sự kiện").slice(0,200),label:String(link.label||"Tra cứu Staff").slice(0,80),fields:normalizeStaffFields(link.fields)}
+}
+async function publicStaffLookup(req,body){
+  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"lookup",60);
+  const link=snap.data()||{},{data:event}=await loadEvent(db,normalizeId(link.eventId,"Sự kiện")),person=await resolveStaffPerson(db,event,body.query);
+  return{ok:true,version:90,person:staffPublicInfo(person,link.fields),kind:person.kind,identity:person.kind==="ticket"?(person.ticketCode||person.mssv):person.mssv}
+}
+async function publicStaffCheckin(req,body){
+  const db=getDb(),token=normalizeToken(body.token),snap=await db.collection("eventStaffLinks").doc(token).get();if(!snap.exists||snap.data()?.active!==true)throw bad("Link tra cứu Staff đã hết hiệu lực.","osc/staff-link-invalid");await enforceStaffRate(req,db,token,"checkin",100);
+  const link=snap.data()||{},label=String(link.label||"Tra cứu Staff").slice(0,80),[{data:event},state]=await Promise.all([loadEvent(db,normalizeId(link.eventId,"Sự kiện")),loadState(db)]);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  const person=await resolveStaffPerson(db,event,body.query);
+  if(person.kind==="ticket"){const result=await scanTicket({db,event,state,qrToken:String(person.ticket.qrToken||""),checkedInBy:"staff_lookup",checkedInByName:label,scannerSource:"staff_lookup"});return{ok:true,duplicate:result.duplicate,pendingAdmin:false,name:result.memberName,identity:result.ticketCode||result.mssv||"",kind:"ticket"}}
+  const mssv=person.mssv;await ensureQrNotRevoked(db,event.semester,mssv);const member=person.member,registration=person.registration,audience=event.qrCheckinAudience==="public"?"public":"members";if(!member&&audience!=="public")throw bad("MSSV không thuộc danh sách được phép check-in.","osc/not-member");
+  if(member&&!registration){const pending=await writePendingCheckin({db,event,member,registration,mssv,method:"public_scanner",checkedInBy:"staff_lookup",checkedInByName:label,scannerSource:"staff_lookup"});return{ok:true,duplicate:pending.duplicate,pendingAdmin:true,name:person.name,identity:mssv,kind:"mssv"}}
+  const result=await writeApprovedCheckin({db,event,state,member,registration,mssv,method:"public_scanner",checkedInBy:"staff_lookup",checkedInByName:label});return{ok:true,duplicate:result.duplicate,pendingAdmin:false,name:person.name,identity:mssv,kind:"mssv"}
+}
+
 async function publicConfig(body) {
   const db = getDb(), token = normalizeToken(body.token);
   const linkSnap = await db.collection("eventScannerLinks").doc(token).get();
@@ -795,20 +860,26 @@ async function undo(req, body) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:89 });
+    if (req.method === "GET") return sendJson(res, 200, { ok:true, service:"event-checkin", version:90 });
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, { ok: false, error: "Chỉ hỗ trợ GET/POST." });
     }
     const body = readJsonBody(req), action = String(body.action || "");
     let result;
-    if (action === "health") result = { ok:true, service:"event-checkin", version:89 };
+    if (action === "health") result = { ok:true, service:"event-checkin", version:90 };
     else if (action === "public-config") result = await publicConfig(body);
     else if (action === "public-scan") result = await publicScan(body);
+    else if (action === "public-staff-config") result = await publicStaffConfig(body);
+    else if (action === "public-staff-lookup") result = await publicStaffLookup(req, body);
+    else if (action === "public-staff-checkin") result = await publicStaffCheckin(req, body);
     else if (action === "admin-scan") result = await adminScan(req, body);
     else if (action === "admin-list-checkins") result = await adminListCheckins(req, body);
     else if (action === "admin-summary") result = await adminSummary(req, body);
     else if (action === "admin-links") result = await adminLinks(req, body);
+    else if (action === "admin-staff-links") result = await adminStaffLinks(req, body);
+    else if (action === "admin-create-staff-link") result = await adminCreateStaffLink(req, body);
+    else if (action === "admin-update-staff-link") result = await adminUpdateStaffLink(req, body);
     else if (action === "admin-create-link") result = await adminCreateLink(req, body);
     else if (action === "admin-set-link-label") result = await adminSetLinkLabel(req, body);
     else if (action === "admin-revoke-link") result = await adminRevokeLink(req, body);
@@ -821,9 +892,9 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 200, result);
   } catch (error) {
     const code = String(error?.code || "");
-    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/ticket-invalid", "osc/ticket-revoked", "osc/ticket-cancelled", "osc/member-qr-disabled"]);
+    const clientCodes = new Set(["osc/bad-request", "osc/not-member", "osc/qr-revoked", "osc/semester-locked", "osc/scanner-invalid", "osc/event-not-found", "osc/member-not-found", "osc/checkin-not-found", "osc/ticket-invalid", "osc/ticket-revoked", "osc/ticket-cancelled", "osc/member-qr-disabled", "osc/staff-link-invalid", "osc/staff-not-found", "osc/rate-limited"]);
     if (clientCodes.has(code)) {
-      const status = code === "osc/scanner-invalid" || code === "osc/event-not-found" || code === "osc/ticket-invalid" ? 404 : ["osc/semester-locked","osc/ticket-revoked","osc/ticket-cancelled","osc/member-qr-disabled"].includes(code) ? 409 : 400;
+      const status = ["osc/scanner-invalid","osc/event-not-found","osc/ticket-invalid","osc/staff-link-invalid","osc/staff-not-found"].includes(code) ? 404 : ["osc/semester-locked","osc/ticket-revoked","osc/ticket-cancelled","osc/member-qr-disabled"].includes(code) ? 409 : code==="osc/rate-limited"?429:400;
       return sendJson(res, status, { ok: false, error: error.message, code });
     }
     return handleError(res, error);
