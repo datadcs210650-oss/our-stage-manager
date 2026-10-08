@@ -9,6 +9,10 @@
       "destination": "/tra-cuu-tu-do.html"
     },
     {
+      "source": "/su-kien/:slug",
+      "destination": "/su-kien.html"
+    },
+    {
       "source": "/su-kien",
       "destination": "/su-kien.html"
     },
@@ -102,6 +106,19 @@
     },
     {
       "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/su-kien/:slug",
       "headers": [
         {
           "key": "Cache-Control",
