@@ -1,0 +1,820 @@
+// OUR STAGE CLUB MANAGER V92 — Ticket Studio + Staff fallback + Event Seating security
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== Identity / roles =====
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function userExists() {
+      return signedIn() && exists(userPath());
+    }
+
+    function me() {
+      return get(userPath()).data;
+    }
+
+    function active() {
+      return userExists() && me().active == true;
+    }
+
+    function superAdmin() {
+      return active() && me().role == "superadmin";
+    }
+
+    function adminOnly() {
+      return active() && me().role == "admin";
+    }
+
+    function admin() {
+      return active() && (me().role == "admin" || me().role == "superadmin");
+    }
+
+    function bcn() {
+      return active() && me().role == "bcn";
+    }
+
+    function perm(k) {
+      return bcn()
+        && me().permissions is map
+        && me().permissions[k] == true;
+    }
+
+    function viewAttendance() { return admin() || perm("viewAttendance"); }
+    function editAttendance() { return admin() || (viewAttendance() && perm("editAttendance")); }
+    function viewMembers() { return admin() || perm("viewMembers"); }
+    function editMembers() { return admin() || (viewMembers() && perm("editMembers")); }
+    function viewFinance() { return admin() || perm("viewFinance"); }
+    function editFinance() { return admin() || (viewFinance() && perm("editFinance")); }
+    function viewEvents() { return admin() || perm("viewEvents"); }
+    function editEvents() { return admin() || (viewEvents() && perm("editEvents")); }
+    function viewLookup() { return admin() || perm("viewLookup"); }
+
+    function validSemesterCode(code) {
+      return code is string && code.size() > 0 && code.size() <= 20;
+    }
+
+    function semesterUnlocked(code) {
+      let p = /databases/$(database)/documents/clubState/main;
+      return code == ""
+        || (
+          validSemesterCode(code)
+          && exists(p)
+          && get(p).data.state is map
+          && get(p).data.state.semesters is map
+          && get(p).data.state.semesters.keys().hasAny([code])
+          && get(p).data.state.semesters[code].locked != true
+        );
+    }
+
+    function validPermissions(p) {
+      return p is map
+        && p.keys().hasOnly([
+          "viewAttendance", "editAttendance",
+          "viewMembers", "editMembers",
+          "viewFinance", "editFinance",
+          "viewEvents", "editEvents",
+          "viewLookup", "editLookup"
+        ]);
+    }
+
+    function customAdminPortalUnlocked(portalId) {
+      let p = /databases/$(database)/documents/customLookupAdmin/$(portalId);
+      return !exists(p)
+        || !get(p).data.keys().hasAny(["scopeSemester"])
+        || get(p).data.scopeSemester == ""
+        || semesterUnlocked(get(p).data.scopeSemester);
+    }
+
+    function customPublicPortalUnlocked(portalId) {
+      let p = /databases/$(database)/documents/customLookupPortals/$(portalId);
+      return !exists(p)
+        || !get(p).data.keys().hasAny(["scopeSemester"])
+        || get(p).data.scopeSemester == ""
+        || semesterUnlocked(get(p).data.scopeSemester);
+    }
+
+    // ===== Accounts =====
+    match /users/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow read: if admin();
+
+      allow create: if
+        request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.active == true
+        && validPermissions(request.resource.data.permissions)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          (superAdmin() && request.resource.data.role in ["admin", "bcn"])
+          || (adminOnly() && request.resource.data.role == "bcn")
+        );
+
+      allow update: if
+        request.auth.uid != uid
+        && resource.data.role != "superadmin"
+        && validPermissions(request.resource.data.permissions)
+        && request.resource.data.active is bool
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "displayName", "email", "role", "active", "permissions", "updatedAt", "updatedBy"
+        ])
+        && (
+          (superAdmin() && request.resource.data.role in ["admin", "bcn"])
+          || (
+            adminOnly()
+            && resource.data.role == "bcn"
+            && request.resource.data.role == "bcn"
+          )
+        );
+
+      allow delete: if
+        request.auth.uid != uid
+        && resource.data.role != "superadmin"
+        && (superAdmin() || (adminOnly() && resource.data.role == "bcn"));
+    }
+
+    // ===== Global club configuration =====
+    match /clubState/{id} {
+      allow read: if active();
+      allow create, update, delete: if admin();
+    }
+
+    // ===== Members =====
+    match /members/{id} {
+      // NOTE: Firestore Rules cannot redact individual fields from a document.
+      // A BCN with attendance/finance view permission can read the whole member doc.
+      allow read: if admin() || viewMembers() || viewAttendance() || viewFinance();
+
+      allow create: if
+        editMembers()
+        && validSemesterCode(request.resource.data.semester)
+        && semesterUnlocked(request.resource.data.semester);
+
+      allow update: if
+        validSemesterCode(resource.data.semester)
+        && request.resource.data.semester == resource.data.semester
+        && semesterUnlocked(resource.data.semester)
+        && (
+          editMembers()
+          || (
+            editAttendance()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "scores", "updatedAt", "updatedBy"
+            ])
+            && request.resource.data.updatedBy == request.auth.uid
+            && request.resource.data.updatedAt == request.time
+          )
+          || (
+            editFinance()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "fundPaid", "updatedAt", "updatedBy"
+            ])
+            && request.resource.data.updatedBy == request.auth.uid
+            && request.resource.data.updatedAt == request.time
+          )
+        );
+
+      allow delete: if
+        editMembers()
+        && validSemesterCode(resource.data.semester)
+        && semesterUnlocked(resource.data.semester);
+    }
+
+    // ===== Finance =====
+    match /financeTransactions/{id} {
+      allow read: if viewFinance();
+
+      allow create: if
+        editFinance()
+        && validSemesterCode(request.resource.data.semester)
+        && semesterUnlocked(request.resource.data.semester);
+
+      allow update: if
+        editFinance()
+        && request.resource.data.semester == resource.data.semester
+        && semesterUnlocked(resource.data.semester);
+
+      allow delete: if
+        editFinance()
+        && semesterUnlocked(resource.data.semester);
+    }
+
+    // ===== Public member lookup =====
+    match /publicLookupSemesters/{semesterId} {
+      allow get: if viewLookup() || resource.data.enabled == true;
+      allow list: if viewLookup();
+      allow create, update, delete: if admin() && semesterUnlocked(semesterId);
+    }
+
+    match /publicLookupSemesters/{semesterId}/members/{key} {
+      allow get: if
+        viewLookup()
+        || get(/databases/$(database)/documents/publicLookupSemesters/$(semesterId)).data.enabled == true;
+      allow list: if viewLookup();
+      allow create, update, delete: if admin() && semesterUnlocked(semesterId);
+    }
+
+    // ===== Event portals =====
+    match /eventPortals/{eventId} {
+      allow get: if viewEvents() || resource.data.isOpen == true;
+      allow list: if viewEvents();
+
+      allow create: if
+        editEvents()
+        && validSemesterCode(request.resource.data.semester)
+        && semesterUnlocked(request.resource.data.semester)
+        && request.resource.data.id == eventId
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.isOpen is bool
+        && request.resource.data.fields is list
+        && request.resource.data.fields.size() <= 100;
+
+      allow update: if
+        editEvents()
+        && request.resource.data.semester == resource.data.semester
+        && semesterUnlocked(resource.data.semester)
+        && (
+          !resource.data.keys().hasAny(["id"])
+          || request.resource.data.id == resource.data.id
+        );
+
+      allow delete: if
+        editEvents()
+        && semesterUnlocked(resource.data.semester);
+
+      match /submissions/{sid} {
+        // Public create: exact top-level field allowlist, server timestamp,
+        // event semester binding and open/close window are enforced.
+        allow create: if
+          (
+            // Admin/BCN manual continuation submission
+            editEvents()
+            && semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester)
+            && request.resource.data.keys().hasOnly([
+              "eventId", "semester", "answers", "submitterLabel", "actionApplied", "createdAt",
+              "adminManual", "adminCreatedBy", "adminCreatedByName"
+            ])
+            && request.resource.data.eventId == eventId
+            && request.resource.data.semester == get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 60
+            && request.resource.data.submitterLabel is string
+            && request.resource.data.submitterLabel.size() > 0
+            && request.resource.data.submitterLabel.size() <= 200
+            && request.resource.data.actionApplied == false
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.adminManual == true
+            && request.resource.data.adminCreatedBy == request.auth.uid
+            && request.resource.data.adminCreatedByName is string
+            && request.resource.data.adminCreatedByName.size() <= 200
+          )
+          || (
+            // V94: public browser writes are disabled. Public registrations go through
+            // the trusted /api/event-seating endpoint (Firebase Admin SDK) for
+            // server-side schema validation, rate limiting and destination checks.
+            false
+            && get(/databases/$(database)/documents/eventPortals/$(eventId)).data.isOpen == true
+            && (
+              !get(/databases/$(database)/documents/eventPortals/$(eventId)).data.keys().hasAny(["openAt"])
+              || get(/databases/$(database)/documents/eventPortals/$(eventId)).data.openAt == null
+              || request.time >= get(/databases/$(database)/documents/eventPortals/$(eventId)).data.openAt
+            )
+            && (
+              !get(/databases/$(database)/documents/eventPortals/$(eventId)).data.keys().hasAny(["closeAt"])
+              || get(/databases/$(database)/documents/eventPortals/$(eventId)).data.closeAt == null
+              || request.time < get(/databases/$(database)/documents/eventPortals/$(eventId)).data.closeAt
+            )
+            && semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester)
+            && request.resource.data.keys().hasOnly([
+              "eventId", "semester", "answers", "submitterLabel", "actionApplied", "createdAt"
+            ])
+            && request.resource.data.eventId == eventId
+            && request.resource.data.semester == get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 60
+            && request.resource.data.submitterLabel is string
+            && request.resource.data.submitterLabel.size() > 0
+            && request.resource.data.submitterLabel.size() <= 200
+            && request.resource.data.actionApplied == false
+            && request.resource.data.createdAt == request.time
+          )
+          || (
+            // Restore an event submission from Trash Bin.
+            // The caller must already have editEvents permission.
+            editEvents()
+            && semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester)
+            && request.resource.data.keys().hasOnly([
+              "eventId", "semester", "answers", "submitterLabel", "actionApplied", "createdAt",
+              "adminManual", "adminCreatedBy", "adminCreatedByName",
+              "actionStatus", "actionCheckedAt", "actionAppliedAt", "actionAppliedBy",
+              "pointsApplied", "pointsValue", "pointsStatus", "pointsCheckedAt", "pointsAppliedAt", "pointsAppliedBy",
+              "editedAt", "editedBy", "editedByName", "adminEditedFromAttendance",
+              "continuationLatest", "continuationDecision", "continuationStatus", "continuationSyncedAt",
+              "seatSelectionRequired", "seatStatus", "seatClaimHash", "seatId", "seatLabel",
+              "seatSectionId", "seatSectionName", "seatConfirmedAt", "seatReleasedAt", "seatReleasedBy"
+            ])
+            && request.resource.data.eventId == eventId
+            && request.resource.data.semester == get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 60
+            && request.resource.data.submitterLabel is string
+            && request.resource.data.submitterLabel.size() <= 200
+          );
+
+        allow read: if viewEvents();
+
+        allow update: if
+          semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester)
+          && (
+            (
+              editEvents()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "answers", "submitterLabel", "editedAt", "editedBy", "editedByName",
+                "adminEditedFromAttendance", "continuationSyncedAt",
+                "continuationLatest", "continuationDecision", "continuationStatus"
+              ])
+              && (
+                !request.resource.data.diff(resource.data).affectedKeys().hasAny(["editedBy"])
+                || request.resource.data.editedBy == request.auth.uid
+              )
+            )
+            || (
+              editFinance()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "actionApplied", "actionStatus", "actionCheckedAt", "actionAppliedAt", "actionAppliedBy"
+              ])
+            )
+            || (
+              editAttendance()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "pointsApplied", "pointsValue", "pointsStatus", "pointsCheckedAt", "pointsAppliedAt", "pointsAppliedBy"
+              ])
+            )
+          );
+
+        allow delete: if
+          editEvents()
+          && semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester);
+      }
+
+      // V78 — Event QR check-in records. Read access is limited to attendance viewers or event editors; the Admin UI reads through the server API.
+      // Normal check-in writes are performed only by the trusted Vercel Firebase Admin API.
+      // Browser clients may read authorized results. Admin can restore historical records from Trash.
+      match /qrCheckins/{checkinId} {
+        allow read: if viewAttendance() || editEvents();
+
+        allow create: if
+          admin()
+          && request.resource.data.eventId == eventId
+          && request.resource.data.semester == get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester
+          && semesterUnlocked(request.resource.data.semester)
+          && request.resource.data.mssv is string
+          && request.resource.data.mssv.size() > 0
+          && request.resource.data.mssv.size() <= 30;
+
+        allow update: if false;
+
+        allow delete: if
+          (editAttendance() || editEvents())
+          && semesterUnlocked(get(/databases/$(database)/documents/eventPortals/$(eventId)).data.semester);
+      }
+    }
+
+    // ===== V77 member QR issuance / delegated scanner secrets =====
+    // These documents are now managed only by trusted Firebase Admin API routes.
+    // Browser clients (including Admin UI) do not read/write them directly.
+    match /memberQrPortals/{semesterId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /memberQrCards/{mssv} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /eventScannerLinks/{token} {
+      allow read, create, update, delete: if false;
+    }
+
+    // ===== V94 event seating, protected submissions & Staff fallback links =====
+    // All writes/reads are mediated by trusted Vercel Firebase Admin APIs.
+    // Public clients never receive seat-holder PII or a participant list.
+    match /eventSeatClaims/{eventId} {
+      allow read, create, update, delete: if false;
+      match /seats/{seatId} {
+        allow read, create, update, delete: if false;
+      }
+    }
+
+    match /eventStaffLinks/{token} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /eventStaffRateLimits/{id} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /eventSeatRateLimits/{id} {
+      allow read, create, update, delete: if false;
+    }
+
+    // ===== V90 Ticket Studio =====
+    // Ticket templates, portal tokens, ticket QR tokens and public lookup rate limits
+    // are server-only. Admin UI and public ticket pages use trusted Vercel APIs.
+    match /ticketStudios/{eventId} {
+      allow read, create, update, delete: if false;
+      match /tickets/{ticketId} {
+        allow read, create, update, delete: if false;
+      }
+    }
+
+    match /ticketLookupRateLimits/{id} {
+      allow read, create, update, delete: if false;
+    }
+
+    // ===== Custom lookup admin/private data =====
+    match /customLookupAdmin/{portalId} {
+      allow read: if admin();
+
+      allow create: if
+        admin()
+        && validSemesterCode(request.resource.data.scopeSemester)
+        && semesterUnlocked(request.resource.data.scopeSemester);
+
+      allow update: if
+        admin()
+        && validSemesterCode(request.resource.data.scopeSemester)
+        && semesterUnlocked(request.resource.data.scopeSemester);
+
+      allow delete: if admin() && customAdminPortalUnlocked(portalId);
+
+      match /records/{recordId} {
+        allow read: if admin();
+        allow create, update, delete: if admin() && customAdminPortalUnlocked(portalId);
+      }
+    }
+
+    // ===== Custom lookup public projection =====
+    match /customLookupPortals/{portalId} {
+      allow get: if admin() || resource.data.open == true;
+      allow list: if admin();
+
+      allow create: if
+        admin()
+        && validSemesterCode(request.resource.data.scopeSemester)
+        && semesterUnlocked(request.resource.data.scopeSemester);
+
+      allow update: if
+        admin()
+        && validSemesterCode(request.resource.data.scopeSemester)
+        && semesterUnlocked(request.resource.data.scopeSemester);
+
+      allow delete: if admin() && customPublicPortalUnlocked(portalId);
+
+      match /records/{recordId} {
+        allow get: if
+          admin()
+          || get(/databases/$(database)/documents/customLookupPortals/$(portalId)).data.open == true;
+        allow list: if admin();
+        allow create, update, delete: if admin() && customPublicPortalUnlocked(portalId);
+      }
+    }
+
+    // ===== User preferences =====
+    match /userPreferences/{uid} {
+      allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ===== Audit logs =====
+    match /auditLogs/{id} {
+      allow read: if admin();
+
+      allow create: if
+        active()
+        && request.resource.data.keys().hasOnly([
+          "action", "module", "entityType", "entityId", "summary",
+          "before", "after", "undo", "semester",
+          "actorUid", "actorName", "actorEmail", "createdAt"
+        ])
+        && request.resource.data.actorUid == request.auth.uid
+        && validSemesterCode(request.resource.data.semester)
+        && request.resource.data.action is string
+        && request.resource.data.action.size() <= 80
+        && request.resource.data.module is string
+        && request.resource.data.module.size() <= 80
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 500
+        && request.resource.data.actorName is string
+        && request.resource.data.actorName.size() <= 120
+        && request.resource.data.actorEmail is string
+        && request.resource.data.actorEmail.size() <= 254
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        admin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "undo", "undoneAt", "undoneBy"
+        ])
+        && request.resource.data.undoneBy == request.auth.uid
+        && request.resource.data.undoneAt == request.time;
+
+      allow delete: if false;
+    }
+
+    // ===== Import history =====
+    match /importHistory/{id} {
+      allow read: if admin();
+
+      allow create: if
+        active()
+        && request.resource.data.keys().hasOnly([
+          "type", "fileName", "total", "added", "updated", "skipped", "details",
+          "semester", "actorUid", "actorName", "createdAt"
+        ])
+        && request.resource.data.actorUid == request.auth.uid
+        && validSemesterCode(request.resource.data.semester)
+        && request.resource.data.type is string
+        && request.resource.data.type.size() <= 80
+        && request.resource.data.fileName is string
+        && request.resource.data.fileName.size() <= 240
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 1000
+        && request.resource.data.actorName is string
+        && request.resource.data.actorName.size() <= 120
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // ===== Notifications =====
+    match /systemNotifications/{id} {
+      // Kept compatible with the current client query. Target filtering is still
+      // done client-side; see audit notes below.
+      allow read: if active();
+
+      allow create: if
+        active()
+        && request.resource.data.keys().hasOnly([
+          "title", "message", "type", "targetRoles", "targetUid", "linkTab",
+          "semester", "readBy", "createdAt", "createdBy"
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && validSemesterCode(request.resource.data.semester)
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 800
+        && request.resource.data.type is string
+        && request.resource.data.type.size() <= 50
+        && request.resource.data.targetRoles is list
+        && request.resource.data.targetRoles.size() <= 5
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid.size() <= 160
+        && request.resource.data.linkTab is string
+        && request.resource.data.linkTab.size() <= 80
+        && request.resource.data.readBy is list
+        && request.resource.data.readBy.size() == 0
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        active()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readBy"])
+        && resource.data.readBy is list
+        && request.resource.data.readBy is list
+        && request.resource.data.readBy.hasAll(resource.data.readBy)
+        && request.resource.data.readBy.hasAny([request.auth.uid])
+        && request.resource.data.readBy.size() <= resource.data.readBy.size() + 1;
+
+      allow delete: if admin();
+    }
+
+    // ===== Trash Bin =====
+    match /trashBin/{id} {
+      allow read, update, delete: if admin();
+
+      allow create: if
+        active()
+        && request.resource.data.keys().hasOnly([
+          "type", "sourceId", "data", "meta", "semester",
+          "deletedBy", "deletedByName", "deletedAt", "expiresAt"
+        ])
+        && request.resource.data.type in ["member", "finance", "event", "eventSubmission", "eventQrCheckin"]
+        && request.resource.data.sourceId is string
+        && request.resource.data.sourceId.size() > 0
+        && request.resource.data.sourceId.size() <= 240
+        && request.resource.data.data is map
+        && request.resource.data.meta is map
+        && validSemesterCode(request.resource.data.semester)
+        && semesterUnlocked(request.resource.data.semester)
+        && request.resource.data.deletedBy == request.auth.uid
+        && request.resource.data.deletedByName is string
+        && request.resource.data.deletedByName.size() <= 120
+        && request.resource.data.deletedAt == request.time
+        && request.resource.data.expiresAt is timestamp;
+    }
+
+    // ===== Approval requests =====
+    match /approvalRequests/{id} {
+      allow create: if
+        active()
+        && request.resource.data.keys().hasOnly([
+          "kind", "payload", "summary", "status", "semester",
+          "requesterUid", "requesterName", "createdAt"
+        ])
+        && request.resource.data.kind in ["deleteMember", "deleteFinance", "bulkAttendance"]
+        && request.resource.data.payload is map
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() > 0
+        && request.resource.data.summary.size() <= 500
+        && request.resource.data.status == "pending"
+        && validSemesterCode(request.resource.data.semester)
+        && semesterUnlocked(request.resource.data.semester)
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.requesterName is string
+        && request.resource.data.requesterName.size() <= 120
+        && request.resource.data.createdAt == request.time;
+
+      allow get: if admin() || (active() && resource.data.requesterUid == request.auth.uid);
+      allow list: if admin();
+
+      allow update: if
+        admin()
+        && resource.data.status == "pending"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status", "decidedAt", "decidedBy", "decidedByName"
+        ])
+        && request.resource.data.status in ["approved", "rejected"]
+        && request.resource.data.decidedAt == request.time
+        && request.resource.data.decidedBy == request.auth.uid
+        && request.resource.data.decidedByName is string
+        && request.resource.data.decidedByName.size() <= 120;
+
+      allow delete: if admin();
+    }
+
+    // ===== QR attendance =====
+    match /attendancePortals/{token} {
+      allow get: if
+        viewAttendance()
+        || (resource.data.open == true && semesterUnlocked(resource.data.semester));
+      allow list: if viewAttendance();
+
+      allow create: if
+        editAttendance()
+        && request.resource.data.keys().hasOnly([
+          "token", "semester", "semesterCode", "semesterName",
+          "groupId", "itemId", "itemName", "groupName",
+          "points", "mode", "startAt", "endAt", "instruction",
+          "open", "createdBy", "createdAt"
+        ])
+        && request.resource.data.token == token
+        && validSemesterCode(request.resource.data.semester)
+        && request.resource.data.semesterCode == request.resource.data.semester
+        && semesterUnlocked(request.resource.data.semester)
+        && request.resource.data.itemId is string
+        && request.resource.data.itemId.size() > 0
+        && request.resource.data.itemId.size() <= 160
+        && request.resource.data.itemName is string
+        && request.resource.data.itemName.size() <= 200
+        && request.resource.data.groupId is string
+        && request.resource.data.groupId.size() <= 160
+        && request.resource.data.groupName is string
+        && request.resource.data.groupName.size() <= 200
+        && (request.resource.data.points is int || request.resource.data.points is float)
+        && request.resource.data.points >= 0
+        && request.resource.data.mode in ["checkbox", "number"]
+        && request.resource.data.startAt is timestamp
+        && request.resource.data.endAt is timestamp
+        && request.resource.data.endAt > request.resource.data.startAt
+        && request.resource.data.instruction is string
+        && request.resource.data.instruction.size() <= 500
+        && request.resource.data.open == true
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        editAttendance()
+        && request.resource.data.semester == resource.data.semester
+        && semesterUnlocked(resource.data.semester)
+        && (
+          // Close an open QR.
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "open", "closedAt", "closedBy"
+            ])
+            && request.resource.data.open == false
+            && request.resource.data.closedAt == request.time
+            && request.resource.data.closedBy == request.auth.uid
+          )
+          ||
+          // Edit the start/end time without changing open/closed state.
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "startAt", "endAt", "updatedAt", "updatedBy"
+            ])
+            && request.resource.data.open == resource.data.open
+            && request.resource.data.startAt is timestamp
+            && request.resource.data.endAt is timestamp
+            && request.resource.data.endAt > request.resource.data.startAt
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.updatedBy == request.auth.uid
+          )
+          ||
+          // Reopen the SAME QR/link. Old check-ins remain; one-MSSV-per-QR is preserved.
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "open", "startAt", "endAt",
+              "reopenedAt", "reopenedBy",
+              "updatedAt", "updatedBy"
+            ])
+            && request.resource.data.open == true
+            && request.resource.data.startAt is timestamp
+            && request.resource.data.endAt is timestamp
+            && request.resource.data.endAt > request.resource.data.startAt
+            && request.resource.data.reopenedAt == request.time
+            && request.resource.data.reopenedBy == request.auth.uid
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.updatedBy == request.auth.uid
+          )
+        );
+
+      allow delete: if
+        editAttendance()
+        && semesterUnlocked(resource.data.semester);
+
+      match /checkins/{checkinId} {
+        allow create: if
+          get(/databases/$(database)/documents/attendancePortals/$(token)).data.open == true
+          && semesterUnlocked(get(/databases/$(database)/documents/attendancePortals/$(token)).data.semester)
+          && request.time >= get(/databases/$(database)/documents/attendancePortals/$(token)).data.startAt
+          && request.time <= get(/databases/$(database)/documents/attendancePortals/$(token)).data.endAt
+          && request.resource.data.keys().hasOnly([
+            "mssv", "name", "mssvKey", "status", "createdAt"
+          ])
+          && request.resource.data.mssvKey is string
+          && request.resource.data.mssvKey == checkinId
+          && request.resource.data.mssv == checkinId
+          && request.resource.data.mssvKey.size() > 0
+          && request.resource.data.mssvKey.size() <= 50
+          && request.resource.data.mssv is string
+          && request.resource.data.mssv.size() > 0
+          && request.resource.data.mssv.size() <= 50
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 120
+          && request.resource.data.status == "pending"
+          && request.resource.data.createdAt == request.time;
+
+        allow read: if viewAttendance();
+
+        allow update: if
+          editAttendance()
+          && semesterUnlocked(get(/databases/$(database)/documents/attendancePortals/$(token)).data.semester)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "memberId", "decidedAt", "decidedBy"
+          ])
+          && request.resource.data.status in ["approved", "rejected"]
+          && request.resource.data.decidedAt == request.time
+          && request.resource.data.decidedBy == request.auth.uid
+          && (
+            request.resource.data.status == "rejected"
+            || (
+              request.resource.data.memberId is string
+              && request.resource.data.memberId.size() > 0
+              && request.resource.data.memberId.size() <= 240
+            )
+          );
+
+        allow delete: if
+          editAttendance()
+          && semesterUnlocked(get(/databases/$(database)/documents/attendancePortals/$(token)).data.semester);
+      }
+    }
+
+    // ===== Settings =====
+    match /settings/{id} {
+      allow read: if active();
+      allow create, update, delete: if admin();
+    }
+
+    // Explicit default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
