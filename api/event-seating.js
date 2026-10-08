@@ -92,16 +92,27 @@ function cleanAnswer(v){
 function validateAnswers(event,raw){
   if(!raw||typeof raw!=="object"||Array.isArray(raw))throw bad("Dữ liệu phản hồi không hợp lệ.");
   if(JSON.stringify(raw).length>60000)throw bad("Dữ liệu phản hồi quá lớn.");
-  const fields=Array.isArray(event?.fields)?event.fields:[],out={};
+  const fields=Array.isArray(event?.fields)?event.fields:[],out={},allowedIds=new Set();
   for(const f of fields){
     const type=String(f?.type||"text"),id=String(f?.id||"").slice(0,180);
     if(!id||["image","content","section"].includes(type))continue;
+    allowedIds.add(id);
     const v=cleanAnswer(raw[id]);
     if(f?.required===true&&answerEmpty(v))throw bad("Vui lòng trả lời câu bắt buộc: "+cleanText(f?.label||"Thông tin",120));
     if(type==="email"&&!answerEmpty(v)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))throw bad("Email không hợp lệ.");
     if(type==="mssv"&&!answerEmpty(v)&&!/^[A-Za-z0-9_-]{4,30}$/.test(String(v).trim()))throw bad("MSSV không hợp lệ.");
+    if(type==="phone"&&!answerEmpty(v)&&!/^[0-9+().\s-]{6,30}$/.test(String(v)))throw bad("Số điện thoại không hợp lệ.");
+    if(type==="number"&&!answerEmpty(v)&&!Number.isFinite(Number(v)))throw bad("Giá trị số không hợp lệ.");
+    const options=(Array.isArray(f?.options)?f.options:[]).map(x=>String(typeof x==="object"?(x?.label??x?.value??x?.text??""):x));
+    if(["radio","select"].includes(type)&&!answerEmpty(v)&&options.length&&!options.includes(String(v)))throw bad("Lựa chọn không hợp lệ: "+cleanText(f?.label||"Thông tin",120));
+    if(type==="checkboxes"&&!answerEmpty(v)){
+      if(!Array.isArray(v))throw bad("Dữ liệu hộp kiểm không hợp lệ.");
+      if(options.length&&v.some(x=>!options.includes(String(x))))throw bad("Có lựa chọn không hợp lệ: "+cleanText(f?.label||"Thông tin",120));
+    }
     out[id]=v;
   }
+  const unknown=Object.keys(raw).filter(k=>!allowedIds.has(String(k)));
+  if(unknown.length)throw bad("Biểu mẫu chứa trường dữ liệu không hợp lệ.");
   if(Object.keys(out).length>60)throw bad("Biểu mẫu có quá nhiều trường trả lời.");
   return out
 }
@@ -124,7 +135,7 @@ function isDeclinedParticipation(field,answer){
   if(!label.includes("tham gia"))return false;
   return value==="khong"||value.startsWith("khong ")||value.includes("khong tham gia")||value.includes("khong the tham gia")||value.includes("tu choi");
 }
-function resolveSubmissionDestination(event,answers){
+function resolveSubmissionDestination(event,answers,defaultDestination="submit"){
   const fields=Array.isArray(event?.fields)?event.fields:[];
   for(const field of fields){
     if(String(field?.type||"")!=="radio")continue;
@@ -133,7 +144,13 @@ function resolveSubmissionDestination(event,answers){
     if(explicit)return explicit;
     if(isDeclinedParticipation(field,answer))return "submit";
   }
-  return "seat";
+  return defaultDestination==="seat"?"seat":"submit";
+}
+function enforcePublicRequestSecurity(req){
+  const site=String(req.headers["sec-fetch-site"]||"").toLowerCase();
+  if(site==="cross-site")throw bad("Yêu cầu từ nguồn không hợp lệ.","osc/cross-site");
+  const type=String(req.headers["content-type"]||"").toLowerCase();
+  if(type&&!type.includes("application/json"))throw bad("Định dạng yêu cầu không hợp lệ.","osc/content-type");
 }
 function deriveSubmitterLabel(event,answers,fallback){
   const fields=Array.isArray(event?.fields)?event.fields:[];
@@ -162,15 +179,17 @@ async function enforceCreateRate(req,db,eventId,clientId){
   await bumpRate(db,col.doc(rateKey(["ip",eventId,ip])),now,windowMs,300,"Mạng này đang có quá nhiều đăng ký cùng lúc. Vui lòng thử lại sau.");
 }
 async function createSubmission(req,body){
+  enforcePublicRequestSecurity(req);
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
   if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   if(!eventOpen(event))throw bad("Cổng sự kiện hiện không nhận đăng ký.","osc/event-closed");
-  seatsFromConfig(cfg);
+  const cfg=normalizeConfig(event.seating);
+  if(cfg.enabled)seatsFromConfig(cfg);
   await enforceCreateRate(req,db,eventId,body.clientId);
   const answers=validateAnswers(event,body.answers);
   const submitterLabel=deriveSubmitterLabel(event,answers,body.submitterLabel);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
-  const nextDestination=resolveSubmissionDestination(event,answers);
+  const nextDestination=resolveSubmissionDestination(event,answers,cfg.enabled?"seat":"submit");
+  if(nextDestination==="seat"&&!cfg.enabled)throw bad("Lựa chọn này yêu cầu chọn ghế nhưng sự kiện chưa bật sơ đồ ghế.","osc/seating-disabled");
   const submissionId="sub_"+crypto.randomBytes(16).toString("hex"),now=Date.now();
   const ref=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
 
@@ -180,7 +199,7 @@ async function createSubmission(req,body){
       submissionDestination:"submit",seatSelectionRequired:false,seatStatus:"not-required",
       createdAt:admin.firestore.FieldValue.serverTimestamp()
     });
-    return{ok:true,version:93,submissionId,nextDestination:"submit",seatSelectionRequired:false}
+    return{ok:true,version:94,submissionId,nextDestination:"submit",seatSelectionRequired:false}
   }
 
   const claimToken=cleanToken(body.claimToken);
@@ -191,7 +210,7 @@ async function createSubmission(req,body){
     seatSessionExpiresAt:admin.firestore.Timestamp.fromMillis(now+2*60*60*1000),
     createdAt:admin.firestore.FieldValue.serverTimestamp()
   });
-  return{ok:true,version:93,submissionId,nextDestination:"seat",seatSelectionRequired:true,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
+  return{ok:true,version:94,submissionId,nextDestination:"seat",seatSelectionRequired:true,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
 }
 async function publicState(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
@@ -199,7 +218,7 @@ async function publicState(body){
   const session=await verifySeatSession(db,eventId,body.submissionId,body.claimToken),seats=seatsFromConfig(cfg);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
   const occupied=snap.docs.map(d=>String(d.id));
-  return{ok:true,version:93,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
+  return{ok:true,version:94,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
 }
 async function claimSeat(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
@@ -226,12 +245,12 @@ async function claimSeat(body){
     tx.update(subRef,{seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp()});
     changed=true;
   });
-  return{ok:true,version:93,seat,changed}
+  return{ok:true,version:94,seat,changed}
 }
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
-  return{ok:true,version:93,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
+  return{ok:true,version:94,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
 }
 async function adminRelease(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),seatId=cleanId(body.seatId,"Ghế"),ref=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),snap=await ref.get();
@@ -261,10 +280,10 @@ async function adminReleaseManySubmissionSeats(req,body){
   for(let i=0;i<pairs.length;i++){const p=pairs[i],seatSnap=seatSnaps[i];if(seatSnap?.exists&&String(seatSnap.data()?.submissionId||"")===p.submissionId)batch.delete(seatSnap.ref);batch.set(p.subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});released++}
   await batch.commit();return{ok:true,released}
 }
-function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(code==="osc/rate-limited")return 429;return 400}
+function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(["osc/cross-site","osc/content-type"].includes(code))return 403;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:93});
+    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:94});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="public-create-submission")out=await createSubmission(req,body);
