@@ -838,6 +838,7 @@ async function init(){
       const schemaChanged=publicSchemaSignature(incoming)!==eventRenderedSchemaSignature;
 
       eventConfig=incoming;
+      document.title=`${String(incoming.title||"Sự kiện").trim()||"Sự kiện"} • Our Stage`;
 
       // Firestore có thể phát snapshot cache rồi snapshot server.
       // Không dựng lại toàn bộ input nếu schema không đổi, tránh mất focus/giá trị đang nhập.
@@ -1141,22 +1142,10 @@ $("#eventForm").addEventListener("submit",async e=>{
     const nameField=nameIndex>=0?fields[nameIndex]:null;
 
     const submitterLabel=(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||"Phản hồi";
-    if(eventConfig?.seating?.enabled===true){
-      const claimToken=randomSeatToken();
-      const d=await seatApi({action:"public-create-submission",eventId,answers,submitterLabel,claimToken,clientId:seatClientId});
-      setSubmitState("");
-      await beginSeatSelection({submissionId:d.submissionId,claimToken,sessionExpiresAt:d.sessionExpiresAt||0});
-    }else{
-      await db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).set({
-        eventId,
-        semester:eventConfig.semester||"",
-        answers,
-        submitterLabel,
-        actionApplied:false,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-      showSubmissionSuccess();
-    }
+    const claimToken=randomSeatToken();
+    const d=await seatApi({action:"public-create-submission",eventId,answers,submitterLabel,claimToken,clientId:seatClientId});
+    setSubmitState("");
+    await beginSeatSelection({submissionId:d.submissionId,claimToken,sessionExpiresAt:d.sessionExpiresAt||0});
   }catch(err){
     console.error("event submit",err);
     const code=String(err?.code||"");
