@@ -2211,6 +2211,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button data-tab="divisions">Phân ban</button>
         <button data-tab="finance">Thu Chi CLB</button>
         <button data-tab="events">Cổng sự kiện</button>
+        <button data-tab="operations">Điều hành nâng cao</button>
         <button data-tab="ticketStudio" class="admin-nav">Ticket Studio</button>
         <button data-tab="memberQr" class="admin-nav">Mã QR thành viên</button>
         <button data-tab="lookupPortal">Tra cứu thành viên</button>
@@ -2535,6 +2536,10 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
     </section>
 
 
+
+    <section id="operations" class="hidden">
+      <div id="v95OperationsRoot"><div class="empty">Đang tải Điều hành nâng cao…</div></div>
+    </section>
 
     <section id="ticketStudio" class="hidden">
       <div class="ts-hero">
@@ -3049,10 +3054,21 @@ let lookupLastAutoSyncAt=0,lookupAutoSyncInFlight=false,lookupAutoSyncPending=fa
 function role(){return currentProfile?.role||""}
 function canEditClub(){return role()==="admin"||role()==="superadmin"}
 function isBCN(){return role()==="bcn"}
+function activeTemporaryPermissions(){
+  if(!isBCN())return null;
+  const t=currentProfile?.temporaryPermissions;
+  if(!t||typeof t!=="object")return null;
+  const expires=t.expiresAt?.toMillis?.()||t.expiresAt?.toDate?.()?.getTime?.()||Number(t.expiresAt||0)||0;
+  return expires>Date.now()&&t.permissions&&typeof t.permissions==="object"?t.permissions:null;
+}
+function effectivePermissions(){
+  const p={...(currentProfile?.permissions||{})},t=activeTemporaryPermissions();
+  if(t)Object.keys(t).forEach(k=>{if(t[k]===true)p[k]=true});
+  return p;
+}
 function hasViewPermission(key){
   if(canEditClub())return true;
-  const p=currentProfile?.permissions||{};
-  return p[key]===true;
+  return effectivePermissions()[key]===true;
 }
 const MODULE_PERMISSION_KEYS={
   attendance:["viewAttendance","editAttendance"],
@@ -3066,7 +3082,7 @@ function canViewModule(module){
   if(!isBCN())return false;
   const pair=MODULE_PERMISSION_KEYS[module];
   if(!pair)return false;
-  return currentProfile?.permissions?.[pair[0]]===true;
+  return effectivePermissions()[pair[0]]===true;
 }
 const TAB_PERMISSION_MODULE={
   manage:"attendance",
@@ -3078,7 +3094,7 @@ const TAB_PERMISSION_MODULE={
   lookupPortal:"lookup"
 };
 function canAccessTab(tab){
-  if(["dashboard","attention","myAccount"].includes(tab))return true;
+  if(["dashboard","attention","myAccount","operations"].includes(tab))return true;
   if(["freeLookup","ticketStudio","memberQr","approvals","audit","trash","accounts","settings"].includes(tab))return canEditClub();
   const module=TAB_PERMISSION_MODULE[tab];
   return module?canViewModule(module):canEditClub();
@@ -3594,7 +3610,7 @@ function canEditModule(module){
   if(canEditClub())return true;
   if(!isBCN())return false;
   const pair=MODULE_PERMISSION_KEYS[module];if(!pair)return false;
-  const [v,e]=pair,p=currentProfile?.permissions||{};
+  const [v,e]=pair,p=effectivePermissions();
   if(module==="lookup")return false;
   return p[v]===true&&p[e]===true;
 }
@@ -4538,6 +4554,7 @@ function applyRoleAccess(){
     info:canViewModule("members"),
     finance:canViewModule("finance"),
     events:canViewModule("events"),
+    operations:true,
     ticketStudio:canEditClub(),
     memberQr:canEditClub(),
     lookupPortal:canViewModule("lookup"),
@@ -4612,7 +4629,7 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   target.classList.remove("hidden");requestAnimationFrame(()=>target.classList.add("workspace-window-enter"));
   b.scrollIntoView({block:"nearest",behavior:"smooth"});
   $("#pageTitle").textContent=navLabel(tab);noteWorkspace(tab);closeMobileSidebar();
-  if(tab!=="events")stopEventQrSummaryPolling();if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
+  if(tab!=="events")stopEventQrSummaryPolling();if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="operations"&&typeof renderV95Operations==="function")renderV95Operations();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
   updateWorkspaceWindowMeta();applyRoleAccess();
 });
 $("#semester").onchange=async e=>{
@@ -7399,7 +7416,7 @@ function renderEvents(){
             ${(()=>{const st=eventAvailability(ev);return `<span class="${st.className}">${esc(st.label)}</span>`})()}
             • Học kỳ: <b>${esc(sem().name||semester)}</b>
             • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${eventAnswerFieldCount(ev)} trường`:"Thiếu trường"}</span>
-            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span> • <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in: Bật":"QR check-in: Tắt"}</span> • <span class="event-qr-checkin-badge ${ev.ticketStudioEnabled===true?"":"off"}">${ev.ticketStudioEnabled===true?"Ticket Studio: Bật":"Ticket Studio: Tắt"}</span>${ev.qrCheckinEnabled===true?` • <span class="event-checkin-audience-badge ${ev.qrCheckinAudience==="public"?"public":""}">${ev.qrCheckinAudience==="public"?"Check-in Public":"Chỉ thành viên"}</span>`:""}${ev.qrCheckinEnabled===true?` • <span id="eventQrSummary_${esc(ev.id)}" class="event-checkin-count-badge">Check-in: …</span>`:""}${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
+            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span> • <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in: Bật":"QR check-in: Tắt"}</span> • <span class="event-qr-checkin-badge ${ev.ticketStudioEnabled===true?"":"off"}">${ev.ticketStudioEnabled===true?"Ticket Studio: Bật":"Ticket Studio: Tắt"}</span>${Number(ev.capacity||0)>0?` • <span class="event-points-badge">${Number(ev.capacity)} suất${ev.capacityReached===true?" • Đã đủ":""}</span>`:""}${ev.qrCheckinEnabled===true?` • <span class="event-checkin-audience-badge ${ev.qrCheckinAudience==="public"?"public":""}">${ev.qrCheckinAudience==="public"?"Check-in Public":"Chỉ thành viên"}</span>`:""}${ev.qrCheckinEnabled===true?` • <span id="eventQrSummary_${esc(ev.id)}" class="event-checkin-count-badge">Check-in: …</span>`:""}${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
           </div>
         </div>
         ${ev.specialType==="continuation"
@@ -7410,7 +7427,7 @@ function renderEvents(){
         <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
         <button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng / Test nhập</button>
         <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
-        ${ev.qrCheckinEnabled===true&&(canViewModule("attendance")||canEditClub())?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">${canEditModule("attendance")?"Quét / duyệt QR":"Kết quả QR"}</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventScannerLinkManager('${ev.id}')">Link check-in ngoài BCN</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventStaffLinkManager('${ev.id}')">Link tra cứu Staff</button>${ev.ticketStudioEnabled===true?`<button class="secondary" onclick="openTab('ticketStudio');setTimeout(()=>{const s=document.getElementById('tsEventSelect');if(s){s.value='${ev.id}';s.dispatchEvent(new Event('change'))}},120)">Ticket Studio</button>`:""}`:""}
+        ${ev.qrCheckinEnabled===true&&(canViewModule("attendance")||canEditClub())?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">${canEditModule("attendance")?"Quét / duyệt QR":"Kết quả QR"}</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventScannerLinkManager('${ev.id}')">Link check-in ngoài BCN</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventStaffLinkManager('${ev.id}')">Link tra cứu Staff</button>${ev.ticketStudioEnabled===true?`<button class="secondary" onclick="openTab('ticketStudio');setTimeout(()=>{const s=document.getElementById('tsEventSelect');if(s){s.value='${ev.id}';s.dispatchEvent(new Event('change'))}},120)">Ticket Studio</button>`:""}<button class="secondary" onclick="openV95EventControl('${ev.id}')">Live Control</button>`:""}
         <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
         ${canEditModule("events")?`
           <button class="secondary edit-only" onclick="openEventBuilder('${ev.id}')">Chỉnh sửa</button>
@@ -7717,6 +7734,10 @@ async function openEventBuilder(eventId=""){
       <label>Ticket Studio
         <select id="eventTicketStudioEnabled"><option value="0" ${(ev?.ticketStudioEnabled||tpl?.ticketStudioEnabled)!==true?"selected":""}>Tắt cho sự kiện này</option><option value="1" ${(ev?.ticketStudioEnabled||tpl?.ticketStudioEnabled)===true?"selected":""}>Bật Ticket Studio</option></select>
         <div class="permission-note">Chỉ sự kiện bật mục này mới xuất hiện trong Ticket Studio và mới có thể mở cổng nhận vé.</div>
+      </label>
+      <label>Giới hạn đăng ký / Capacity
+        <input id="eventCapacity" type="number" min="0" max="100000" step="1" value="${Number(ev?.capacity||tpl?.capacity||0)||""}" placeholder="Để trống = không giới hạn">
+        <div class="permission-note">Khi đạt giới hạn, server tự khóa nhận phản hồi mới. Câu trả lời “không tham gia” không chiếm suất.</div>
       </label>
       <label>Tiêu đề sau khi gửi<input id="eventSuccessTitle" value="${esc(ev?.successTitle||"Gửi thông tin thành công")}"></label>
       <label>Lời nhắn kết quả<input id="eventSuccessMessage" value="${esc(ev?.successMessage||"CLB đã ghi nhận thông tin của bạn.")}"></label>
@@ -8273,6 +8294,8 @@ async function saveEventBuilder(){
   if(approximateSize>850000)return alert("Form có quá nhiều/ảnh quá lớn. Hãy giảm số ảnh hoặc dùng ảnh nhỏ hơn.");
 
   const action=$("#eventResultAction").value;
+  const capacityRaw=String($("#eventCapacity")?.value||"").trim(),capacity=capacityRaw===""?0:Number(capacityRaw);
+  if(!Number.isInteger(capacity)||capacity<0||capacity>100000)return alert("Giới hạn đăng ký phải là số nguyên từ 0 đến 100.000.");
   const eventPointsRaw=String($("#eventPoints")?.value||"").trim();
   const eventPoints=eventPointsRaw===""?0:Number(eventPointsRaw);
   if(!Number.isFinite(eventPoints)||eventPoints<0||eventPoints>1000)return alert("Điểm sự kiện phải từ 0 đến 1000.");
@@ -8344,8 +8367,10 @@ async function saveEventBuilder(){
     qrCheckinAudience:$("#eventQrCheckinAudience")?.value==="public"?"public":"members",
     qrCheckinVersion:2,
     ticketStudioEnabled:$("#eventTicketStudioEnabled")?.value==="1",
+    capacity,
+    capacityReached:capacity>0&&ev?.capacityReached===true&&Number(ev?.capacity||0)===capacity,
     seating,
-    fieldSchemaVersion:4,
+    fieldSchemaVersion:5,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
     successMessage:$("#eventSuccessMessage").value.trim()||"CLB đã ghi nhận thông tin của bạn.",
     fields:fullFields
@@ -10810,8 +10835,9 @@ function renderAll(){
   applyZeroClearBehavior();bindCurrencyInputs(document);if(currentProfile)applyRoleAccess();
 }
 </script>
-<script src="/seat-studio-admin.js?v=92"></script>
-<script src="/ticket-studio-admin.js"></script>
-<script src="event-routing-admin.js"></script>
+<script src="/seat-studio-admin.js?v=95"></script>
+<script src="/ticket-studio-admin.js?v=95"></script>
+<script src="/event-routing-admin.js?v=95"></script>
+<script src="/v95-operations.js?v=95"></script>
 </body>
 </html>
