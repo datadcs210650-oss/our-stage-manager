@@ -16,6 +16,13 @@ function tokenHash(v){return crypto.createHash("sha256").update(cleanToken(v)).d
 function clamp(n,a,b){const x=Number(n);return Math.min(b,Math.max(a,Number.isFinite(x)?x:a))}
 function cleanPart(v,max=40){return String(v||"").trim().replace(/[^A-Za-z0-9_-]/g,"_").slice(0,max)}
 function normalizeRows(v){const src=Array.isArray(v)?v:String(v||"").split(",");return src.map(x=>cleanText(x,12)).filter(Boolean).slice(0,40)}
+const SEAT_AUDIENCES=new Set(["public","vip","bcn","guest","artist","sponsor","media"]);
+function normalizeAudience(v){const x=String(v||"public").toLowerCase();return SEAT_AUDIENCES.has(x)?x:"public"}
+function parseLockedSeats(v){
+  const raw=Array.isArray(v)?v:String(v||"").split(/[\n,;\s]+/),out=new Set();
+  for(const item of raw){const part=String(item||"").trim().toUpperCase();if(!part)continue;const range=part.match(/^(.{1,12}?)(\d{1,4})-\1?(\d{1,4})$/);if(range){const row=range[1],a=Number(range[2]),b=Number(range[3]),lo=Math.min(a,b),hi=Math.max(a,b);for(let n=lo;n<=hi&&n-lo<200;n++)out.add(row+n);continue}const one=part.match(/^(.{1,12}?)(\d{1,4})$/);if(one)out.add(one[1]+Number(one[2]))}
+  return [...out].slice(0,1200)
+}
 function normalizeRowSpecs(section,seatsPerRow){
   const raw=Array.isArray(section?.rowSpecs)?section.rowSpecs:[];
   const out=[],seen=new Set();
@@ -45,7 +52,9 @@ function normalizeConfig(raw){
       id,name:cleanText(s.name||("Khu "+(i+1)),60),
       x:clamp(s.x,0,94),y:clamp(s.y,0,94),w:clamp(s.w||32,12,94),
       rowSpecs,rows:rowSpecs.map(x=>x.label),seatsPerRow,
-      startNumber:Math.round(clamp(s.startNumber||1,1,999)),reverse:s.reverse===true
+      startNumber:Math.round(clamp(s.startNumber||1,1,999)),reverse:s.reverse===true,
+      audience:normalizeAudience(s.audience||s.reservedFor),
+      lockedSeats:parseLockedSeats(s.lockedSeats||s.lockedSeatsText||[])
     }
   });
   const stage=normalizeStage(src.stage||{x:src.stageX,y:src.stageY,w:src.stageW,h:src.stageH});
@@ -64,7 +73,8 @@ function seatsFromConfig(config){
         const num=sec.startNumber+(sec.reverse?(count-1-i):i);
         const raw=sec.id+"|"+row+"|"+num,id=crypto.createHash("sha256").update(raw).digest("hex").slice(0,28);
         if(seen.has(id))throw bad("Sơ đồ ghế có ghế trùng.","osc/seat-config-invalid");
-        seen.add(id);out.push({id,sectionId:sec.id,sectionName:sec.name,row,number:num,label:`${row}${num}`});
+        const label=`${row}${num}`,locked=(sec.lockedSeats||[]).includes(String(label).toUpperCase());
+        seen.add(id);out.push({id,sectionId:sec.id,sectionName:sec.name,row,number:num,label,audience:sec.audience||"public",locked,publicSelectable:(sec.audience||"public")==="public"&&!locked});
       }
     }
   }
@@ -73,7 +83,37 @@ function seatsFromConfig(config){
 }
 function publicConfig(event){
   const cfg=normalizeConfig(event.seating);
-  return{enabled:cfg.enabled,title:cfg.title,stageLabel:cfg.stageLabel,canvasHeight:cfg.canvasHeight,stage:cfg.stage,sections:cfg.sections.map(s=>({...s,rowSpecs:s.rowSpecs.map(r=>({...r}))}))}
+  return{enabled:cfg.enabled,title:cfg.title,stageLabel:cfg.stageLabel,canvasHeight:cfg.canvasHeight,stage:cfg.stage,sections:cfg.sections.map(s=>({...s,rowSpecs:s.rowSpecs.map(r=>({...r})),lockedSeats:[...(s.lockedSeats||[])]}))}
+}
+function eventCapacity(event){const n=Math.floor(Number(event?.capacity||event?.registrationCapacity||0));return Number.isFinite(n)&&n>0?Math.min(n,100000):0}
+function submissionDeclined(event,answers){
+  const fields=Array.isArray(event?.fields)?event.fields:[];
+  return fields.some(field=>String(field?.type||"")==="radio"&&isDeclinedParticipation(field,answers?.[String(field?.id||"")]))
+}
+async function initialCapacityCount(db,event){
+  const snap=await db.collection("eventPortals").doc(event.id).collection("submissions").get();let count=0;
+  for(const doc of snap.docs){const d=doc.data()||{};if(d.countsTowardCapacity===false)continue;if(d.countsTowardCapacity===true){count++;continue}if(!submissionDeclined(event,d.answers||{}))count++}
+  return count
+}
+async function saveSubmissionWithCapacity(db,event,ref,payload,countsTowardCapacity){
+  const limit=eventCapacity(event);if(!limit||!countsTowardCapacity){await ref.create(payload);return{count:null,limit,reached:false}}
+  const counterRef=db.collection("eventCapacityCounters").doc(event.id),pre=await counterRef.get();
+  const base=pre.exists?null:await initialCapacityCount(db,event);
+  let finalCount=0;
+  try{
+    await db.runTransaction(async tx=>{
+      const counter=await tx.get(counterRef);const current=counter.exists?Math.max(0,Number(counter.data()?.count||0)):Math.max(0,Number(base||0));
+      if(current>=limit)throw bad("Sự kiện đã đủ số lượng đăng ký.","osc/event-capacity-reached");
+      finalCount=current+1;
+      tx.set(counterRef,{eventId:event.id,semester:String(event.semester||""),count:finalCount,limit,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+      tx.set(ref,payload,{merge:false});
+    });
+  }catch(e){
+    if(e?.code==="osc/event-capacity-reached")await db.collection("eventPortals").doc(event.id).set({isOpen:false,capacityReached:true,capacityReachedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(()=>{});
+    throw e
+  }
+  if(finalCount>=limit)await db.collection("eventPortals").doc(event.id).set({isOpen:false,capacityReached:true,capacityReachedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  return{count:finalCount,limit,reached:finalCount>=limit}
 }
 async function verifySeatSession(db,eventId,submissionId,claimToken){
   const subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(cleanId(submissionId,"Phản hồi")),snap=await subRef.get();
@@ -182,35 +222,31 @@ async function createSubmission(req,body){
   enforcePublicRequestSecurity(req);
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
   if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  if(!eventOpen(event))throw bad("Cổng sự kiện hiện không nhận đăng ký.","osc/event-closed");
+  if(!eventOpen(event))throw bad(event?.capacityReached===true?"Sự kiện đã đủ số lượng đăng ký.":"Cổng sự kiện hiện không nhận đăng ký.",event?.capacityReached===true?"osc/event-capacity-reached":"osc/event-closed");
   const cfg=normalizeConfig(event.seating);
   if(cfg.enabled)seatsFromConfig(cfg);
   await enforceCreateRate(req,db,eventId,body.clientId);
   const answers=validateAnswers(event,body.answers);
   const submitterLabel=deriveSubmitterLabel(event,answers,body.submitterLabel);if(!submitterLabel)throw bad("Thiếu tên/người gửi.");
+  const declined=submissionDeclined(event,answers),countsTowardCapacity=!declined;
   const nextDestination=resolveSubmissionDestination(event,answers,cfg.enabled?"seat":"submit");
   if(nextDestination==="seat"&&!cfg.enabled)throw bad("Lựa chọn này yêu cầu chọn ghế nhưng sự kiện chưa bật sơ đồ ghế.","osc/seating-disabled");
   const submissionId="sub_"+crypto.randomBytes(16).toString("hex"),now=Date.now();
   const ref=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
+  const common={eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,countsTowardCapacity};
 
   if(nextDestination==="submit"){
-    await ref.create({
-      eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,
-      submissionDestination:"submit",seatSelectionRequired:false,seatStatus:"not-required",
-      createdAt:admin.firestore.FieldValue.serverTimestamp()
-    });
-    return{ok:true,version:94,submissionId,nextDestination:"submit",seatSelectionRequired:false}
+    const cap=await saveSubmissionWithCapacity(db,event,ref,{...common,submissionDestination:"submit",seatSelectionRequired:false,seatStatus:"not-required",createdAt:admin.firestore.FieldValue.serverTimestamp()},countsTowardCapacity);
+    return{ok:true,version:95,submissionId,nextDestination:"submit",seatSelectionRequired:false,capacity:cap}
   }
 
   const claimToken=cleanToken(body.claimToken);
-  await ref.create({
-    eventId,semester:String(event.semester||""),answers,submitterLabel,actionApplied:false,
-    submissionDestination:"seat",seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
-    seatSessionCreatedAt:admin.firestore.Timestamp.fromMillis(now),
-    seatSessionExpiresAt:admin.firestore.Timestamp.fromMillis(now+2*60*60*1000),
+  const cap=await saveSubmissionWithCapacity(db,event,ref,{
+    ...common,submissionDestination:"seat",seatSelectionRequired:true,seatStatus:"pending",seatClaimHash:tokenHash(claimToken),
+    seatSessionCreatedAt:admin.firestore.Timestamp.fromMillis(now),seatSessionExpiresAt:admin.firestore.Timestamp.fromMillis(now+2*60*60*1000),
     createdAt:admin.firestore.FieldValue.serverTimestamp()
-  });
-  return{ok:true,version:94,submissionId,nextDestination:"seat",seatSelectionRequired:true,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000}
+  },countsTowardCapacity);
+  return{ok:true,version:95,submissionId,nextDestination:"seat",seatSelectionRequired:true,seating:publicConfig(event),sessionExpiresAt:now+2*60*60*1000,capacity:cap}
 }
 async function publicState(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
@@ -218,13 +254,14 @@ async function publicState(body){
   const session=await verifySeatSession(db,eventId,body.submissionId,body.claimToken),seats=seatsFromConfig(cfg);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
   const occupied=snap.docs.map(d=>String(d.id));
-  return{ok:true,version:94,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
+  return{ok:true,version:95,seating:publicConfig(event),seats,occupied,currentSeatId:String(session.data.seatId||""),currentSeatLabel:String(session.data.seatLabel||""),seatCount:seats.length}
 }
 async function claimSeat(body){
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),state=await loadState(db);
   if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   const seats=seatsFromConfig(cfg),seat=seats.find(x=>x.id===String(body.seatId||""));if(!seat)throw bad("Ghế không tồn tại trong sơ đồ.","osc/seat-invalid");
+  if(seat.publicSelectable!==true)throw bad("Ghế này thuộc khu dành riêng hoặc đã được VIP Seat Lock. Vui lòng chọn ghế khác.","osc/seat-reserved");
   const submissionId=cleanId(body.submissionId,"Phản hồi"),claimHash=tokenHash(body.claimToken);
   const subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId);
   const claims=db.collection("eventSeatClaims").doc(eventId).collection("seats"),newRef=claims.doc(seat.id);
@@ -245,12 +282,28 @@ async function claimSeat(body){
     tx.update(subRef,{seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp()});
     changed=true;
   });
-  return{ok:true,version:94,seat,changed}
+  return{ok:true,version:95,seat,changed}
+}
+async function adminAssignSeat(req,body){
+  const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),submissionId=cleanId(body.submissionId,"Phản hồi"),seatId=cleanId(body.seatId,"Ghế");
+  const [{data:event},state]=await Promise.all([loadEvent(db,eventId),loadState(db)]);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
+  const seat=seatsFromConfig(cfg).find(x=>x.id===seatId);if(!seat)throw bad("Ghế không tồn tại trong sơ đồ.","osc/seat-invalid");
+  const subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),claims=db.collection("eventSeatClaims").doc(eventId).collection("seats"),newRef=claims.doc(seat.id);
+  await db.runTransaction(async tx=>{
+    const [subSnap,newSnap]=await Promise.all([tx.get(subRef),tx.get(newRef)]);if(!subSnap.exists)throw bad("Không tìm thấy phản hồi đăng ký.","osc/submission-not-found");
+    const sub=subSnap.data()||{};if(newSnap.exists&&String(newSnap.data()?.submissionId||"")!==submissionId)throw bad("Ghế đã có người khác.","osc/seat-taken");
+    if(sub.seatId&&String(sub.seatId)!==seat.id){const oldRef=claims.doc(String(sub.seatId)),old=await tx.get(oldRef);if(old.exists&&String(old.data()?.submissionId||"")===submissionId)tx.delete(oldRef)}
+    tx.set(newRef,{eventId,submissionId,seatId:seat.id,seatLabel:seat.label,sectionId:seat.sectionId,sectionName:seat.sectionName,row:seat.row,number:seat.number,audience:seat.audience,assignedByAdmin:true,claimedAt:admin.firestore.FieldValue.serverTimestamp(),assignedBy:actor.decoded.uid},{merge:false});
+    tx.set(subRef,{seatSelectionRequired:true,submissionDestination:"seat",seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp(),seatAssignedByAdmin:true,seatAssignedBy:actor.decoded.uid},{merge:true});
+  });
+  return{ok:true,version:95,seat}
 }
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
-  return{ok:true,version:94,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,actorRole:actor.profile.role}
+  const claims=snap.docs.map(d=>({seatId:d.id,...(d.data()||{})}));
+  return{ok:true,version:95,eventId,seating:publicConfig(event),claimed:snap.size,total:seatsFromConfig(cfg).length,claims,actorRole:actor.profile.role}
 }
 async function adminRelease(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),seatId=cleanId(body.seatId,"Ghế"),ref=db.collection("eventSeatClaims").doc(eventId).collection("seats").doc(seatId),snap=await ref.get();
@@ -280,16 +333,17 @@ async function adminReleaseManySubmissionSeats(req,body){
   for(let i=0;i<pairs.length;i++){const p=pairs[i],seatSnap=seatSnaps[i];if(seatSnap?.exists&&String(seatSnap.data()?.submissionId||"")===p.submissionId)batch.delete(seatSnap.ref);batch.set(p.subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});released++}
   await batch.commit();return{ok:true,released}
 }
-function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(["osc/cross-site","osc/content-type"].includes(code))return 403;if(code==="osc/rate-limited")return 429;return 400}
+function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed","osc/seat-reserved","osc/event-capacity-reached"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(["osc/cross-site","osc/content-type"].includes(code))return 403;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:94});
+    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:95});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="public-create-submission")out=await createSubmission(req,body);
     else if(action==="public-state")out=await publicState(body);
     else if(action==="public-claim-seat")out=await claimSeat(body);
     else if(action==="admin-state")out=await adminState(req,body);
+    else if(action==="admin-assign-seat")out=await adminAssignSeat(req,body);
     else if(action==="admin-release-seat")out=await adminRelease(req,body);
     else if(action==="admin-release-submission-seat")out=await adminReleaseSubmissionSeat(req,body);
     else if(action==="admin-release-submission-seats")out=await adminReleaseManySubmissionSeats(req,body);
