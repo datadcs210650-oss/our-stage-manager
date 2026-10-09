@@ -125,6 +125,24 @@ async function verifySeatSession(db,eventId,submissionId,claimToken){
   return{subRef,data}
 }
 function answerEmpty(v){return Array.isArray(v)?v.length===0:String(v??"").trim()===""}
+function fieldVisibilityRule(f){const r=f?.visibilityRule&&typeof f.visibilityRule==="object"?f.visibilityRule:{};return{sourceFieldId:String(r.sourceFieldId||"").trim(),equals:String(r.equals??"").trim()}}
+function activeFieldIds(event,raw){
+  const fields=Array.isArray(event?.fields)?event.fields:[],active=fields.map(()=>true),sectionIndex=new Map();
+  fields.forEach((f,i)=>{if(String(f?.type||"")==="section"&&f?.id)sectionIndex.set(String(f.id),i)});
+  for(let i=0;i<fields.length;i++){
+    if(!active[i])continue;
+    const f=fields[i],type=String(f?.type||"");
+    if(!["radio","select"].includes(type))continue;
+    const answer=String(raw?.[String(f?.id||"")]??"");
+    const d=optionDestinationFor(f,answer);
+    if(d&&d.startsWith("section:")){
+      const target=sectionIndex.get(d.slice(8));
+      if(Number.isInteger(target)&&target>i+1)for(let j=i+1;j<target;j++)active[j]=false;
+    }
+  }
+  fields.forEach((f,i)=>{if(!active[i])return;const r=fieldVisibilityRule(f);if(r.sourceFieldId&&r.equals&&String(raw?.[r.sourceFieldId]??"")!==r.equals)active[i]=false});
+  const ids=new Set();fields.forEach((f,i)=>{if(active[i]&&f?.id)ids.add(String(f.id))});return ids
+}
 function cleanAnswer(v){
   if(Array.isArray(v))return v.slice(0,50).map(x=>cleanText(x,300));
   return String(v??"").slice(0,4000)
@@ -132,11 +150,11 @@ function cleanAnswer(v){
 function validateAnswers(event,raw){
   if(!raw||typeof raw!=="object"||Array.isArray(raw))throw bad("Dữ liệu phản hồi không hợp lệ.");
   if(JSON.stringify(raw).length>60000)throw bad("Dữ liệu phản hồi quá lớn.");
-  const fields=Array.isArray(event?.fields)?event.fields:[],out={},allowedIds=new Set();
+  const fields=Array.isArray(event?.fields)?event.fields:[],out={},allowedIds=new Set(),activeIds=activeFieldIds(event,raw);
   for(const f of fields){
     const type=String(f?.type||"text"),id=String(f?.id||"").slice(0,180);
     if(!id||["image","content","section"].includes(type))continue;
-    allowedIds.add(id);
+    allowedIds.add(id);if(!activeIds.has(id))continue;
     const v=cleanAnswer(raw[id]);
     if(f?.required===true&&answerEmpty(v))throw bad("Vui lòng trả lời câu bắt buộc: "+cleanText(f?.label||"Thông tin",120));
     if(type==="email"&&!answerEmpty(v)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))throw bad("Email không hợp lệ.");
@@ -145,14 +163,10 @@ function validateAnswers(event,raw){
     if(type==="number"&&!answerEmpty(v)&&!Number.isFinite(Number(v)))throw bad("Giá trị số không hợp lệ.");
     const options=(Array.isArray(f?.options)?f.options:[]).map(x=>String(typeof x==="object"?(x?.label??x?.value??x?.text??""):x));
     if(["radio","select"].includes(type)&&!answerEmpty(v)&&options.length&&!options.includes(String(v)))throw bad("Lựa chọn không hợp lệ: "+cleanText(f?.label||"Thông tin",120));
-    if(type==="checkboxes"&&!answerEmpty(v)){
-      if(!Array.isArray(v))throw bad("Dữ liệu hộp kiểm không hợp lệ.");
-      if(options.length&&v.some(x=>!options.includes(String(x))))throw bad("Có lựa chọn không hợp lệ: "+cleanText(f?.label||"Thông tin",120));
-    }
+    if(type==="checkboxes"&&!answerEmpty(v)){if(!Array.isArray(v))throw bad("Dữ liệu hộp kiểm không hợp lệ.");if(options.length&&v.some(x=>!options.includes(String(x))))throw bad("Có lựa chọn không hợp lệ: "+cleanText(f?.label||"Thông tin",120))}
     out[id]=v;
   }
-  const unknown=Object.keys(raw).filter(k=>!allowedIds.has(String(k)));
-  if(unknown.length)throw bad("Biểu mẫu chứa trường dữ liệu không hợp lệ.");
+  const unknown=Object.keys(raw).filter(k=>!allowedIds.has(String(k)));if(unknown.length)throw bad("Biểu mẫu chứa trường dữ liệu không hợp lệ.");
   if(Object.keys(out).length>60)throw bad("Biểu mẫu có quá nhiều trường trả lời.");
   return out
 }
@@ -178,7 +192,7 @@ function isDeclinedParticipation(field,answer){
 function resolveSubmissionDestination(event,answers,defaultDestination="submit"){
   const fields=Array.isArray(event?.fields)?event.fields:[];
   for(const field of fields){
-    if(String(field?.type||"")!=="radio")continue;
+    if(!["radio","select"].includes(String(field?.type||"")))continue;
     const answer=answers?.[String(field?.id||"")];
     const explicit=optionDestinationFor(field,answer);
     if(explicit)return explicit;
