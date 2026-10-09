@@ -9596,6 +9596,7 @@ async function restoreTrash(id){
     else if(t.type==="eventSubmission"){
       await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("submissions").doc(t.sourceId).set(t.data,{merge:false});
       const ev=eventFor(t.meta.eventId);
+      if(Number(ev?.capacity||0)>0)await eventSeatingAdminApi({action:"admin-recount-capacity",eventId:t.meta.eventId}).catch(e=>console.warn("capacity recount",e));
       if(ev?.specialType==="continuation"){
         const key=continuationSubmissionMssv(ev,{id:t.sourceId,...t.data});
         if(key)await reconcileContinuationMember(ev,key,{silent:true});
