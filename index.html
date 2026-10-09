@@ -8364,6 +8364,7 @@ async function saveEventBuilder(){
   }
   const linkedActivityId=String($("#eventLinkedActivity")?.value||"");
   const linkedActivity=linkedActivityId?activityItemById(linkedActivityId,lockedSemester):null;
+  const priorEventForCapacity=eventBuilderId?eventFor(eventBuilderId):null;
   const fullEvent={
     id:eventId,
     title,
@@ -8384,7 +8385,7 @@ async function saveEventBuilder(){
     qrCheckinVersion:2,
     ticketStudioEnabled:$("#eventTicketStudioEnabled")?.value==="1",
     capacity,
-    capacityReached:capacity>0&&ev?.capacityReached===true&&Number(ev?.capacity||0)===capacity,
+    capacityReached:capacity>0&&priorEventForCapacity?.capacityReached===true&&Number(priorEventForCapacity?.capacity||0)===capacity,
     seating,
     fieldSchemaVersion:5,
     successTitle:$("#eventSuccessTitle").value.trim()||"Gửi thông tin thành công",
