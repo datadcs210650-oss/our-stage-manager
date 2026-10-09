@@ -36,6 +36,19 @@ function parseRowPlan(v,defaultSeats=10){
   const seen=new Set();
   return out.filter(x=>{const k=x.label.toUpperCase();if(seen.has(k))return false;seen.add(k);return true}).slice(0,60);
 }
+const SEAT_AUDIENCES=new Set(["public","vip","bcn","guest","artist","sponsor","media"]);
+function normalizeAudience(v){const x=String(v||"public").toLowerCase();return SEAT_AUDIENCES.has(x)?x:"public"}
+function parseLockedSeats(v){
+  const raw=Array.isArray(v)?v:String(v||"").split(/[\n,;\s]+/);
+  const out=new Set();
+  for(const partRaw of raw){
+    const part=String(partRaw||"").trim().toUpperCase();if(!part)continue;
+    const range=part.match(/^([A-ZÀ-Ỹ0-9_-]{1,12}?)(\d{1,4})-\1?(\d{1,4})$/i);
+    if(range){const row=range[1],a=Number(range[2]),b=Number(range[3]),lo=Math.min(a,b),hi=Math.max(a,b);for(let n=lo;n<=hi&&n-lo<200;n++)out.add(row+n);continue}
+    const one=part.match(/^(.{1,12}?)(\d{1,4})$/);if(one)out.add(one[1]+Number(one[2]));
+  }
+  return [...out].slice(0,1200);
+}
 function normalizeStage(stage={}){
   return{
     x:clamp(stage.x??20,0,95),
@@ -61,7 +74,9 @@ function normalizeSection(s={},i=0){
     rows:rowSpecs.map(x=>x.label),
     seatsPerRow,
     startNumber:Math.round(clamp(s.startNumber||1,1,999)),
-    reverse:s.reverse===true
+    reverse:s.reverse===true,
+    audience:normalizeAudience(s.audience||s.reservedFor),
+    lockedSeats:parseLockedSeats(s.lockedSeats||s.lockedSeatsText||[])
   };
 }
 function normalize(config){
@@ -82,25 +97,27 @@ function defaultSection(i=0){
   return normalizeSection({
     id:uid(),name:"Khu "+String.fromCharCode(65+i),
     x:7+(i%3)*31,y:18+Math.floor(i/3)*30,w:28,
-    rowSpecs:labels.map(label=>({label,seats:10})),seatsPerRow:10,startNumber:1,reverse:false
+    rowSpecs:labels.map(label=>({label,seats:10})),seatsPerRow:10,startNumber:1,reverse:false,audience:"public",lockedSeats:[]
   },i);
 }
 function totalSeats(){
   return seatState.sections.reduce((n,s)=>n+s.rowSpecs.reduce((a,r)=>a+r.seats,0),0);
 }
 function rowPlanText(sec){return sec.rowSpecs.map(r=>r.label+":"+r.seats).join(", ")}
+function audienceLabel(v){return ({public:"Công khai",vip:"VIP",bcn:"BCN",guest:"Khách mời",artist:"Nghệ sĩ",sponsor:"Nhà tài trợ",media:"Media"})[v]||"Công khai"}
 function stageHtml(){
   const st=seatState.stage||normalizeStage();
   return `<div class="seat-stage-label seat-stage-draggable" data-seat-stage-drag style="left:${st.x}%;top:${st.y}%;width:${st.w}%;height:${st.h}%"><span>${esc(seatState.stageLabel||"SÂN KHẤU")}</span><small>Kéo để căn sân khấu</small></div>`;
 }
 function seatCells(sec){
+  const locked=new Set(sec.lockedSeats||[]);
   return sec.rowSpecs.map(spec=>{
     const nums=Array.from({length:spec.seats},(_,i)=>sec.startNumber+(sec.reverse?(spec.seats-1-i):i));
-    return `<div class="seat-mini-row"><span class="seat-row-label">${esc(spec.label)}</span><div class="seat-mini-grid" style="--seat-cols:${Math.min(spec.seats,80)}">${nums.map(n=>`<span title="${esc(spec.label)}${n}">${n}</span>`).join("")}</div></div>`
+    return `<div class="seat-mini-row"><span class="seat-row-label">${esc(spec.label)}</span><div class="seat-mini-grid" style="--seat-cols:${Math.min(spec.seats,80)}">${nums.map(n=>{const label=String(spec.label).toUpperCase()+n,isLocked=locked.has(label)||sec.audience!=="public";return `<span class="${isLocked?"seat-mini-reserved":""}" title="${esc(spec.label)}${n}${isLocked?" • "+audienceLabel(sec.audience):""}">${n}</span>`}).join("")}</div></div>`
   }).join("");
 }
 function previewHtml(){
-  return `<div id="seatStudioCanvas" class="seat-studio-canvas" style="height:${seatState.canvasHeight}px">${stageHtml()}${seatState.sections.map((sec,i)=>`<div class="seat-section-block" data-seat-section="${i}" style="left:${sec.x}%;top:${sec.y}%;width:${sec.w}%"><div class="seat-section-drag" data-seat-drag="${i}"><b>${esc(sec.name)}</b><span>${sec.rowSpecs.reduce((n,r)=>n+r.seats,0)} ghế</span></div><div class="seat-section-preview">${seatCells(sec)}</div></div>`).join("")}</div>`;
+  return `<div id="seatStudioCanvas" class="seat-studio-canvas" style="height:${seatState.canvasHeight}px">${stageHtml()}${seatState.sections.map((sec,i)=>`<div class="seat-section-block" data-seat-section="${i}" style="left:${sec.x}%;top:${sec.y}%;width:${sec.w}%"><div class="seat-section-drag" data-seat-drag="${i}"><b>${esc(sec.name)}</b><span>${sec.rowSpecs.reduce((n,r)=>n+r.seats,0)} ghế • ${esc(audienceLabel(sec.audience))}</span></div><div class="seat-section-preview">${seatCells(sec)}</div></div>`).join("")}</div>`;
 }
 function sectionEditor(sec,i){
   return `<div class="seat-section-editor" data-seat-editor="${i}">
@@ -114,6 +131,16 @@ function sectionEditor(sec,i){
       <label>Vị trí Y (%)<input type="number" min="0" max="94" step="0.5" value="${sec.y}" onchange="seatStudioUpdate(${i},'y',this.value)"></label>
       <label>Độ rộng khu (%)<input type="number" min="12" max="94" step="0.5" value="${sec.w}" onchange="seatStudioUpdate(${i},'w',this.value)"></label>
       <label>Thứ tự số<select onchange="seatStudioUpdate(${i},'reverse',this.value)"><option value="0" ${!sec.reverse?"selected":""}>Tăng dần →</option><option value="1" ${sec.reverse?"selected":""}>Giảm dần ←</option></select></label>
+      <label>Khu dành riêng<select onchange="seatStudioUpdate(${i},'audience',this.value)">
+        <option value="public" ${sec.audience==="public"?"selected":""}>Công khai</option>
+        <option value="vip" ${sec.audience==="vip"?"selected":""}>VIP</option>
+        <option value="bcn" ${sec.audience==="bcn"?"selected":""}>BCN</option>
+        <option value="guest" ${sec.audience==="guest"?"selected":""}>Khách mời</option>
+        <option value="artist" ${sec.audience==="artist"?"selected":""}>Nghệ sĩ</option>
+        <option value="sponsor" ${sec.audience==="sponsor"?"selected":""}>Nhà tài trợ</option>
+        <option value="media" ${sec.audience==="media"?"selected":""}>Media</option>
+      </select><small>Khu khác “Công khai” chỉ Admin/BTC được cấp ghế.</small></label>
+      <label class="seat-row-plan-label">VIP Seat Lock / Ghế khóa<input maxlength="1200" value="${esc((sec.lockedSeats||[]).join(", "))}" placeholder="A1, A2, B1-B4" onchange="seatStudioUpdate(${i},'lockedSeats',this.value)"><small>Khóa từng ghế khỏi cổng public, ví dụ A1, A2, B1-B4.</small></label>
     </div>
   </div>`;
 }
@@ -189,6 +216,8 @@ function update(i,k,v){
     sec.rowSpecs=sec.rowSpecs.map(r=>({label:r.label,seats:r.seats===old?sec.seatsPerRow:r.seats}));
   }else if(k==="startNumber")sec[k]=Math.round(clamp(v,1,999));
   else if(k==="name")sec.name=String(v||"").slice(0,60);
+  else if(k==="audience")sec.audience=normalizeAudience(v);
+  else if(k==="lockedSeats")sec.lockedSeats=parseLockedSeats(v);
   render();
 }
 window.seatStudioMount=mount;
