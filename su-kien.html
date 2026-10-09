@@ -884,13 +884,13 @@ function renderFields({force=false}={}){
       const domKey=publicDomKey(index);
 
       if(f.type==="section"){
-        return `<div class="event-section-public"><h2>${esc(f.label||"Phần")}</h2>${f.description?`<p>${esc(f.description)}</p>`:""}</div>`;
+        return `<div class="event-section-public" data-field-card="${index}"><h2>${esc(f.label||"Phần")}</h2>${f.description?`<p>${esc(f.description)}</p>`:""}</div>`;
       }
       if(f.type==="content"){
-        return `<div class="rich-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}<div>${renderRichText(f.content||"")}</div></div>`;
+        return `<div class="rich-block" data-field-card="${index}">${f.label?`<h3>${esc(f.label)}</h3>`:""}<div>${renderRichText(f.content||"")}</div></div>`;
       }
       if(f.type==="image"){
-        return `<div class="image-block">${f.label?`<h3>${esc(f.label)}</h3>`:""}${f.caption?`<p>${esc(f.caption)}</p>`:""}${f.imageData?`<img src="${f.imageData}" alt="Hình ảnh sự kiện">`:"<div class='hint'>Hình ảnh của trường này hiện không khả dụng.</div>"}</div>`;
+        return `<div class="image-block" data-field-card="${index}">${f.label?`<h3>${esc(f.label)}</h3>`:""}${f.caption?`<p>${esc(f.caption)}</p>`:""}${f.imageData?`<img src="${f.imageData}" alt="Hình ảnh sự kiện">`:"<div class='hint'>Hình ảnh của trường này hiện không khả dụng.</div>"}</div>`;
       }
 
       const req=f.required?'<span class="required">*</span>':"";
@@ -1004,23 +1004,25 @@ function renderSeatPublicMap(force=false){
   const cfg=eventSeatState.seating||{},occupiedIds=[...(eventSeatState.occupied||[])].sort(),st=cfg.stage||{x:20,y:3,w:60,h:7};
   const sig=JSON.stringify([occupiedIds,eventSeatSelected,eventSeatState.currentSeatId,cfg]);
   if(!force&&sig===eventSeatRenderSig)return;eventSeatRenderSig=sig;
-  const occupied=new Set(occupiedIds),allSeats=Array.isArray(eventSeatState.seats)?eventSeatState.seats:[],free=Math.max(0,allSeats.length-occupied.size);
+  const occupied=new Set(occupiedIds),allSeats=Array.isArray(eventSeatState.seats)?eventSeatState.seats:[],free=allSeats.filter(x=>x.publicSelectable===true&&!occupied.has(x.id)).length,reserved=allSeats.filter(x=>x.publicSelectable!==true).length;
+  const audienceLabel=v=>({vip:"VIP",bcn:"BCN",guest:"Khách mời",artist:"Nghệ sĩ",sponsor:"Nhà tài trợ",media:"Media"})[v]||"Dành riêng";
   map.style.height=Math.max(360,Number(cfg.canvasHeight||640))+"px";
   map.innerHTML=`<div class="seat-public-stage" style="left:${Number(st.x??20)}%;top:${Number(st.y??3)}%;width:${Number(st.w??60)}%;height:${Number(st.h??7)}%">${esc(cfg.stageLabel||"SÂN KHẤU")}</div>`+(cfg.sections||[]).map(sec=>{
-    const rowMap=seatGroupRows(eventSeatState,sec);
+    const rowMap=seatGroupRows(eventSeatState,sec),zoneReserved=String(sec.audience||"public")!=="public";
     const rowOrder=(Array.isArray(sec.rowSpecs)&&sec.rowSpecs.length?sec.rowSpecs.map(x=>x.label):(sec.rows||[]));
     const body=rowOrder.map(row=>{
       const seats=(rowMap.get(String(row))||[]);
       return `<div class="seat-public-row"><span class="seat-public-row-label">${esc(row)}</span><div class="seat-public-grid" style="--seat-cols:${Math.max(1,seats.length)}">${seats.map(seat=>{
-        const occ=occupied.has(seat.id)&&seat.id!==eventSeatState.currentSeatId,sel=seat.id===eventSeatSelected||seat.id===eventSeatState.currentSeatId;
-        return `<button type="button" class="seat-public-seat ${occ?"occupied":""} ${sel?"selected":""}" ${occ?"disabled":""} aria-label="Ghế ${esc(seat.label)}${occ?", đã có người chọn":sel?", đang chọn":", còn trống"}" onclick="selectPublicSeat('${esc(seat.id)}','${esc(seat.label)}')">${esc(seat.number)}</button>`
+        const occ=occupied.has(seat.id)&&seat.id!==eventSeatState.currentSeatId,sel=seat.id===eventSeatSelected||seat.id===eventSeatState.currentSeatId,isReserved=seat.publicSelectable!==true&&!sel,disabled=occ||isReserved;
+        const note=occ?"đã có người chọn":isReserved?"ghế dành riêng":sel?"đang chọn":"còn trống";
+        return `<button type="button" class="seat-public-seat ${occ?"occupied":""} ${isReserved?"reserved":""} ${sel?"selected":""}" ${disabled?"disabled":""} aria-label="Ghế ${esc(seat.label)}, ${note}" onclick="selectPublicSeat('${esc(seat.id)}','${esc(seat.label)}')">${esc(seat.number)}</button>`
       }).join("")}</div></div>`
     }).join("");
-    return `<div class="seat-public-section" style="left:${Number(sec.x||0)}%;top:${Number(sec.y||0)}%;width:${Number(sec.w||30)}%"><div class="seat-public-section-title"><b>${esc(sec.name||"Khu ghế")}</b><span>${seatSectionTotal(sec)} ghế</span></div><div class="seat-public-section-body">${body}</div></div>`
+    return `<div class="seat-public-section ${zoneReserved?"reserved-zone":""}" style="left:${Number(sec.x||0)}%;top:${Number(sec.y||0)}%;width:${Number(sec.w||30)}%"><div class="seat-public-section-title"><b>${esc(sec.name||"Khu ghế")}${zoneReserved?` <span class="seat-zone-badge">${esc(audienceLabel(sec.audience))}</span>`:""}</b><span>${seatSectionTotal(sec)} ghế</span></div><div class="seat-public-section-body">${body}</div></div>`
   }).join("");
   $("#seatSelectedLabel").textContent=eventSeatState.currentSeatLabel||allSeats.find(x=>x.id===eventSeatSelected)?.label||"Chưa chọn";
   $("#seatConfirmBtn").disabled=!(eventSeatSelected||eventSeatState.currentSeatId);
-  const summary=$("#seatPublicSummary");if(summary)summary.textContent=`${free} trống • ${occupied.size} đã chọn`;
+  const summary=$("#seatPublicSummary");if(summary)summary.textContent=`${free} ghế công khai trống • ${occupied.size} đã chọn${reserved?" • "+reserved+" ghế dành riêng":""}`;
 }
 window.selectPublicSeat=(id,label)=>{eventSeatSelected=String(id||"");$("#seatSelectedLabel").textContent=label||"Đã chọn";renderSeatPublicMap(true)};
 async function refreshSeatState({silent=false}={}){if(!eventSeatSession)return;try{const d=await seatApi({action:"public-state",eventId,submissionId:eventSeatSession.submissionId,claimToken:eventSeatSession.claimToken});eventSeatState=d;if(!eventSeatSelected&&d.currentSeatId)eventSeatSelected=d.currentSeatId;$("#seatViewTitle").textContent=d.seating?.title||"Chọn ghế";renderSeatPublicMap();if(!silent)seatStatus("",d.currentSeatLabel?`Ghế đã xác nhận: ${d.currentSeatLabel}.`:"Chọn một ghế còn trống rồi bấm Xác nhận ghế.")}catch(e){if(e.code==="osc/seat-session-expired"){clearSeatSession();eventSeatSelecting=false;seatStatus("error","Phiên chọn ghế đã hết hạn. Vui lòng tải lại trang và gửi lại form đăng ký.");return}seatStatus("error",e.message||"Không tải được sơ đồ ghế.")}}
@@ -1108,6 +1110,7 @@ $("#eventForm").addEventListener("submit",async e=>{
     eventConfig.fields=fields;
 
     fields.forEach((f,index)=>{
+      if(typeof window.eventFormFieldActive==="function"&&!window.eventFormFieldActive(f,index))return;
       if(["image","content","section"].includes(f.type))return;
 
       const domKey=publicDomKey(index);
