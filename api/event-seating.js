@@ -306,6 +306,8 @@ async function adminAssignSeat(req,body){
   const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   const seat=seatsFromConfig(cfg).find(x=>x.id===seatId);if(!seat)throw bad("Ghế không tồn tại trong sơ đồ.","osc/seat-invalid");
   const subRef=db.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),claims=db.collection("eventSeatClaims").doc(eventId).collection("seats"),newRef=claims.doc(seat.id);
+  const linkedTickets=await db.collection("ticketStudios").doc(eventId).collection("tickets").where("sourceSubmissionId","==",submissionId).limit(10).get();
+  if(linkedTickets.docs.some(d=>String(d.data()?.status||"")==="checked_in"))throw bad("Không thể đổi/cấp ghế sau khi vé liên kết đã check-in.","osc/ticket-checked-in");
   await db.runTransaction(async tx=>{
     const [subSnap,newSnap]=await Promise.all([tx.get(subRef),tx.get(newRef)]);if(!subSnap.exists)throw bad("Không tìm thấy phản hồi đăng ký.","osc/submission-not-found");
     const sub=subSnap.data()||{};if(newSnap.exists&&String(newSnap.data()?.submissionId||"")!==submissionId)throw bad("Ghế đã có người khác.","osc/seat-taken");
@@ -313,6 +315,9 @@ async function adminAssignSeat(req,body){
     tx.set(newRef,{eventId,submissionId,seatId:seat.id,seatLabel:seat.label,sectionId:seat.sectionId,sectionName:seat.sectionName,row:seat.row,number:seat.number,audience:seat.audience,assignedByAdmin:true,claimedAt:admin.firestore.FieldValue.serverTimestamp(),assignedBy:actor.decoded.uid},{merge:false});
     tx.set(subRef,{seatSelectionRequired:true,submissionDestination:"seat",seatStatus:"confirmed",seatId:seat.id,seatLabel:seat.label,seatSectionId:seat.sectionId,seatSectionName:seat.sectionName,seatConfirmedAt:admin.firestore.FieldValue.serverTimestamp(),seatAssignedByAdmin:true,seatAssignedBy:actor.decoded.uid},{merge:true});
   });
+  if(!linkedTickets.empty){
+    const batch=db.batch();for(const doc of linkedTickets.docs){const d=doc.data()||{};if(["revoked","cancelled"].includes(String(d.status||"")))continue;batch.set(doc.ref,{seat:seat.label,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true})}await batch.commit();
+  }
   return{ok:true,version:95,seat}
 }
 async function adminState(req,body){
@@ -349,7 +354,7 @@ async function adminReleaseManySubmissionSeats(req,body){
   for(let i=0;i<pairs.length;i++){const p=pairs[i],seatSnap=seatSnaps[i];if(seatSnap?.exists&&String(seatSnap.data()?.submissionId||"")===p.submissionId)batch.delete(seatSnap.ref);batch.set(p.subRef,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:"",seatReleasedAt:admin.firestore.FieldValue.serverTimestamp(),seatReleasedBy:actor.decoded.uid},{merge:true});released++}
   await batch.commit();return{ok:true,released}
 }
-function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed","osc/seat-reserved","osc/event-capacity-reached"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(["osc/cross-site","osc/content-type"].includes(code))return 403;if(code==="osc/rate-limited")return 429;return 400}
+function status(code){if(["osc/unauthenticated"].includes(code))return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(["osc/event-not-found"].includes(code))return 404;if(["osc/seat-taken","osc/seat-already-confirmed","osc/seat-reserved","osc/event-capacity-reached","osc/ticket-checked-in"].includes(code))return 409;if(code==="osc/seat-session-expired")return 410;if(["osc/semester-locked","osc/event-closed","osc/seating-disabled"].includes(code))return 409;if(["osc/cross-site","osc/content-type"].includes(code))return 403;if(code==="osc/rate-limited")return 429;return 400}
 module.exports=async function handler(req,res){
   try{
     if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-seating",version:95});
