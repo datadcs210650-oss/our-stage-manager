@@ -127,20 +127,28 @@ async function verifySeatSession(db,eventId,submissionId,claimToken){
 function answerEmpty(v){return Array.isArray(v)?v.length===0:String(v??"").trim()===""}
 function fieldVisibilityRule(f){const r=f?.visibilityRule&&typeof f.visibilityRule==="object"?f.visibilityRule:{};return{sourceFieldId:String(r.sourceFieldId||"").trim(),equals:String(r.equals??"").trim()}}
 function activeFieldIds(event,raw){
-  const fields=Array.isArray(event?.fields)?event.fields:[],active=fields.map(()=>true),sectionIndex=new Map();
-  fields.forEach((f,i)=>{if(String(f?.type||"")==="section"&&f?.id)sectionIndex.set(String(f.id),i)});
-  for(let i=0;i<fields.length;i++){
-    if(!active[i])continue;
-    const f=fields[i],type=String(f?.type||"");
-    if(!["radio","select"].includes(type))continue;
-    const answer=String(raw?.[String(f?.id||"")]??"");
-    const d=optionDestinationFor(f,answer);
-    if(d&&d.startsWith("section:")){
-      const target=sectionIndex.get(d.slice(8));
-      if(Number.isInteger(target)&&target>i+1)for(let j=i+1;j<target;j++)active[j]=false;
+  const fields=Array.isArray(event?.fields)?event.fields:[],sectionIndex=new Map(),fieldIndex=new Map();
+  fields.forEach((f,i)=>{if(f?.id)fieldIndex.set(String(f.id),i);if(String(f?.type||"")==="section"&&f?.id)sectionIndex.set(String(f.id),i)});
+  let active=fields.map(()=>true);
+  for(let pass=0;pass<Math.max(2,fields.length+1);pass++){
+    const next=fields.map(()=>true);
+    fields.forEach((f,i)=>{
+      const r=fieldVisibilityRule(f);if(!r.sourceFieldId||!r.equals)return;
+      const si=fieldIndex.get(r.sourceFieldId);
+      if(!Number.isInteger(si)||active[si]===false||String(raw?.[r.sourceFieldId]??"")!==r.equals)next[i]=false;
+    });
+    for(let i=0;i<fields.length;i++){
+      if(active[i]===false||next[i]===false)continue;
+      const f=fields[i],type=String(f?.type||"");if(!["radio","select"].includes(type))continue;
+      const d=optionDestinationFor(f,String(raw?.[String(f?.id||"")]??""));
+      if(d&&d.startsWith("section:")){
+        const target=sectionIndex.get(d.slice(8));
+        if(Number.isInteger(target)&&target>i+1)for(let j=i+1;j<target;j++)next[j]=false;
+      }
     }
+    if(next.every((v,i)=>v===active[i])){active=next;break}
+    active=next;
   }
-  fields.forEach((f,i)=>{if(!active[i])return;const r=fieldVisibilityRule(f);if(r.sourceFieldId&&r.equals&&String(raw?.[r.sourceFieldId]??"")!==r.equals)active[i]=false});
   const ids=new Set();fields.forEach((f,i)=>{if(active[i]&&f?.id)ids.add(String(f.id))});return ids
 }
 function cleanAnswer(v){
