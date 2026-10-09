@@ -333,6 +333,17 @@ async function adminAssignSeat(req,body){
   }
   return{ok:true,version:95,seat}
 }
+async function adminRecountCapacity(req,body){
+  const actor=await requireUser(req);if(!canAssignReserved(actor))throw bad("Bạn chưa có quyền đồng bộ Capacity.","osc/forbidden");
+  const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),limit=eventCapacity(event);
+  const snap=await db.collection("eventPortals").doc(eventId).collection("submissions").get();let count=0;
+  for(const doc of snap.docs){const d=doc.data()||{};if(d.countsTowardCapacity===false)continue;if(d.countsTowardCapacity===true||!submissionDeclined(event,d.answers||{}))count++}
+  const ref=db.collection("eventCapacityCounters").doc(eventId);
+  if(limit>0)await ref.set({eventId,semester:String(event.semester||""),count,limit,updatedAt:admin.firestore.FieldValue.serverTimestamp(),recountedBy:actor.decoded.uid},{merge:true});
+  else await ref.delete().catch(()=>{});
+  if(event.capacityReached===true&&(limit===0||count<limit))await db.collection("eventPortals").doc(eventId).set({capacityReached:false,capacityReopenedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  return{ok:true,version:95,count,limit,reached:limit>0&&count>=limit}
+}
 async function adminState(req,body){
   const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),{data:event}=await loadEvent(db,eventId),cfg=normalizeConfig(event.seating);
   const snap=await db.collection("eventSeatClaims").doc(eventId).collection("seats").get();
@@ -378,6 +389,7 @@ module.exports=async function handler(req,res){
     else if(action==="public-claim-seat")out=await claimSeat(body);
     else if(action==="admin-state")out=await adminState(req,body);
     else if(action==="admin-assign-seat")out=await adminAssignSeat(req,body);
+    else if(action==="admin-recount-capacity")out=await adminRecountCapacity(req,body);
     else if(action==="admin-release-seat")out=await adminRelease(req,body);
     else if(action==="admin-release-submission-seat")out=await adminReleaseSubmissionSeat(req,body);
     else if(action==="admin-release-submission-seats")out=await adminReleaseManySubmissionSeats(req,body);
