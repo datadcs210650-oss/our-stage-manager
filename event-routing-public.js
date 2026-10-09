@@ -20,24 +20,24 @@ function fieldValue(field,index){
   return form.querySelector(`[data-field-index="${index}"]`)?.value??"";
 }
 function activeIndices(){
-  const fields=typeof publicNormalizeEventFields==="function"?publicNormalizeEventFields(eventConfig||{}):[],active=fields.map(()=>true),sectionIndex=new Map();
-  fields.forEach((f,i)=>{if(f?.type==="section"&&f?.id)sectionIndex.set(String(f.id),i)});
-  for(let i=0;i<fields.length;i++){
-    if(!active[i])continue;const f=fields[i];
-    if(!["radio","select"].includes(String(f?.type||"")))continue;
-    const d=destination(f,fieldValue(f,i));
-    if(d.startsWith("section:")){
-      const target=sectionIndex.get(d.slice(8));
-      if(Number.isInteger(target)&&target>i+1)for(let j=i+1;j<target;j++)active[j]=false;
+  const fields=typeof publicNormalizeEventFields==="function"?publicNormalizeEventFields(eventConfig||{}):[],sectionIndex=new Map(),fieldIndex=new Map();
+  fields.forEach((f,i)=>{if(f?.id)fieldIndex.set(String(f.id),i);if(f?.type==="section"&&f?.id)sectionIndex.set(String(f.id),i)});
+  let active=fields.map(()=>true);
+  for(let pass=0;pass<Math.max(2,fields.length+1);pass++){
+    const next=fields.map(()=>true);
+    fields.forEach((f,i)=>{
+      const r=f?.visibilityRule&&typeof f.visibilityRule==="object"?f.visibilityRule:{},source=String(r.sourceFieldId||"").trim(),expected=String(r.equals??"").trim();
+      if(!source||!expected)return;const si=fieldIndex.get(source);
+      if(!Number.isInteger(si)||active[si]===false||String(fieldValue(fields[si],si)??"")!==expected)next[i]=false;
+    });
+    for(let i=0;i<fields.length;i++){
+      if(active[i]===false||next[i]===false)continue;const f=fields[i];if(!["radio","select"].includes(String(f?.type||"")))continue;
+      const d=destination(f,fieldValue(f,i));if(!d.startsWith("section:"))continue;
+      const target=sectionIndex.get(d.slice(8));if(Number.isInteger(target)&&target>i+1)for(let j=i+1;j<target;j++)next[j]=false;
     }
+    if(next.every((v,i)=>v===active[i])){active=next;break}
+    active=next;
   }
-  fields.forEach((f,i)=>{
-    if(!active[i])return;
-    const r=f?.visibilityRule&&typeof f.visibilityRule==="object"?f.visibilityRule:{},source=String(r.sourceFieldId||"").trim(),expected=String(r.equals??"").trim();
-    if(!source||!expected)return;
-    const si=fields.findIndex(x=>String(x?.id||"")===source);
-    if(si<0||!active[si]||String(fieldValue(fields[si],si)??"")!==expected)active[i]=false;
-  });
   return{fields,active};
 }
 function applyFormLogic(){
