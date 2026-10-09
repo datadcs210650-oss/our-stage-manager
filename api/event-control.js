@@ -39,10 +39,11 @@ async function loadEvent(db,eventId){const ref=db.collection("eventPortals").doc
 async function live(req,body){
   const actor=await requireUser(req);if(!canView(actor))throw bad("Bạn chưa có quyền xem điều hành sự kiện.","osc/forbidden");
   const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),event=await loadEvent(db,eventId),cfg=seating(event),allSeats=seatsFrom(cfg);
-  const [claimSnap,subSnap,checkSnap]=await Promise.all([
+  const [claimSnap,subSnap,checkSnap,ticketSnap]=await Promise.all([
     db.collection("eventSeatClaims").doc(eventId).collection("seats").get(),
     db.collection("eventPortals").doc(eventId).collection("submissions").get(),
-    db.collection("eventPortals").doc(eventId).collection("qrCheckins").get()
+    db.collection("eventPortals").doc(eventId).collection("qrCheckins").get(),
+    db.collection("ticketStudios").doc(eventId).collection("tickets").get()
   ]);
   const field=mssvField(event),subs=new Map(),subByMssv=new Map();
   for(const doc of subSnap.docs){const d=doc.data()||{},mssv=field?mssvKey(d.answers?.[field.id]):"";const item={id:doc.id,label:clean(d.submitterLabel||"Phản hồi",160),mssv,seatId:String(d.seatId||""),seatLabel:String(d.seatLabel||""),countsTowardCapacity:d.countsTowardCapacity!==false};subs.set(doc.id,item);if(mssv)subByMssv.set(mssv,item)}
@@ -50,9 +51,18 @@ async function live(req,body){
   const checkedSubs=new Set(),checkedMssv=new Set(),checkedSeats=new Set();
   for(const x of checkins){if(x.checkinStatus==="rejected")continue;if(x.registrationSubmissionId)checkedSubs.add(x.registrationSubmissionId);if(x.mssv)checkedMssv.add(x.mssv);if(x.seat)checkedSeats.add(x.seat.toUpperCase())}
   const claims=new Map(claimSnap.docs.map(d=>[d.id,{seatId:d.id,...(d.data()||{})}]));
-  const seatRows=allSeats.map(seat=>{const claim=claims.get(seat.id),sub=claim?subs.get(String(claim.submissionId||"")):null,checked=!!claim&&(checkedSubs.has(String(claim.submissionId||""))||(sub?.mssv&&checkedMssv.has(sub.mssv))||checkedSeats.has(seat.label.toUpperCase()));return{...seat,status:claim?(checked?"checked_in":"not_arrived"):(seat.publicSelectable?"free":"reserved"),submissionId:claim?String(claim.submissionId||""):""}});
-  const counts={total:seatRows.length,free:0,reserved:0,not_arrived:0,checked_in:0,registered:subSnap.size,checkedInTotal:checkins.filter(x=>x.checkinStatus!=="rejected").length};
+  const ticketsBySeat=new Map();
+  for(const doc of ticketSnap.docs){const t=doc.data()||{},status=String(t.status||"issued");if(["revoked","cancelled"].includes(status))continue;const key=String(t.seat||"").trim().toUpperCase();if(key&&!ticketsBySeat.has(key))ticketsBySeat.set(key,{id:doc.id,status,sourceSubmissionId:String(t.sourceSubmissionId||"")})}
+  const seatRows=allSeats.map(seat=>{
+    const claim=claims.get(seat.id),sub=claim?subs.get(String(claim.submissionId||"")):null,ticket=ticketsBySeat.get(seat.label.toUpperCase());
+    const checked=!!claim&&(checkedSubs.has(String(claim.submissionId||""))||(sub?.mssv&&checkedMssv.has(sub.mssv))||checkedSeats.has(seat.label.toUpperCase()));
+    const ticketChecked=!!ticket&&(ticket.status==="checked_in"||checkedSeats.has(seat.label.toUpperCase())||(ticket.sourceSubmissionId&&checkedSubs.has(ticket.sourceSubmissionId)));
+    const status=claim?(checked?"checked_in":"not_arrived"):ticket?(ticketChecked?"checked_in":"sold"):(seat.publicSelectable?"free":"reserved");
+    return{...seat,status,submissionId:claim?String(claim.submissionId||""):""}
+  });
+  const counts={total:seatRows.length,free:0,reserved:0,sold:0,not_arrived:0,checked_in:0,registered:subSnap.size,checkedInTotal:checkins.filter(x=>x.checkinStatus!=="rejected").length};
   seatRows.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
+  counts.soldTotal=counts.sold+counts.not_arrived+counts.checked_in;
   const capacity=Math.max(0,Math.floor(Number(event.capacity||event.registrationCapacity||0))),counted=[...subs.values()].filter(x=>x.countsTowardCapacity).length;
   const result={ok:true,version:95,event:{id:eventId,title:clean(event.title||"Sự kiện",200),semester:String(event.semester||""),capacity,capacityUsed:counted,isOpen:event.isOpen===true},seating:cfg,seats:seatRows,counts,timeline:timeline(checkins),canAssign:isManager(actor)};
   if(isManager(actor))result.submissions=[...subs.values()].filter(x=>x.countsTowardCapacity).sort((a,b)=>a.label.localeCompare(b.label,"vi"));
