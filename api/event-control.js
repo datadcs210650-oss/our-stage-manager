@@ -8,6 +8,7 @@ function cleanId(v,label="ID"){const s=String(v||"").trim();if(!s||s.length>180|
 function clean(v,max=160){return String(v??"").trim().replace(/\s+/g," ").slice(0,max)}
 function millis(v){try{return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||Number(v||0)||0}catch{return 0}}
 function isManager(a){return ["admin","superadmin"].includes(a?.profile?.role)}
+function canAssign(a){return isManager(a)||(a?.profile?.role==="bcn"&&a.profile.permissions?.viewEvents===true&&a.profile.permissions?.editEvents===true)}
 function canView(a){return isManager(a)||(a?.profile?.role==="bcn"&&(a.profile.permissions?.viewAttendance===true||a.profile.permissions?.viewEvents===true))}
 function normalizeAudience(v){const x=String(v||"public").toLowerCase();return ["public","vip","bcn","guest","artist","sponsor","media"].includes(x)?x:"public"}
 function clamp(n,a,b){const x=Number(n);return Math.min(b,Math.max(a,Number.isFinite(x)?x:a))}
@@ -64,8 +65,8 @@ async function live(req,body){
   seatRows.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
   counts.soldTotal=counts.sold+counts.not_arrived+counts.checked_in;
   const capacity=Math.max(0,Math.floor(Number(event.capacity||event.registrationCapacity||0))),counted=[...subs.values()].filter(x=>x.countsTowardCapacity).length;
-  const result={ok:true,version:95,event:{id:eventId,title:clean(event.title||"Sự kiện",200),semester:String(event.semester||""),capacity,capacityUsed:counted,isOpen:event.isOpen===true},seating:cfg,seats:seatRows,counts,timeline:timeline(checkins),canAssign:isManager(actor)};
-  if(isManager(actor))result.submissions=[...subs.values()].filter(x=>x.countsTowardCapacity).sort((a,b)=>a.label.localeCompare(b.label,"vi"));
+  const result={ok:true,version:95,event:{id:eventId,title:clean(event.title||"Sự kiện",200),semester:String(event.semester||""),capacity,capacityUsed:counted,isOpen:event.isOpen===true},seating:cfg,seats:seatRows,counts,timeline:timeline(checkins),canAssign:canAssign(actor)};
+  if(canAssign(actor))result.submissions=[...subs.values()].filter(x=>x.countsTowardCapacity).sort((a,b)=>a.label.localeCompare(b.label,"vi"));
   return result
 }
 function status(code){if(code==="osc/unauthenticated")return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(code==="osc/event-not-found")return 404;return 400}
