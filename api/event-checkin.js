@@ -657,6 +657,10 @@ async function adminDeleteEvent(req, body) {
     ...seatSnap.docs.map(d => ({ type:"delete", ref:d.ref }))
   ];
   await commitBatchOps(db, deleteOps);
+  await Promise.all([
+    db.collection("eventCapacityCounters").doc(eventId).delete().catch(()=>{}),
+    db.collection("eventSeatClaims").doc(eventId).delete().catch(()=>{})
+  ]);
   await eventRef.delete();
 
   return { ok:true, deleted:true, eventId, submissions:subSnap.size, checkins:qrSnap.size, scannerLinks:linkSnap.size, staffLinks:staffLinkSnap.size, seatClaims:seatSnap.size };
