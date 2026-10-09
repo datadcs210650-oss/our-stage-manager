@@ -8696,6 +8696,7 @@ async function deleteSingleEventSubmission(eventId,submissionId){
     if(data.seatId){await eventSeatingAdminApi({action:"admin-release-submission-seat",eventId,submissionId});Object.assign(data,{seatStatus:"pending",seatId:"",seatLabel:"",seatSectionId:"",seatSectionName:""})}
     await moveToTrash("eventSubmission",submissionId,data,{eventId,label:data.submitterLabel||"Phản hồi",semester:ev?.semester||semester});
     await ref.delete();
+    if(Number(ev?.capacity||0)>0)await eventSeatingAdminApi({action:"admin-recount-capacity",eventId}).catch(e=>console.warn("capacity recount",e));
     if(ev?.specialType==="continuation"&&mssv)await reconcileContinuationMember(ev,mssv,{silent:true});
     await logAudit({action:"delete",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:ev?.specialType==="continuation"?"Xóa phản hồi đồng hành và đồng bộ điểm danh":"Xóa phản hồi sự kiện",semesterKey:ev?.semester||semester});
     toast(ev?.specialType==="continuation"?"Đã xóa phản hồi và cập nhật điểm danh":"Đã chuyển phản hồi vào Thùng rác");
@@ -8719,6 +8720,7 @@ async function deleteSelectedEventSubmissions(eventId){
       }
     }
     await commitInChunks(ids.map(id=>batch=>batch.delete(fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(id))));
+    if(Number(ev?.capacity||0)>0)await eventSeatingAdminApi({action:"admin-recount-capacity",eventId}).catch(e=>console.warn("capacity recount",e));
     if(ev?.specialType==="continuation")for(const key of affected)await reconcileContinuationMember(ev,key,{silent:true});
     await logAudit({action:"delete-bulk",module:"events",entityType:"eventSubmission",summary:`Xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" đồng hành và đồng bộ điểm danh":""}`,semesterKey:ev?.semester||semester});
     toast(`Đã xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" và cập nhật điểm danh":""}`);
