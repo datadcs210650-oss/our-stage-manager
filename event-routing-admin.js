@@ -55,8 +55,8 @@ function setDestination(index,option,value){
   const key=String(option||"");f.optionDestinations=normalizeDestinations(f,f.options||[]);
   const d=normalizeDestination(value);if(d==="default")delete f.optionDestinations[key];else f.optionDestinations[key]=d;
 }
-function destinationOptions(selected){
-  const sections=sectionFields();
+function destinationOptions(selected,sourceIndex){
+  const sections=sectionFields().filter(s=>eventBuilderFields.indexOf(s)>Number(sourceIndex));
   return `<option value="default" ${selected==="default"?"selected":""}>Tiếp tục bình thường</option>
     <option value="seat" ${selected==="seat"?"selected":""}>Đi đến Chọn ghế</option>
     <option value="submit" ${selected==="submit"?"selected":""}>Kết thúc & gửi form</option>
@@ -67,7 +67,7 @@ function routingPanel(index,field){
   const panel=document.createElement("div");panel.className="event-option-routing-v95";
   panel.innerHTML=`<div class="event-option-routing-title">Đích đến / Section Branching</div>
   <div class="small-help">Mỗi lựa chọn có thể tiếp tục bình thường, chuyển tới một Phần, kết thúc form hoặc mở bước chọn ghế.</div>
-  <div class="event-option-routing-list">${(field.options||[]).map(option=>{const d=normalizeDestination(field.optionDestinations?.[option]);return `<label class="event-option-routing-row"><span>${esc(option)}</span><select data-v95-route-index="${index}" data-v95-route-option="${esc(option)}">${destinationOptions(d)}</select></label>`}).join("")}</div>`;
+  <div class="event-option-routing-list">${(field.options||[]).map(option=>{const d=normalizeDestination(field.optionDestinations?.[option]);return `<label class="event-option-routing-row"><span>${esc(option)}</span><select data-v95-route-index="${index}" data-v95-route-option="${esc(option)}">${destinationOptions(d,index)}</select></label>`}).join("")}</div>`;
   return panel;
 }
 function visibilityPanel(index,field){
@@ -115,8 +115,13 @@ saveEventBuilder=async function(){
     alert("Có lựa chọn dẫn tới “Chọn ghế” nhưng sự kiện chưa bật sơ đồ ghế.");return;
   }
   const sectionIds=new Set(fields.filter(f=>f.type==="section").map(f=>f.id));
-  for(const f of fields){
-    for(const d of Object.values(f.optionDestinations||{})){if(String(d).startsWith("section:")&&!sectionIds.has(String(d).slice(8))){alert("Có nhánh đang trỏ tới một Phần đã bị xóa. Hãy chọn lại đích đến.");return}}
+  for(let fi=0;fi<fields.length;fi++){
+    const f=fields[fi];
+    for(const d of Object.values(f.optionDestinations||{})){
+      if(!String(d).startsWith("section:"))continue;
+      const targetId=String(d).slice(8),targetIndex=fields.findIndex(x=>x.type==="section"&&x.id===targetId);
+      if(!sectionIds.has(targetId)||targetIndex<=fi){alert("Section Branching chỉ được chuyển tới một Phần nằm phía sau câu hỏi nguồn. Hãy chọn lại đích đến.");return}
+    }
     const r=normalizeVisibility(f);if(r.sourceFieldId&&!fields.some(x=>x.id===r.sourceFieldId&&isChoice(x))){alert("Có điều kiện hiển thị đang trỏ tới câu hỏi không còn tồn tại.");return}
   }
   return originalSaveEventBuilder();
