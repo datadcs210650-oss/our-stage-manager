@@ -1,13 +1,17 @@
 "use strict";
 
 const crypto=require("crypto");
-const {admin,getDb,readJsonBody,requireManager,sendJson}=require("../lib/firebase-admin");
+const {admin,getDb,readJsonBody,requireUser,requireManager,sendJson}=require("../lib/firebase-admin");
 
 function bad(message,code="osc/bad-request"){const e=new Error(message);e.code=code;return e}
 function cleanId(v,label="ID"){const s=String(v||"").trim();if(!s||s.length>180||s.includes("/"))throw bad(label+" không hợp lệ.");return s}
 function cleanText(v,max=200){return String(v??"").trim().replace(/\s+/g," ").slice(0,max)}
 function millis(v){try{return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||Number(v||0)||0}catch{return 0}}
 function semesterLocked(state,semester){return !!state?.semesters?.[semester]?.locked}
+function canAssignReserved(actor){
+  if(["admin","superadmin"].includes(actor?.profile?.role))return true;
+  return actor?.profile?.role==="bcn"&&actor.profile.permissions?.viewEvents===true&&actor.profile.permissions?.editEvents===true;
+}
 async function loadState(db){const s=await db.collection("clubState").doc("main").get();return s.exists?(s.data()?.state||{}):{}}
 async function loadEvent(db,eventId){const ref=db.collection("eventPortals").doc(cleanId(eventId,"Sự kiện")),snap=await ref.get();if(!snap.exists)throw bad("Sự kiện không tồn tại.","osc/event-not-found");return{ref,data:{id:ref.id,...(snap.data()||{})}}}
 function eventOpen(event){const now=Date.now(),start=millis(event?.openAt),end=millis(event?.closeAt);return event?.isOpen===true&&(!start||now>=start)&&(!end||now<end)}
@@ -309,7 +313,8 @@ async function claimSeat(body){
   return{ok:true,version:95,seat,changed}
 }
 async function adminAssignSeat(req,body){
-  const actor=await requireManager(req),db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),submissionId=cleanId(body.submissionId,"Phản hồi"),seatId=cleanId(body.seatId,"Ghế");
+  const actor=await requireUser(req);if(!canAssignReserved(actor))throw bad("Bạn chưa có quyền cấp ghế dành riêng.","osc/forbidden");
+  const db=getDb(),eventId=cleanId(body.eventId,"Sự kiện"),submissionId=cleanId(body.submissionId,"Phản hồi"),seatId=cleanId(body.seatId,"Ghế");
   const [{data:event},state]=await Promise.all([loadEvent(db,eventId),loadState(db)]);if(semesterLocked(state,event.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const cfg=normalizeConfig(event.seating);if(!cfg.enabled)throw bad("Sự kiện không bật chọn ghế.","osc/seating-disabled");
   const seat=seatsFromConfig(cfg).find(x=>x.id===seatId);if(!seat)throw bad("Ghế không tồn tại trong sơ đồ.","osc/seat-invalid");
