@@ -3054,12 +3054,25 @@ let lookupLastAutoSyncAt=0,lookupAutoSyncInFlight=false,lookupAutoSyncPending=fa
 function role(){return currentProfile?.role||""}
 function canEditClub(){return role()==="admin"||role()==="superadmin"}
 function isBCN(){return role()==="bcn"}
+let temporaryPermissionExpiryTimer=null;
+function temporaryPermissionExpiryMs(){
+  const t=currentProfile?.temporaryPermissions;
+  return t?.expiresAt?.toMillis?.()||t?.expiresAt?.toDate?.()?.getTime?.()||Number(t?.expiresAt||0)||0;
+}
 function activeTemporaryPermissions(){
   if(!isBCN())return null;
-  const t=currentProfile?.temporaryPermissions;
+  const t=currentProfile?.temporaryPermissions,expires=temporaryPermissionExpiryMs();
   if(!t||typeof t!=="object")return null;
-  const expires=t.expiresAt?.toMillis?.()||t.expiresAt?.toDate?.()?.getTime?.()||Number(t.expiresAt||0)||0;
   return expires>Date.now()&&t.permissions&&typeof t.permissions==="object"?t.permissions:null;
+}
+function scheduleTemporaryPermissionExpiry(){
+  clearTimeout(temporaryPermissionExpiryTimer);temporaryPermissionExpiryTimer=null;
+  const expires=temporaryPermissionExpiryMs(),delay=expires-Date.now();if(delay<=0)return;
+  temporaryPermissionExpiryTimer=setTimeout(()=>{
+    if(temporaryPermissionExpiryMs()>Date.now()){scheduleTemporaryPermissionExpiry();return}
+    renderAll();applyRoleAccess();
+    Promise.resolve().then(()=>watchRealtimeCollections({force:true})).catch(e=>console.warn("temporary permission expiry refresh",e));
+  },Math.min(delay+250,2147480000));
 }
 function effectivePermissions(){
   const p={...(currentProfile?.permissions||{})},t=activeTemporaryPermissions();
@@ -3190,9 +3203,10 @@ function watchOwnProfileRealtime(){
       fbAuth.signOut();
       return;
     }
-    const beforeSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{}});
+    const beforeSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{},temporaryPermissions:currentProfile?.temporaryPermissions||null});
     currentProfile={id:snap.id,...snap.data()};
-    const afterSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{}});
+    const afterSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{},temporaryPermissions:currentProfile?.temporaryPermissions||null});
+    scheduleTemporaryPermissionExpiry();
     $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
     renderAll();
     applyRoleAccess();
@@ -3524,7 +3538,7 @@ function firestorePlain(v){
   if(v===undefined)return null;
   try{return structuredClone(v)}catch{return JSON.parse(JSON.stringify(v,(k,x)=>x?.toDate?x.toDate().toISOString():x))}
 }
-const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Cổng sự kiện",desc:"Form, QR & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
+const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Cổng sự kiện",desc:"Form, QR & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},operations:{label:"Điều hành nâng cao",desc:"Phòng, bình chọn, quyền tạm thời & quota",group:"CỔNG & DỮ LIỆU",icon:"grid"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
 function navLabel(tab){return NAV_META[tab]?.label||tab}
 function navIconSvg(tab){const type=NAV_META[tab]?.icon||"grid",c='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"',s={home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 2.5 2.5L16 9"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V7Z"/><path d="M3 7 16 3v4"/><path d="M16 12h5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/><circle cx="12" cy="12" r="10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',shield:'<path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><path d="M9 12h6M12 9v6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.12-1.3l2-1.55-2-3.46-2.43.98a7 7 0 0 0-2.25-1.3L13.85 3h-4l-.35 2.37a7 7 0 0 0-2.25 1.3L4.82 5.69l-2 3.46 2 1.55A7 7 0 0 0 4.7 12c0 .45.04.88.12 1.3l-2 1.55 2 3.46 2.43-.98a7 7 0 0 0 2.25 1.3L9.85 21h4l.35-2.37a7 7 0 0 0 2.25-1.3l2.43.98 2-3.46-2-1.55c.08-.42.12-.85.12-1.3Z"/>'};return `<svg ${c}>${s[type]||s.grid}</svg>`}
 function enhanceSidebarNavigation(){const nav=$(".nav");if(!nav)return;nav.querySelectorAll(".nav-group-label").forEach(x=>x.remove());let last="";[...nav.querySelectorAll("button[data-tab]")].forEach(btn=>{const tab=btn.dataset.tab,m=NAV_META[tab]||{label:tab,desc:"",group:""};if(m.group&&m.group!==last){const l=document.createElement("div");l.className="nav-group-label";l.textContent=m.group;nav.insertBefore(l,btn);last=m.group}btn.title=m.label;btn.innerHTML=`<span class="nav-icon">${navIconSvg(tab)}</span><span class="nav-copy"><b>${esc(m.label)}</b><small>${esc(m.desc)}</small></span><span class="nav-arrow">›</span>`})}
@@ -4441,6 +4455,7 @@ function showApp(){
   $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
   renderAll();
   applyRoleAccess();
+  scheduleTemporaryPermissionExpiry();
   updateWorkspaceWindowMeta();
   renderWorkspaceDock($(".nav button.active")?.dataset.tab||"dashboard");
   if(!initialRouteApplied){
