@@ -175,7 +175,9 @@ function routeText(value){
 }
 function normalizeSubmissionDestination(value){
   const v=String(value||"").trim().toLowerCase();
-  return v==="seat"||v==="submit"?v:"";
+  if(v==="seat"||v==="submit")return v;
+  if(v.startsWith("section:")&&v.slice(8))return "section:"+v.slice(8);
+  return "";
 }
 function optionDestinationFor(field,answer){
   const map=(field?.optionDestinations&&typeof field.optionDestinations==="object"&&!Array.isArray(field.optionDestinations))
@@ -195,7 +197,7 @@ function resolveSubmissionDestination(event,answers,defaultDestination="submit")
     if(!["radio","select"].includes(String(field?.type||"")))continue;
     const answer=answers?.[String(field?.id||"")];
     const explicit=optionDestinationFor(field,answer);
-    if(explicit)return explicit;
+    if(explicit==="seat"||explicit==="submit")return explicit;
     if(isDeclinedParticipation(field,answer))return "submit";
   }
   return defaultDestination==="seat"?"seat":"submit";
