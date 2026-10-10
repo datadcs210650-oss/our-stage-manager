@@ -20,3 +20,9 @@ V96 Stagecraft is a presentation/accessibility redesign layered on the existing 
 V96 UI files make no network requests and contain no credentials. They do not alter Firebase initialization, session/security code, Firestore Security Rules, API authorization, Admin/BCN permissions, seat transactions, capacity guards, ticketing or check-in logic.
 
 Research references used: Vercel Web Interface Guidelines and 2026 dashboard navigation redesign; Linear UI redesign and command menu; Stripe Dashboard workflow/context patterns and accessible color systems; WCAG 2.2 focus and target-size guidance.
+
+## V96.1 Event polish
+- Standardized the admin and public UI on a sans-serif system font stack.
+- Renamed the Events navigation item to “Sự kiện”.
+- Rebuilt the Events workspace hierarchy and action grouping without changing event APIs, check-in, Ticket Studio, QR, capacity or permission logic.
+- Removed Anonymous Voting from the Operations UI and server action surface. Existing historical `clubVotes` data is not deleted automatically; Firestore Rules continue to deny direct client access.
