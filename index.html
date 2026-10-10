@@ -2568,7 +2568,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 
     <section id="ticketStudio" class="hidden">
       <div class="ts-hero">
-        <div><div class="eyebrow">TICKET STUDIO</div><h2>Tạo vé & QR check-in sự kiện</h2><p>Upload mẫu vé, chọn các trường cần hiển thị, lấy khách từ kết quả đăng ký hoặc Excel/CSV rồi phát hành vé. Việc quét vé được thực hiện bằng Link check-in ngoài BCN của Cổng sự kiện.</p></div>
+        <div><div class="eyebrow">TICKET STUDIO</div><h2>Tạo vé & QR check-in sự kiện</h2><p>Upload mẫu vé, chọn các trường cần hiển thị, lấy khách từ kết quả đăng ký hoặc Excel/CSV rồi phát hành vé. Việc quét vé được thực hiện bằng Link check-in ngoài BCN của Sự kiện.</p></div>
         <div class="ts-event-picker"><label>SỰ KIỆN</label><select id="tsEventSelect"></select></div>
       </div>
       <div id="tsLoadState" class="small-help" style="margin:0 0 10px"></div>
@@ -4551,7 +4551,7 @@ function clearRestrictedModuleUi(module){
   }
   if(module==="events"){
     clear("#eventList");
-    const e=$("#eventEmpty");if(e){e.textContent="Bạn chưa được cấp quyền xem Cổng sự kiện và kết quả.";e.classList.remove("hidden")}
+    const e=$("#eventEmpty");if(e){e.textContent="Bạn chưa được cấp quyền xem Sự kiện và kết quả.";e.classList.remove("hidden")}
   }
   if(module==="lookup"){
     clear("#lookupCoreFields");clear("#lookupCustomFields");clear("#lookupCodeBody");
@@ -4642,8 +4642,8 @@ function applyRoleAccess(){
   if($("#readonlyBannerEvents")&&canViewModule("events")){
     $("#readonlyBannerEvents").classList.toggle("hidden",!isBCN()&&!semesterLocked());
     $("#readonlyBannerEvents").textContent=semesterLocked()
-      ?"Học kỳ đã khóa — Cổng sự kiện đang ở chế độ chỉ xem."
-      :(ee?"BCN — Bạn được cấp quyền chỉnh sửa cổng sự kiện.":"BCN — Bạn chỉ được xem cổng sự kiện và kết quả.");
+      ?"Học kỳ đã khóa — Sự kiện đang ở chế độ chỉ xem."
+      :(ee?"BCN — Bạn được cấp quyền chỉnh sửa sự kiện.":"BCN — Bạn chỉ được xem sự kiện và kết quả.");
   }
 
   $$(".admin-only-action").forEach(x=>x.classList.toggle("hidden",!canEditClub()));
@@ -6424,7 +6424,7 @@ function globalSearchItems(q){
   if(canEditClub())Object.entries(state.semesters||{}).forEach(([k,s])=>add(`${s.name||k} (${k})`,"Học kỳ","settings",`semester:${k}`));
   if(canViewModule("members"))for(const m of state.members||[])add(m.name||"Thành viên",`${m.mssv||""}`,"info",`member:${m.id}`);
   if(canViewModule("finance"))for(const t of state.transactions||[])add(t.description||"Giao dịch",`${t.type==="income"?"Thu":"Chi"} • ${money(t.amount)} • ${t.date||""}`,"finance");
-  if(canViewModule("events"))for(const e of state.events||[])add(e.title||"Sự kiện",`${e.semester||""} • Cổng sự kiện`,"events");
+  if(canViewModule("events"))for(const e of state.events||[])add(e.title||"Sự kiện",`${e.semester||""} • Sự kiện`,"events");
   if(canEditClub())for(const p of freeLookupPortals||[])add(p.title||"Tra cứu",`Cổng tra cứu tự do • ${freeLookupScopeLabel(p)}`,"freeLookup");
   if(canEditClub())for(const u of accountRows||[])add(u.displayName||u.email||"Tài khoản",`${u.email||""} • ${u.role||""}`,"accounts");
   return out.slice(0,35)
@@ -6512,7 +6512,7 @@ async function deleteTx(id){if(!canEditModule("finance"))return;const t=state.tr
 
 
 
-/* cổng sự kiện dạng form */
+/* sự kiện dạng form */
 function eventPublicSlug(value){
   const s=String(value||"su-kien").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
     .replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,90);
@@ -7139,7 +7139,7 @@ $("#freeLookupSearch").oninput=()=>renderFreeLookup();
 
 function eventFor(id){return state.events.find(e=>e.id===id)}
 
-/* ===== V74: Cổng sự kiện liên kết trực tiếp với từng hoạt động ===== */
+/* ===== V74: Sự kiện liên kết trực tiếp với từng hoạt động ===== */
 function linkedEventsForActivity(activityId,semKey=semester){
   const id=String(activityId||"");
   if(!id)return [];
@@ -7149,7 +7149,7 @@ function activityPortalTemplate(gi,ii){
   const g=sem().groups?.[gi],it=g?.items?.[ii];
   if(!g||!it)return null;
   return {
-    name:it.name||"Cổng sự kiện hoạt động",
+    name:it.name||"Sự kiện hoạt động",
     description:it.date?`Đăng ký / ghi nhận thông tin cho hoạt động ${it.name||""} • ${it.date}`:`Đăng ký / ghi nhận thông tin cho hoạt động ${it.name||""}`,
     resultAction:"none",
     eventPoints:activityMaxPoints(it)||0,
@@ -7164,8 +7164,8 @@ function activityPortalTemplate(gi,ii){
   };
 }
 function createActivityEventPortal(gi,ii){
-  if(!canEditModule("events"))return alert("Tài khoản chưa có quyền chỉnh sửa Cổng sự kiện.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trước khi tạo cổng sự kiện.");
+  if(!canEditModule("events"))return alert("Tài khoản chưa có quyền chỉnh sửa Sự kiện.");
+  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trước khi tạo sự kiện.");
   const tpl=activityPortalTemplate(gi,ii);if(!tpl)return alert("Không tìm thấy hoạt động.");
   window.__eventTemplate=tpl;
   closeModal();
@@ -7175,10 +7175,10 @@ function openActivityPortalManager(gi,ii){
   const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
   const portals=linkedEventsForActivity(it.id);
   const rows=portals.length?portals.map(ev=>`<div class="activity-portal-manage-row">
-    <div><b>${esc(ev.title||"Cổng sự kiện")}</b><small>${eventAvailability(ev).label} • ${eventAnswerFieldCount(ev)} trường</small></div>
+    <div><b>${esc(ev.title||"Sự kiện")}</b><small>${eventAvailability(ev).label} • ${eventAnswerFieldCount(ev)} trường</small></div>
     <div class="activity-portal-manage-actions"><button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng</button>${ev.qrCheckinEnabled===true&&canEditModule("attendance")?`<button class="primary" onclick="closeModal();setTimeout(()=>openEventStudentQrCheckin('${ev.id}'),0)">Quét QR</button>`:""}<button class="secondary" onclick="closeModal();setTimeout(()=>openEventSubmissions('${ev.id}'),0)">Kết quả</button>${canEditModule("events")?`<button class="secondary" onclick="closeModal();setTimeout(()=>openEventBuilder('${ev.id}'),0)">Chỉnh sửa</button>`:""}</div>
-  </div>`).join(""):`<div class="empty">Hoạt động này chưa có cổng sự kiện.</div>`;
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Cổng sự kiện của hoạt động</h2><div class="small-help">${esc(g.name)} → <b>${esc(it.name)}</b></div></div><button onclick="closeModal()">×</button></div><div class="activity-portal-manage-list">${rows}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Đóng</button>${canEditModule("events")&&!semesterLocked()?`<button class="primary" onclick="createActivityEventPortal(${gi},${ii})">+ Tạo cổng mới</button>`:""}</div></div></div>`;
+  </div>`).join(""):`<div class="empty">Hoạt động này chưa có sự kiện.</div>`;
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Sự kiện của hoạt động</h2><div class="small-help">${esc(g.name)} → <b>${esc(it.name)}</b></div></div><button onclick="closeModal()">×</button></div><div class="activity-portal-manage-list">${rows}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Đóng</button>${canEditModule("events")&&!semesterLocked()?`<button class="primary" onclick="createActivityEventPortal(${gi},${ii})">+ Tạo cổng mới</button>`:""}</div></div></div>`;
   $("#modalWrap").classList.remove("hidden");syncModalBodyState();
 }
 function eventBuilderActivityOptions(selectedId="",semKey=semester){
@@ -7208,7 +7208,7 @@ function eventPointGroup(semKey,{create=false}={}){
   cfg.groups=cfg.groups||[];
   let g=cfg.groups.find(x=>x.specialType==="eventPoints"||x.id==="event_portal_points");
   if(!g&&create){
-    g={id:"event_portal_points",name:"Điểm từ cổng sự kiện",mode:"number",specialType:"eventPoints",items:[]};
+    g={id:"event_portal_points",name:"Điểm từ sự kiện",mode:"number",specialType:"eventPoints",items:[]};
     cfg.groups.push(g);
   }
   if(g){
@@ -7225,10 +7225,10 @@ async function ensureEventPointActivity(ev){
   const itemId=eventPointItemId(ev.id);
   let item=g.items.find(x=>x.id===itemId);
   if(!item){
-    item={id:itemId,name:ev.title||"Cổng sự kiện",date:"",points,mode:"number",sourceEventId:ev.id,specialType:"eventPoints",locked:false};
+    item={id:itemId,name:ev.title||"Sự kiện",date:"",points,mode:"number",sourceEventId:ev.id,specialType:"eventPoints",locked:false};
     g.items.push(item);
   }else{
-    item.name=ev.title||item.name||"Cổng sự kiện";
+    item.name=ev.title||item.name||"Sự kiện";
     item.points=points;
     item.sourceEventId=ev.id;
   }
@@ -7249,7 +7249,7 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
   const linked=ev.linkedActivityId?activityItemById(ev.linkedActivityId,ev.semester):null;
   const points=eventPointsValue(ev);
   if(!points&&!linked){
-    if(!silent)alert("Cổng sự kiện này không cấu hình điểm hoặc hoạt động liên kết.");
+    if(!silent)alert("Sự kiện này không cấu hình điểm hoặc hoạt động liên kết.");
     return false;
   }
   if(semesterLocked(ev.semester)){
@@ -7279,7 +7279,7 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
   const item=linked?.item||await ensureEventPointActivity(ev);
   if(!item){
     await ref.set({pointsStatus:"Không tìm thấy hoạt động đã liên kết",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert("Hoạt động liên kết không còn tồn tại. Hãy chỉnh lại cổng sự kiện.");
+    if(!silent)alert("Hoạt động liên kết không còn tồn tại. Hãy chỉnh lại sự kiện.");
     return false;
   }
   if(item?.locked===true){
@@ -7313,7 +7313,7 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
     module:"attendance",
     entityType:"member",
     entityId:target.id,
-    summary:linkedMode==="checkbox"?`Ghi nhận tham gia ${item.name} từ cổng sự kiện cho ${target.name}`:`Cộng ${appliedValue} điểm từ sự kiện ${ev.title} cho ${target.name}`,
+    summary:linkedMode==="checkbox"?`Ghi nhận tham gia ${item.name} từ sự kiện cho ${target.name}`:`Cộng ${appliedValue} điểm từ sự kiện ${ev.title} cho ${target.name}`,
     before:{itemId:item.id,value:before},
     after:{itemId:item.id,value:appliedValue},
     undo:{type:"memberScore",memberId:target.id,itemId:item.id,value:before},
@@ -7347,7 +7347,7 @@ function eventQrCheckinTimeLabel(v){return v?dateTime(v):"vừa xong"}
 async function eventCheckinApi(body,timeoutMs=15000){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},timeoutMs);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||(res.status===404?"API /api/event-checkin chưa được deploy trên Vercel.":`API trả về lỗi ${res.status}`));e.code=data.code||"";e.status=res.status;throw e}return data}
 
 async function commitEventStudentQrCheckin(eventId,payload,{method="school_qr",decision=""}={}){return eventCheckinApi({action:"admin-scan",eventId,payload,method,decision})}
-async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),ticketPayload=extractTicketStudioQr(rawText),mssv=ticketPayload?"":extractEventStudentMssv(rawText),scanKey=ticketPayload||mssv,now=Date.now();if(!scanKey){eventStudentQrStatus("error","Không nhận diện được QR","QR không phải mã thành viên hoặc vé Ticket Studio hợp lệ. Dữ liệu QR gốc không được lưu.");return}if(scanKey===eventStudentQrLastText&&now-eventStudentQrLastAt<3200)return;eventStudentQrLastText=scanKey;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,scanKey,{method:ticketPayload?"ticket_qr":method});if(result.needsConfirmation){const ok=confirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên cổng sự kiện này.\n\nBạn có xác nhận cho phép check-in không?`);if(!ok){eventStudentQrStatus("warn","Chưa ghi nhận check-in",`MSSV ${mssv}`);return}result=await commitEventStudentQrCheckin(ev.id,scanKey,{method,decision:"approve"})}const isTicket=result.attendeeType==="ticket",name=result.memberName||(isTicket?"Khách có vé":mssv||"Người tham dự"),identity=isTicket?`Mã vé ${result.ticketCode||""}`:`MSSV ${result.mssv||mssv}`;if(result.pendingAdmin){eventStudentQrStatus("warn",`Chờ Admin duyệt • ${name}`,identity,3000);return}if(result.duplicate){eventStudentQrStatus("warn",`Đã check-in trước đó • ${name}`,identity,3000);return}eventStudentQrStatus("success",`✓ Đã check-in thành công • ${name}`,identity,2800)}catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}finally{loadEventStudentQrCheckins(ev.id,{silent:true}).catch(()=>{});refreshEventQrSummaryBadges({force:true}).catch(()=>{});setTimeout(()=>{eventStudentQrBusy=false},650)}}
+async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),ticketPayload=extractTicketStudioQr(rawText),mssv=ticketPayload?"":extractEventStudentMssv(rawText),scanKey=ticketPayload||mssv,now=Date.now();if(!scanKey){eventStudentQrStatus("error","Không nhận diện được QR","QR không phải mã thành viên hoặc vé Ticket Studio hợp lệ. Dữ liệu QR gốc không được lưu.");return}if(scanKey===eventStudentQrLastText&&now-eventStudentQrLastAt<3200)return;eventStudentQrLastText=scanKey;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,scanKey,{method:ticketPayload?"ticket_qr":method});if(result.needsConfirmation){const ok=confirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên sự kiện này.\n\nBạn có xác nhận cho phép check-in không?`);if(!ok){eventStudentQrStatus("warn","Chưa ghi nhận check-in",`MSSV ${mssv}`);return}result=await commitEventStudentQrCheckin(ev.id,scanKey,{method,decision:"approve"})}const isTicket=result.attendeeType==="ticket",name=result.memberName||(isTicket?"Khách có vé":mssv||"Người tham dự"),identity=isTicket?`Mã vé ${result.ticketCode||""}`:`MSSV ${result.mssv||mssv}`;if(result.pendingAdmin){eventStudentQrStatus("warn",`Chờ Admin duyệt • ${name}`,identity,3000);return}if(result.duplicate){eventStudentQrStatus("warn",`Đã check-in trước đó • ${name}`,identity,3000);return}eventStudentQrStatus("success",`✓ Đã check-in thành công • ${name}`,identity,2800)}catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}finally{loadEventStudentQrCheckins(ev.id,{silent:true}).catch(()=>{});refreshEventQrSummaryBadges({force:true}).catch(()=>{});setTimeout(()=>{eventStudentQrBusy=false},650)}}
 async function submitManualEventStudentMssv(){const input=$("#eventStudentQrManual");if(!input)return;const value=input.value.trim();if(!value)return;input.value="";await processEventStudentQrPayload(value,{method:"manual_mssv"})}
 
 async function stopEventStudentQrScanner({silent=false,keepWatch=true}={}){eventStudentQrBusy=false;if(eventStudentQrStatusTimer){clearTimeout(eventStudentQrStatusTimer);eventStudentQrStatusTimer=0}eventStudentQrStatusSeq++;if(!keepWatch&&eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}if(eventStudentQrScanner){const q=eventStudentQrScanner;eventStudentQrScanner=null;try{if(q.getState?.()===2||q.getState?.()===3)await q.stop()}catch{}try{q.clear?.()}catch{}}if(eventStudentQrNativeRaf){cancelAnimationFrame(eventStudentQrNativeRaf);eventStudentQrNativeRaf=0}if(eventStudentQrNativeStream){try{eventStudentQrNativeStream.getTracks().forEach(t=>t.stop())}catch{}eventStudentQrNativeStream=null}const reader=$("#eventStudentQrReader");if(reader)reader.innerHTML=`<div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để tiếp tục quét.</div>`;const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=false;btn.textContent="Bật camera"}if(!silent&&eventStudentQrEventId)eventStudentQrStatus("","Camera đã tắt","Không có hình ảnh hoặc video nào được lưu.");if(!keepWatch)eventStudentQrEventId=""}
@@ -7728,7 +7728,7 @@ function openEventTemplatePicker(){
   if(!canEditModule("events"))return;
   const cards=Object.entries(EVENT_TEMPLATES).map(([k,t])=>`<div class="event-template-card" onclick="useEventTemplate('${k}')"><h4>${esc(t.name)}</h4><p>${esc(t.description)}</p></div>`).join("");
   const continuation=buildContinuationEventTemplate();
-  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Mẫu cổng sự kiện</h2><div class="small-help">Chọn mẫu để tạo nhanh, sau đó vẫn sửa được mọi câu hỏi.</div></div><button onclick="closeModal()">×</button></div><div class="event-template-grid">${cards}<div class="event-template-card" onclick="useEventTemplate('continuation')"><h4>${esc(continuation.name)}</h4><p>${esc(continuation.description)}</p><span class="companion-badge">Tự chuyển thành viên sang kỳ tiếp theo</span></div></div></div></div>`;
+  $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Mẫu sự kiện</h2><div class="small-help">Chọn mẫu để tạo nhanh, sau đó vẫn sửa được mọi câu hỏi.</div></div><button onclick="closeModal()">×</button></div><div class="event-template-grid">${cards}<div class="event-template-card" onclick="useEventTemplate('continuation')"><h4>${esc(continuation.name)}</h4><p>${esc(continuation.description)}</p><span class="companion-badge">Tự chuyển thành viên sang kỳ tiếp theo</span></div></div></div></div>`;
   $("#modalWrap").classList.remove("hidden");
 }
 function useEventTemplate(k){
@@ -7772,9 +7772,9 @@ async function openEventBuilder(eventId=""){
   const eventSemesterKey=ev?.semester||semester;
   const eventSemesterName=state.semesters[eventSemesterKey]?.name||eventSemesterKey;
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal event-builder-modal">
-    <div class="modal-head"><div><h2>${ev?"Chỉnh sửa":"Tạo"} cổng sự kiện</h2><div class="modal-kicker">${esc(eventSemesterName)} • Cổng sự kiện</div></div><button class="modal-close-btn" onclick="closeModal()" aria-label="Đóng">×</button></div>
+    <div class="modal-head"><div><h2>${ev?"Chỉnh sửa":"Tạo"} sự kiện</h2><div class="modal-kicker">${esc(eventSemesterName)} • Sự kiện</div></div><button class="modal-close-btn" onclick="closeModal()" aria-label="Đóng">×</button></div>
     <div class="form-grid">
-      <label>Tiêu đề<textarea id="eventTitle" rows="2" maxlength="200" placeholder="Có thể nhấn Enter để xuống dòng">${esc(ev?.title||tpl?.name||"")}</textarea><div class="permission-note">Dòng xuống trong ô này sẽ được giữ nguyên ở cổng sự kiện. Tối đa 200 ký tự.</div></label>
+      <label>Tiêu đề<textarea id="eventTitle" rows="2" maxlength="200" placeholder="Có thể nhấn Enter để xuống dòng">${esc(ev?.title||tpl?.name||"")}</textarea><div class="permission-note">Dòng xuống trong ô này sẽ được giữ nguyên ở sự kiện. Tối đa 200 ký tự.</div></label>
       <label>Học kỳ<input id="eventSemesterDisplay" value="${esc(eventSemesterName)}" readonly><div class="permission-note">Sự kiện được cố định vào học kỳ này. Muốn tạo cho kỳ khác, hãy đổi học kỳ ở menu bên trái rồi tạo sự kiện mới.</div></label>
       <label class="full">Liên kết với hoạt động<select id="eventLinkedActivity">${eventBuilderActivityOptions(eventBuilderLinkedActivityId,eventSemesterKey)}</select><div class="permission-note">Có thể tạo cổng ngay từ Thiết lập → Hoạt động. Liên kết này giúp biết cổng thuộc hoạt động nào và không tạo thêm cột điểm trùng.</div></label>
       <label class="full">Mô tả<textarea id="eventDescription" rows="3">${esc(ev?.description||tpl?.description||"")}</textarea></label>
@@ -7821,8 +7821,8 @@ async function openEventBuilder(eventId=""){
     </div>
     <div id="eventFieldEditor"></div>
     <div id="eventSeatStudio"></div>
-    <div class="free-mode-note"><b>Sơ đồ ghế nâng cao:</b> mỗi khu có thể có số ghế khác nhau theo từng hàng (ví dụ A:30, B:28, C:24), kéo thả khu và sân khấu để mô phỏng hội trường. Sau khi có ghế đã xác nhận, hệ thống khóa thay đổi cấu trúc để tránh lệch dữ liệu.<br><br><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Cổng sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file. Với sự kiện đóng quỹ, nên có trường loại MSSV và dùng chế độ Admin duyệt.</div>
-    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveEventBuilder()">Lưu cổng sự kiện</button></div>
+    <div class="free-mode-note"><b>Sơ đồ ghế nâng cao:</b> mỗi khu có thể có số ghế khác nhau theo từng hàng (ví dụ A:30, B:28, C:24), kéo thả khu và sân khấu để mô phỏng hội trường. Sau khi có ghế đã xác nhận, hệ thống khóa thay đổi cấu trúc để tránh lệch dữ liệu.<br><br><b>Chế độ miễn phí Spark:</b> không dùng Firebase Storage. Sự kiện vẫn hỗ trợ <b>hình ảnh/QR do Admin chèn vào câu hỏi</b> (ảnh được nén và lưu cùng cấu hình form). Người trả lời không upload file. Với sự kiện đóng quỹ, nên có trường loại MSSV và dùng chế độ Admin duyệt.</div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveEventBuilder()">Lưu sự kiện</button></div>
   </div></div>`;
   $("#modalWrap").classList.remove("hidden");
   renderEventFieldEditor();
@@ -8144,7 +8144,7 @@ function previewEventBuilderForm(){
     else control=`<input disabled type="${f.type==="email"?"email":f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text"}" style="width:100%">`;
     return `<div class="field"><label>${esc(f.label)} ${required}</label>${control}</div>`;
   }).join("");
-  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="eventPreviewOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Xem trước form</h2><div class="small-help event-preview-title">${esc($("#eventTitle")?.value||"Cổng sự kiện")}</div></div><button onclick="document.getElementById('eventPreviewOverlay')?.remove()">×</button></div>${preview||'<div class="event-field-empty-warning">Chưa có trường nào.</div>'}<div class="modal-actions"><button class="primary" onclick="document.getElementById('eventPreviewOverlay')?.remove()">Đóng xem trước</button></div></div></div>`);
+  $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="eventPreviewOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Xem trước form</h2><div class="small-help event-preview-title">${esc($("#eventTitle")?.value||"Sự kiện")}</div></div><button onclick="document.getElementById('eventPreviewOverlay')?.remove()">×</button></div>${preview||'<div class="event-field-empty-warning">Chưa có trường nào.</div>'}<div class="modal-actions"><button class="primary" onclick="document.getElementById('eventPreviewOverlay')?.remove()">Đóng xem trước</button></div></div></div>`);
 }
 
 function continuationActivityId(sourceSem,targetSem){return `continuation_${sourceSem}_${targetSem}`}
@@ -8371,10 +8371,10 @@ async function saveEventBuilder(){
     return alert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
   }
   if(eventPoints>0&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Muốn cộng điểm từ cổng sự kiện, form cần có một trường loại MSSV.");
+    return alert("Muốn cộng điểm từ sự kiện, form cần có một trường loại MSSV.");
   }
   if($("#eventQrCheckinEnabled")?.value==="1"&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Bật QR check-in cần có một trường loại MSSV để hệ thống đối chiếu người đã đăng ký trên cổng sự kiện.");
+    return alert("Bật QR check-in cần có một trường loại MSSV để hệ thống đối chiếu người đã đăng ký trên sự kiện.");
   }
   if(eventBuilderSpecialType==="continuation"){
     if(!eventBuilderTargetSemester||!state.semesters?.[eventBuilderTargetSemester]){
@@ -8472,7 +8472,7 @@ async function saveEventBuilder(){
     scheduleRealtimeRender("events");
     toast(fullEvent.specialType==="continuation"
       ?"Đã lưu form đồng hành kỳ tiếp theo"
-      :(eventPoints>0?`Đã lưu cổng sự kiện • ${eventPoints} điểm`:"Đã lưu cổng sự kiện • Không tính điểm"));
+      :(eventPoints>0?`Đã lưu sự kiện • ${eventPoints} điểm`:"Đã lưu sự kiện • Không tính điểm"));
   }catch(e){
     console.error("saveEventBuilder",e);
     const msg=e?.code==="permission-denied"
@@ -8480,7 +8480,7 @@ async function saveEventBuilder(){
       :(e?.message||e);
     alert("Không lưu được các trường sự kiện: "+msg);
   }finally{
-    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=oldSaveText||"Lưu cổng sự kiện"}
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=oldSaveText||"Lưu sự kiện"}
   }
 }
 async function toggleEventOpen(id){
@@ -8678,7 +8678,7 @@ function eventSubmissionExportRows(ev,rows){
     }
     if(ev.seating?.enabled===true){row["Khu ghế"]=s.seatSectionName||"";row["Ghế"]=s.seatLabel||"";row["Trạng thái ghế"]=s.seatStatus==="confirmed"?"Đã chọn":(s.seatStatus||"Chưa chọn")}
     row["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");
-    row["Điểm cổng sự kiện"]=eventPointsValue(ev)||"";
+    row["Điểm sự kiện"]=eventPointsValue(ev)||"";
     row["Trạng thái điểm"]=s.pointsApplied?`Đã cộng ${Number(s.pointsValue||eventPointsValue(ev)||0)} điểm`:(s.pointsStatus||"Chưa cộng");
     return row;
   });
@@ -9392,7 +9392,7 @@ function accountPermissionHTML(prefix,p={},disabled=false){
     return `<div class="permission-row"><strong>${label}</strong><label><input type="checkbox" id="${prefix}View${k}" ${view?"checked":""} ${disabled?"disabled":""} onchange="syncPermissionRow('${prefix}','${k}')"> Xem</label><label><input type="checkbox" id="${prefix}Edit${k}" ${edit?"checked":""} ${disabled||!view?"disabled":""} onchange="syncPermissionRow('${prefix}','${k}',true)"> Chỉnh sửa</label></div>`;
   };
   const lookupView=p.viewLookup===true;
-  return `<div class="permission-matrix">${row("Attendance","Điểm danh / điểm")}${row("Members","Thành viên")}${row("Finance","Thu chi")}${row("Events","Cổng sự kiện / kết quả")}
+  return `<div class="permission-matrix">${row("Attendance","Điểm danh / điểm")}${row("Members","Thành viên")}${row("Finance","Thu chi")}${row("Events","Sự kiện / kết quả")}
     <div class="permission-row"><strong>Cổng tra cứu</strong><label><input type="checkbox" id="${prefix}ViewLookup" ${lookupView?"checked":""} ${disabled?"disabled":""}> Xem</label><label title="Chỉ Admin được thay đổi cấu hình công khai"><input type="checkbox" disabled> Chỉnh sửa</label></div></div>`;
 }
 function syncPermissionRow(prefix,k,editChanged=false){const v=$("#"+prefix+"View"+k),e=$("#"+prefix+"Edit"+k);if(!v||!e)return;if(editChanged&&e.checked)v.checked=true;if(!v.checked)e.checked=false;e.disabled=v.disabled||!v.checked}
@@ -10495,7 +10495,7 @@ function renderSettings(){
         <div><button class="secondary" onclick="addActivityItem(${gi})">+ Thêm hoạt động</button></div>
       </div>
       <div class="activity-setting-table">
-        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span>Cổng tra cứu</span><span>Cổng sự kiện</span><span></span></div>
+        <div class="activity-setting-row header"><span>Tên hoạt động</span><span>Ngày hoạt động</span><span>Hình thức</span><span>Điểm tối đa</span><span>Khóa cột</span><span>Cổng tra cứu</span><span>Sự kiện</span><span></span></div>
         ${g.items.map((it,ii)=>`
           <div class="activity-setting-row ${it.locked?"activity-config-locked":""}" data-activity-lock-row="${gi}:${ii}">
             <input class="lock-protected-config" value="${esc(it.name)}" aria-label="Tên hoạt động" ${it.locked?"disabled":""} onchange="sem().groups[${gi}].items[${ii}].name=this.value">
@@ -10516,7 +10516,7 @@ function renderSettings(){
             <button class="danger lock-protected-config" ${it.locked?"disabled":""} title="${it.locked?"Mở khóa cột trước khi xóa":"Xóa hoạt động"}" onclick="removeActivityItem(${gi},${ii})">×</button>
           </div>`).join("")}
       </div>
-      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. <b>Cổng tra cứu</b> cho phép Admin ẩn/hiện riêng hoạt động đó trên trang tra cứu thành viên; việc ẩn không xóa điểm nội bộ và không ảnh hưởng bảng điểm danh. Nút <b>Cổng</b> quản lý cổng sự kiện của hoạt động. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
+      <div class="activity-date-help">Mỗi dòng có thể chọn riêng <b>Tickbox</b> hoặc <b>Nhập điểm</b>. <b>Cổng tra cứu</b> cho phép Admin ẩn/hiện riêng hoạt động đó trên trang tra cứu thành viên; việc ẩn không xóa điểm nội bộ và không ảnh hưởng bảng điểm danh. Nút <b>Cổng</b> quản lý sự kiện của hoạt động. Sau khi chốt, Admin có thể khóa riêng từng cột.</div>
     </div>`).join("");
   renderUniversitySettings();
   applyZeroClearBehavior();
@@ -10835,7 +10835,7 @@ async function removeActivityItem(gi,ii){
   const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
   const linked=linkedEventsForActivity(it.id);
   const message=linked.length
-    ? `Hoạt động này đang liên kết với ${linked.length} cổng sự kiện. Nếu xóa hoạt động, các cổng vẫn được giữ lại nhưng sẽ được gỡ liên kết để tránh lỗi.\n\nBạn có chắc muốn xóa?`
+    ? `Hoạt động này đang liên kết với ${linked.length} sự kiện. Nếu xóa hoạt động, các cổng vẫn được giữ lại nhưng sẽ được gỡ liên kết để tránh lỗi.\n\nBạn có chắc muốn xóa?`
     : "Xóa cột hoạt động này?";
   if(!confirm(message))return;
   try{
@@ -10843,8 +10843,8 @@ async function removeActivityItem(gi,ii){
       await Promise.all(linked.map(ev=>fbDb.collection("eventPortals").doc(ev.id).set({linkedActivityId:"",linkedActivityGroupId:"",linkedActivityName:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})));
       linked.forEach(ev=>{ev.linkedActivityId="";ev.linkedActivityGroupId="";ev.linkedActivityName=""});
     }
-    sem().groups[gi].items.splice(ii,1);save();renderSettings();renderEvents();toast(linked.length?"Đã xóa hoạt động và gỡ liên kết cổng sự kiện":"Đã xóa hoạt động");
-  }catch(e){console.error("removeActivityItem",e);alert("Không xóa được hoạt động vì chưa gỡ được liên kết cổng sự kiện: "+(e.message||e))}
+    sem().groups[gi].items.splice(ii,1);save();renderSettings();renderEvents();toast(linked.length?"Đã xóa hoạt động và gỡ liên kết sự kiện":"Đã xóa hoạt động");
+  }catch(e){console.error("removeActivityItem",e);alert("Không xóa được hoạt động vì chưa gỡ được liên kết sự kiện: "+(e.message||e))}
 }
 $("#saveActivitiesBtn").onclick=()=>{save();toast("Đã lưu hoạt động")};
 if($("#addUniversityBtn"))$("#addUniversityBtn").onclick=addUniversitySetting;
