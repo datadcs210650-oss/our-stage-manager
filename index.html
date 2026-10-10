@@ -2212,7 +2212,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button data-tab="info">Thông tin thành viên</button>
         <button data-tab="divisions">Phân ban</button>
         <button data-tab="finance">Thu Chi CLB</button>
-        <button data-tab="events">Cổng sự kiện</button>
+        <button data-tab="events">Sự kiện</button>
         <button data-tab="operations">Điều hành nâng cao</button>
         <button data-tab="ticketStudio" class="admin-nav">Ticket Studio</button>
         <button data-tab="memberQr" class="admin-nav">Mã QR thành viên</button>
@@ -2518,23 +2518,46 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
     </section>
 
     <section id="events" class="hidden">
-      <div id="readonlyBannerEvents" class="readonly-banner hidden">Quyền BCN: bạn có thể chỉnh sửa mục này nếu Admin đã bật quyền chỉnh sửa tương ứng.</div>
-      <div class="finance-toolbar" style="margin-bottom:12px">
-        <div class="quick-chip">Học kỳ đang xem: <b id="eventSemesterLabel">—</b></div>
-        <div class="quick-chip">Số cổng sự kiện: <b id="eventCount">0</b></div>
+      <div id="readonlyBannerEvents" class="readonly-banner hidden">Quyền BCN: bạn có thể chỉnh sửa mục này nếu Admin đã bật quyền chỉnh sửa Sự kiện.</div>
+
+      <div class="v96-events-hero">
+        <div class="v96-events-hero-copy">
+          <div class="eyebrow">SỰ KIỆN • BIỂU MẪU • CHECK-IN</div>
+          <h2>Quản lý sự kiện</h2>
+          <p>Tạo biểu mẫu đăng ký, QR, vé, check-in và theo dõi kết quả trong một không gian thống nhất.</p>
+        </div>
+        <div class="v96-events-metrics" aria-label="Tổng quan sự kiện">
+          <div><span>Học kỳ</span><b id="eventSemesterLabel">—</b></div>
+          <div><span>Số sự kiện</span><b id="eventCount">0</b></div>
+        </div>
       </div>
-      <div class="toolbar">
-        <input id="eventSearch" placeholder="Tìm cổng sự kiện trong học kỳ này…">
-        <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
-        <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
-        <button class="secondary admin-only-action" type="button" onclick="openTab('ticketStudio')">Ticket Studio</button>
-        <button class="secondary admin-only-action" type="button" onclick="openTab('memberQr')">Mã QR thành viên</button>
-        <button class="primary edit-only" id="createEventBtn">+ Tạo cổng sự kiện</button>
+
+      <div class="v96-event-toolbar">
+        <label class="v96-event-search" for="eventSearch">
+          <span aria-hidden="true">⌕</span>
+          <input id="eventSearch" placeholder="Tìm theo tên hoặc mô tả sự kiện…">
+        </label>
+        <div class="v96-event-toolbar-actions">
+          <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
+          <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
+          <button class="secondary admin-only-action" type="button" onclick="openTab('ticketStudio')">Ticket Studio</button>
+          <button class="secondary admin-only-action" type="button" onclick="openTab('memberQr')">Mã QR thành viên</button>
+          <button class="primary edit-only" id="createEventBtn">+ Tạo sự kiện</button>
+        </div>
       </div>
-      <div class="section-note">Mỗi cổng sự kiện thuộc đúng <b>một học kỳ</b>. Khi bạn đổi học kỳ ở menu bên trái, danh sách cổng sự kiện và kết quả hiển thị ở đây cũng tự chuyển sang học kỳ đó.</div>
-      <div class="security-note"><span>🔒</span><div><b>Bảo mật dữ liệu:</b> phản hồi sự kiện, bao gồm kết quả Form Đồng hành, chỉ hiển thị trong khu vực quản trị cho Admin hoặc BCN đã được cấp quyền Cổng sự kiện. Cổng tra cứu thành viên không hiển thị Form Đồng hành hoặc hoạt động Đồng hành.</div></div>
+
+      <div class="v96-event-info-grid">
+        <div class="v96-event-info">
+          <span class="v96-event-info-icon" aria-hidden="true">↔</span>
+          <div><b>Dữ liệu theo học kỳ</b><p>Khi đổi học kỳ ở menu bên trái, danh sách và kết quả sự kiện cũng chuyển theo học kỳ đó.</p></div>
+        </div>
+        <div class="v96-event-info secure">
+          <span class="v96-event-info-icon" aria-hidden="true">✓</span>
+          <div><b>Bảo mật phản hồi</b><p>Chỉ Admin hoặc BCN được cấp quyền Sự kiện mới xem được phản hồi; dữ liệu Đồng hành không xuất hiện ở cổng tra cứu thành viên.</p></div>
+        </div>
+      </div>
       <div id="eventList" class="event-card-list"></div>
-      <div id="eventEmpty" class="empty hidden">Học kỳ này chưa có cổng sự kiện nào.</div>
+      <div id="eventEmpty" class="empty hidden">Học kỳ này chưa có sự kiện nào.</div>
     </section>
 
 
@@ -2549,7 +2572,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <div class="ts-event-picker"><label>SỰ KIỆN</label><select id="tsEventSelect"></select></div>
       </div>
       <div id="tsLoadState" class="small-help" style="margin:0 0 10px"></div>
-      <div id="tsEmpty" class="empty hidden">Học kỳ này chưa có sự kiện. Hãy tạo Cổng sự kiện trước khi dùng Ticket Studio.</div>
+      <div id="tsEmpty" class="empty hidden">Học kỳ này chưa có sự kiện. Hãy tạo Sự kiện trước khi dùng Ticket Studio.</div>
       <div id="tsBody" class="hidden">
         <div class="ts-top-grid">
           <div class="ts-card">
@@ -3540,7 +3563,7 @@ function firestorePlain(v){
   if(v===undefined)return null;
   try{return structuredClone(v)}catch{return JSON.parse(JSON.stringify(v,(k,x)=>x?.toDate?x.toDate().toISOString():x))}
 }
-const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Cổng sự kiện",desc:"Form, QR & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},operations:{label:"Điều hành nâng cao",desc:"Phòng, bình chọn, quyền tạm thời & quota",group:"CỔNG & DỮ LIỆU",icon:"grid"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
+const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Sự kiện",desc:"Form, QR, vé & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},operations:{label:"Điều hành nâng cao",desc:"Phòng, quyền tạm thời & quota",group:"CỔNG & DỮ LIỆU",icon:"grid"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
 function navLabel(tab){return NAV_META[tab]?.label||tab}
 function navIconSvg(tab){const type=NAV_META[tab]?.icon||"grid",c='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"',s={home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 2.5 2.5L16 9"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V7Z"/><path d="M3 7 16 3v4"/><path d="M16 12h5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/><circle cx="12" cy="12" r="10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',shield:'<path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><path d="M9 12h6M12 9v6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.12-1.3l2-1.55-2-3.46-2.43.98a7 7 0 0 0-2.25-1.3L13.85 3h-4l-.35 2.37a7 7 0 0 0-2.25 1.3L4.82 5.69l-2 3.46 2 1.55A7 7 0 0 0 4.7 12c0 .45.04.88.12 1.3l-2 1.55 2 3.46 2.43-.98a7 7 0 0 0 2.25 1.3L9.85 21h4l.35-2.37a7 7 0 0 0 2.25-1.3l2.43.98 2-3.46-2-1.55c.08-.42.12-.85.12-1.3Z"/>'};return `<svg ${c}>${s[type]||s.grid}</svg>`}
 function enhanceSidebarNavigation(){const nav=$(".nav");if(!nav)return;nav.querySelectorAll(".nav-group-label").forEach(x=>x.remove());let last="";[...nav.querySelectorAll("button[data-tab]")].forEach(btn=>{const tab=btn.dataset.tab,m=NAV_META[tab]||{label:tab,desc:"",group:""};if(m.group&&m.group!==last){const l=document.createElement("div");l.className="nav-group-label";l.textContent=m.group;nav.insertBefore(l,btn);last=m.group}btn.title=m.label;btn.innerHTML=`<span class="nav-icon">${navIconSvg(tab)}</span><span class="nav-copy"><b>${esc(m.label)}</b><small>${esc(m.desc)}</small></span><span class="nav-arrow">›</span>`})}
@@ -6383,7 +6406,7 @@ function renderAttention(){
   const eventPending=canViewModule("events")?pendingEventResponseCount:0;
   const list=[
     ...issues.map(x=>({...x,desc:"Kiểm tra và xử lý dữ liệu trong phạm vi quyền hiện tại."})),
-    ...(eventPending?[{level:"warn",title:`${eventPending} phản hồi sự kiện chưa xử lý`,desc:"Mở Cổng sự kiện để xem kết quả.",tab:"events",icon:"📨"}]:[]),
+    ...(eventPending?[{level:"warn",title:`${eventPending} phản hồi sự kiện chưa xử lý`,desc:"Mở Sự kiện để xem kết quả.",tab:"events",icon:"📨"}]:[]),
     ...recent.map(n=>({level:"good",title:n.title||"Thông báo",desc:n.message||"",tab:n.linkTab||"dashboard",icon:"🔔"}))
   ].filter(x=>canAccessTab(x.tab||"dashboard"));
   const summary=[{l:"Cảnh báo nghiêm trọng",v:issues.filter(x=>x.level==="bad").length},{l:"Cần kiểm tra",v:issues.filter(x=>x.level==="warn").length}];
@@ -7419,42 +7442,69 @@ function renderEvents(){
   const q=($("#eventSearch")?.value||"").trim().toLowerCase();
   const semesterEvents=(state.events||[]).filter(e=>e.semester===semester);
   const list=semesterEvents.filter(e=>!q||String(e.title||"").toLowerCase().includes(q)||String(e.description||"").toLowerCase().includes(q));
+  const semName=sem().name||semester;
 
-  if($("#eventSemesterLabel"))$("#eventSemesterLabel").textContent=sem().name||semester;
+  if($("#eventSemesterLabel"))$("#eventSemesterLabel").textContent=semName;
   if($("#eventCount"))$("#eventCount").textContent=semesterEvents.length;
 
   $("#eventList").innerHTML=list.map(ev=>{
-    return `<div class="event-card">
+    const st=eventAvailability(ev);
+    const answerCount=eventAnswerFieldCount(ev);
+    const activityName=ev.linkedActivityId?(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết"):"";
+    const typeLabel=ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form";
+    const scheduleText=(ev.openAt||ev.closeAt)?((ev.openAt?"Mở "+dateTime(ev.openAt):"Mở ngay")+" → "+(ev.closeAt?dateTime(ev.closeAt):"Không giới hạn")):"";
+    return `<article class="event-card v96-event-card">
       <div class="event-card-head">
-        <div>
+        <div class="v96-event-main">
+          <div class="event-card-kicker">
+            <span class="v96-event-state ${st.className}">${esc(st.label)}</span>
+            <span class="v96-event-semester">${esc(semName)}</span>
+          </div>
           <h3 class="event-card-title">${esc(ev.title)}</h3>
           <p class="event-card-description">${esc(ev.description||"Không có mô tả")}</p>
-          <div class="small-help" style="margin-top:6px">
-            ${(()=>{const st=eventAvailability(ev);return `<span class="${st.className}">${esc(st.label)}</span>`})()}
-            • Học kỳ: <b>${esc(sem().name||semester)}</b>
-            • <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${eventAnswerFieldCount(ev)} trường`:"Thiếu trường"}</span>
-            • <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span> • <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in: Bật":"QR check-in: Tắt"}</span> • <span class="event-qr-checkin-badge ${ev.ticketStudioEnabled===true?"":"off"}">${ev.ticketStudioEnabled===true?"Ticket Studio: Bật":"Ticket Studio: Tắt"}</span>${Number(ev.capacity||0)>0?` • <span class="event-points-badge">${Number(ev.capacity)} suất${ev.capacityReached===true?" • Đã đủ":""}</span>`:""}${ev.qrCheckinEnabled===true?` • <span class="event-checkin-audience-badge ${ev.qrCheckinAudience==="public"?"public":""}">${ev.qrCheckinAudience==="public"?"Check-in Public":"Chỉ thành viên"}</span>`:""}${ev.qrCheckinEnabled===true?` • <span id="eventQrSummary_${esc(ev.id)}" class="event-checkin-count-badge">Check-in: …</span>`:""}${ev.linkedActivityId?` • <span class="event-linked-activity-badge">Hoạt động: ${esc(activityItemById(ev.linkedActivityId,ev.semester)?.item?.name||ev.linkedActivityName||"Đã liên kết")}</span>`:""}${(ev.openAt||ev.closeAt)?` • <span class="event-schedule-badge">${ev.openAt?`Mở ${dateTime(ev.openAt)}`:"Mở ngay"} → ${ev.closeAt?dateTime(ev.closeAt):"Không giới hạn"}</span>`:""}
-          </div>
         </div>
-        ${ev.specialType==="continuation"
-          ? `<span class="companion-badge">Đồng hành → ${esc(state.semesters?.[ev.targetSemester]?.name||parseMainSemester(ev.targetSemester)?.name||ev.targetSemester||"kỳ tiếp theo")}</span>`
-          : `<span class="account-role">${esc(ev.resultAction==="fundPaidAuto"?"Tự động đóng quỹ":ev.resultAction==="fundPaidApprove"?"Duyệt đóng quỹ":"Form")}</span>`}
+        <div class="v96-event-kind">
+          ${ev.specialType==="continuation"
+            ? `<span class="companion-badge">Đồng hành → ${esc(state.semesters?.[ev.targetSemester]?.name||parseMainSemester(ev.targetSemester)?.name||ev.targetSemester||"kỳ tiếp theo")}</span>`
+            : `<span class="account-role">${esc(typeLabel)}</span>`}
+        </div>
       </div>
+
+      <div class="v96-event-meta" aria-label="Trạng thái sự kiện">
+        <span class="event-field-health ${eventHasUsableFields(ev)?"ok":"warn"}">${eventHasUsableFields(ev)?`${answerCount} trường`:"Thiếu trường"}</span>
+        <span class="event-points-badge ${eventPointsValue(ev)?"":"off"}">${eventPointsValue(ev)?`+${eventPointsValue(ev)} điểm`:"Không tính điểm"}</span>
+        <span class="event-qr-checkin-badge ${ev.qrCheckinEnabled===true?"":"off"}">${ev.qrCheckinEnabled===true?"QR check-in bật":"QR check-in tắt"}</span>
+        <span class="event-qr-checkin-badge ${ev.ticketStudioEnabled===true?"":"off"}">${ev.ticketStudioEnabled===true?"Ticket Studio bật":"Ticket Studio tắt"}</span>
+        ${Number(ev.capacity||0)>0?`<span class="event-points-badge">${Number(ev.capacity)} suất${ev.capacityReached===true?" • Đã đủ":""}</span>`:""}
+        ${ev.qrCheckinEnabled===true?`<span class="event-checkin-audience-badge ${ev.qrCheckinAudience==="public"?"public":""}">${ev.qrCheckinAudience==="public"?"Check-in Public":"Chỉ thành viên"}</span>`:""}
+        ${ev.qrCheckinEnabled===true?`<span id="eventQrSummary_${esc(ev.id)}" class="event-checkin-count-badge">Check-in: …</span>`:""}
+        ${activityName?`<span class="event-linked-activity-badge">Hoạt động: ${esc(activityName)}</span>`:""}
+        ${scheduleText?`<span class="event-schedule-badge">${scheduleText}</span>`:""}
+      </div>
+
       <div class="event-actions">
-        <button class="secondary" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
-        <button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở cổng / Test nhập</button>
-        <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
-        ${ev.qrCheckinEnabled===true&&(canViewModule("attendance")||canEditClub())?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">${canEditModule("attendance")?"Quét / duyệt QR":"Kết quả QR"}</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventScannerLinkManager('${ev.id}')">Link check-in ngoài BCN</button>`:""}${canEditClub()?`<button class="secondary" onclick="openEventStaffLinkManager('${ev.id}')">Link tra cứu Staff</button>${ev.ticketStudioEnabled===true?`<button class="secondary" onclick="openTab('ticketStudio');setTimeout(()=>{const s=document.getElementById('tsEventSelect');if(s){s.value='${ev.id}';s.dispatchEvent(new Event('change'))}},120)">Ticket Studio</button>`:""}`:""}
-        <button class="secondary" onclick="openV95EventControl('${ev.id}')">Live Control</button>
-        <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
-        ${canEditModule("events")?`
+        <div class="v96-event-actions-primary">
+          <button class="secondary" onclick="openPublicEventPortal('${ev.id}')">Mở / Test form</button>
+          <button class="secondary" onclick="showEventQr('${ev.id}')">QR sự kiện</button>
+          ${ev.qrCheckinEnabled===true&&(canViewModule("attendance")||canEditClub())?`<button class="primary" onclick="openEventStudentQrCheckin('${ev.id}')">${canEditModule("attendance")?"Quét / duyệt QR":"Kết quả QR"}</button>`:""}
+          <button class="secondary" onclick="openEventSubmissions('${ev.id}')">Xem kết quả</button>
+        </div>
+
+        <div class="v96-event-actions-secondary">
+          <button class="ghost" onclick="copyText('${esc(eventLink(ev))}')">Sao chép link</button>
+          ${canEditClub()?`<button class="ghost" onclick="openEventScannerLinkManager('${ev.id}')">Link check-in ngoài BCN</button>`:""}
+          ${canEditClub()?`<button class="ghost" onclick="openEventStaffLinkManager('${ev.id}')">Link tra cứu Staff</button>${ev.ticketStudioEnabled===true?`<button class="ghost" onclick="openTab('ticketStudio');setTimeout(()=>{const s=document.getElementById('tsEventSelect');if(s){s.value='${ev.id}';s.dispatchEvent(new Event('change'))}},120)">Ticket Studio</button>`:""}`:""}
+          <button class="ghost" onclick="openV95EventControl('${ev.id}')">Live Control</button>
+        </div>
+
+        ${canEditModule("events")?`<div class="v96-event-actions-admin">
           <button class="secondary edit-only" onclick="openEventBuilder('${ev.id}')">Chỉnh sửa</button>
-          <button class="secondary edit-only" onclick="repairEventFields('${ev.id}',{force:true})">Đồng bộ trường form</button>
-          <button class="${ev.isOpen?"danger":"primary"} edit-only" onclick="toggleEventOpen('${ev.id}')">${ev.isOpen?"Đóng cổng":"Mở cổng"}</button>
-          <button class="danger edit-only" onclick="deleteEventPortal('${ev.id}')">Xóa sự kiện</button>
-        `:""}
+          <button class="secondary edit-only" onclick="repairEventFields('${ev.id}',{force:true})">Đồng bộ form</button>
+          <button class="${ev.isOpen?"danger":"primary"} edit-only" onclick="toggleEventOpen('${ev.id}')">${ev.isOpen?"Đóng sự kiện":"Mở sự kiện"}</button>
+          <button class="danger edit-only" onclick="deleteEventPortal('${ev.id}')">Xóa</button>
+        </div>`:""}
       </div>
-    </div>`;
+    </article>`;
   }).join("");
 
   $("#eventEmpty").classList.toggle("hidden",list.length>0);
