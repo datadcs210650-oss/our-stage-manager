@@ -751,3 +751,126 @@ body.auth-admin #modalWrap .modal:not(.event-builder-modal) .modal-actions{
 @media(prefers-reduced-motion:reduce){
   body.auth-admin *,body.auth-admin *:before,body.auth-admin *:after{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important}
 }
+
+
+/* ===== FINAL DETAIL POLISH ===== */
+body.auth-admin #attention .attention-list{display:grid!important;gap:9px!important}
+body.auth-admin #attention .attention-item{
+  margin:0!important;
+  padding:13px!important;
+  align-items:flex-start!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  box-shadow:0 6px 18px rgba(42,27,32,.025)!important;
+}
+body.auth-admin #attention .attention-icon{
+  flex:0 0 36px!important;width:36px!important;height:36px!important;border-radius:11px!important;
+  background:var(--v97-wine-soft)!important;color:var(--v97-wine)!important;
+}
+body.auth-admin #attention .attention-item h4{font-size:12px!important;color:#3c3336!important;font-weight:800!important}
+body.auth-admin #attention .attention-item p{font-size:10px!important;color:var(--v97-muted)!important}
+
+body.auth-admin #info .member-item{
+  margin:2px 0!important;
+  padding:11px 12px!important;
+  border:0!important;
+  border-radius:10px!important;
+  background:transparent!important;
+}
+body.auth-admin #info .member-item:hover{background:#faf7f5!important}
+body.auth-admin #info .member-item.active{
+  background:linear-gradient(90deg,var(--v97-wine-soft),#fff)!important;
+  color:var(--v97-wine)!important;
+  box-shadow:inset 3px 0 0 var(--v97-wine)!important;
+}
+body.auth-admin #info .member-item b{font-size:11px!important}
+body.auth-admin #info .member-item small{font-size:9px!important;color:#91868a!important}
+body.auth-admin #info .profile-head{
+  padding-bottom:14px!important;margin-bottom:14px!important;border-bottom:1px solid var(--v97-line)!important;
+}
+body.auth-admin #info .profile-head h2{font-size:21px!important;font-weight:800!important}
+body.auth-admin #info .info-grid{gap:10px!important}
+body.auth-admin #info .info-grid label{
+  padding:10px!important;border:1px solid var(--v97-line)!important;border-radius:11px!important;background:#fbfaf9!important;
+}
+body.auth-admin #info .score-summary{gap:9px!important}
+body.auth-admin #info .score-summary .mini{
+  border:1px solid var(--v97-line)!important;border-radius:11px!important;background:#fbfaf9!important;
+}
+
+body.auth-admin #divisions .division-stat{
+  border:1px solid var(--v97-line)!important;border-radius:12px!important;background:#fbfaf9!important;box-shadow:none!important;
+}
+body.auth-admin #divisions .division-card{
+  border-color:var(--v97-line)!important;border-radius:11px!important;background:#fff!important;
+}
+body.auth-admin #divisions .division-card:hover{border-color:#d9c4cb!important;background:#fffafa!important}
+body.auth-admin #divisions .division-card.active{
+  border-color:#d6aeba!important;background:var(--v97-wine-soft)!important;box-shadow:0 7px 18px rgba(120,29,59,.06)!important;
+}
+
+body.auth-admin #lookupPortal .lookup-test-box{
+  margin-top:14px!important;padding:12px!important;border:1px dashed #d9ceca!important;border-radius:12px!important;background:#fbfaf9!important;
+}
+body.auth-admin #lookupPortal .portal-box{
+  margin-top:14px!important;
+  padding:15px!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  border-radius:14px!important;
+  background:linear-gradient(135deg,#26151b,#3e1726)!important;
+  box-shadow:0 14px 34px rgba(42,19,28,.15)!important;
+}
+body.auth-admin #lookupPortal .portal-box input{
+  background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.13)!important;color:#fff!important;
+}
+
+body.auth-admin #freeLookup .free-lookup-card{
+  position:relative!important;overflow:hidden!important;padding:16px!important;border-left:0!important;
+}
+body.auth-admin #freeLookup .free-lookup-card:before{
+  content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 8px 8px 0;
+  background:linear-gradient(180deg,var(--v97-wine),var(--v97-gold));
+}
+body.auth-admin #freeLookup .free-lookup-meta{gap:6px!important}
+body.auth-admin #freeLookup .free-lookup-meta span{
+  border-color:var(--v97-line)!important;background:#f8f5f3!important;color:#675b60!important;
+}
+
+body.auth-admin :is(#approvals,#audit,#trash) :is(.attention-item,.approval-item,.audit-item,.trash-item){
+  margin:0!important;
+  padding:12px 13px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:0 6px 18px rgba(42,27,32,.025)!important;
+}
+body.auth-admin :is(#approvals,#audit,#trash) :is(.audit-item h4,.trash-item h4,.approval-item h4){
+  color:#3d3437!important;font-size:11px!important;font-weight:800!important;
+}
+body.auth-admin :is(#approvals,#audit,#trash) :is(.audit-item p,.trash-item p,.approval-item p){
+  color:var(--v97-muted)!important;font-size:9px!important;
+}
+body.auth-admin :is(#approvals,#audit,#trash) :is(.audit-actions,.trash-actions,.approval-actions) button{
+  min-height:32px!important;font-size:9px!important;
+}
+
+body.auth-admin #accounts .accounts-table{border-radius:15px!important}
+body.auth-admin #accounts .account-actions{gap:5px!important}
+body.auth-admin #accounts .account-actions button{min-height:32px!important;padding:0 9px!important;font-size:9px!important}
+
+body.auth-admin #settings #memberFields,
+body.auth-admin #settings #universitySettings,
+body.auth-admin #settings #semesterChecklistSettings{
+  display:grid!important;gap:8px!important;
+}
+body.auth-admin #settings .favorite-setting-grid{gap:7px!important}
+body.auth-admin #settings .favorite-setting-grid label{
+  border-color:var(--v97-line)!important;border-radius:10px!important;background:#fbfaf9!important;
+}
+
+/* Scrollbars follow the neutral admin surfaces */
+body.auth-admin *{scrollbar-color:#cfc4bf transparent;scrollbar-width:thin}
+body.auth-admin ::-webkit-scrollbar{width:10px;height:10px}
+body.auth-admin ::-webkit-scrollbar-thumb{background:#cfc4bf;border:3px solid transparent;background-clip:padding-box;border-radius:999px}
+body.auth-admin ::-webkit-scrollbar-track{background:transparent}
