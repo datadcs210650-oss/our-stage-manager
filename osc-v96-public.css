@@ -10,3 +10,6 @@ body.v41-member-lookup .lookup{padding:30px!important;border-radius:22px!importa
 @media(max-width:700px){button,input,select,textarea,[role="button"]{min-height:44px}input,select,textarea{font-size:16px!important}.wrap{padding-left:14px!important;padding-right:14px!important}.head,.field,.image-block,.rich-block,.message,.card{border-radius:15px!important}body.v41-member-lookup .lookup{padding:22px!important;border-radius:18px!important}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
 /* V96.1 PUBLIC SANS TYPOGRAPHY */
 body h1,body h2,body h3,body h4,.v41-public-brand b,.brand b,.logo-top b{font-family:var(--v96-ui)!important;font-style:normal!important}
+
+/* V96.1 sans-serif correction */
+body,.head h1,.lookup h1,.head h2,.invalid h1,.section-title,.event-section-public h2,.v41-public-brand b,.brand b,.logo-top b{font-family:var(--v96-ui)!important}
