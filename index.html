@@ -2128,7 +2128,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
   .attendance-freeze-status{grid-column:1/-1;justify-content:center}
 }
 </style>
-<link rel="stylesheet" href="/osc-v96-stagecraft.css?v=96">
+<link rel="stylesheet" href="/osc-v96-stagecraft.css?v=96.1">
 </head>
 <body class="auth-login">
 
@@ -7689,7 +7689,7 @@ const EVENT_TEMPLATES={
   fund:{name:"Xác nhận đóng quỹ",description:"Form xác nhận thông tin đóng quỹ CLB.",resultAction:"fundPaidApprove",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Tôi xác nhận đã chuyển khoản",type:"radio",required:true,options:["Đã chuyển khoản"]}]},
   workshop:{name:"Đăng ký Workshop",description:"Thu thập đăng ký tham gia workshop.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Email",type:"email",required:true},{label:"Bạn mong đợi điều gì?",type:"textarea",required:false}]},
   event:{name:"Đăng ký sự kiện",description:"Form đăng ký sự kiện chung.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:true},{label:"MSSV",type:"mssv",required:true},{label:"Số điện thoại",type:"phone",required:false}]},
-  poll:{name:"Bình chọn / Khảo sát",description:"Khảo sát nhanh hoặc bình chọn.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:false},{label:"Lựa chọn",type:"radio",required:true,options:["Phương án 1","Phương án 2"]},{label:"Ý kiến khác",type:"textarea",required:false}]}
+  poll:{name:"Khảo sát nhanh",description:"Thu thập ý kiến nhanh bằng biểu mẫu.",resultAction:"none",fields:[{label:"Họ và tên",type:"text",required:false},{label:"Lựa chọn",type:"radio",required:true,options:["Phương án 1","Phương án 2"]},{label:"Ý kiến khác",type:"textarea",required:false}]}
 };
 function buildContinuationEventTemplate(){
   const target=nextMainSemesterCode(semester);
@@ -10910,7 +10910,7 @@ function renderAll(){
 <script src="/seat-studio-admin.js?v=95"></script>
 <script src="/ticket-studio-admin.js?v=95"></script>
 <script src="/event-routing-admin.js?v=95"></script>
-<script src="/v95-operations.js?v=95"></script>
-<script src="/osc-v96-stagecraft.js?v=96"></script>
+<script src="/v95-operations.js?v=96.1"></script>
+<script src="/osc-v96-stagecraft.js?v=96.1"></script>
 </body>
 </html>
