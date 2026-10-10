@@ -1,0 +1,753 @@
+/* OUR STAGE CLUB — V97 UNIFIED ADMIN UI
+   Presentation-only layer. Keeps all existing IDs, handlers, Firebase/Auth/API logic intact. */
+
+:root{
+  --v97-bg:#f5f3f1;
+  --v97-surface:#ffffff;
+  --v97-surface-2:#fbfaf8;
+  --v97-surface-3:#f7f4f1;
+  --v97-ink:#242124;
+  --v97-muted:#776f73;
+  --v97-soft:#9a9195;
+  --v97-line:#e8e1dd;
+  --v97-line-strong:#ddd2cd;
+  --v97-wine:#781d3b;
+  --v97-wine-2:#95294d;
+  --v97-wine-soft:#fbf0f3;
+  --v97-gold:#b88a4a;
+  --v97-green:#287357;
+  --v97-green-soft:#edf7f1;
+  --v97-amber:#9a6a16;
+  --v97-amber-soft:#fff7e7;
+  --v97-red:#a13d52;
+  --v97-red-soft:#fff3f5;
+  --v97-blue:#3d638d;
+  --v97-blue-soft:#f0f5fb;
+  --v97-radius:16px;
+  --v97-radius-sm:11px;
+  --v97-shadow:0 12px 34px rgba(42,27,32,.055),0 2px 8px rgba(42,27,32,.025);
+  --v97-shadow-lg:0 28px 80px rgba(33,18,24,.15);
+  --v97-font:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+body.auth-admin,
+body.auth-admin button,
+body.auth-admin input,
+body.auth-admin select,
+body.auth-admin textarea,
+body.auth-admin h1,
+body.auth-admin h2,
+body.auth-admin h3,
+body.auth-admin h4,
+body.auth-admin h5,
+body.auth-admin h6{
+  font-family:var(--v97-font)!important;
+}
+body.auth-admin{
+  background:
+    radial-gradient(circle at 82% 0%,rgba(120,29,59,.045),transparent 24%),
+    linear-gradient(180deg,#f8f6f4 0%,var(--v97-bg) 100%)!important;
+}
+
+/* ===== UNIVERSAL WORKSPACE RHYTHM ===== */
+body.auth-admin main>section[id]:not(#dashboard){
+  padding:0 20px 22px!important;
+  border-radius:20px!important;
+  background:rgba(255,255,255,.88)!important;
+  border:1px solid var(--v97-line)!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin main>section[id]:not(#dashboard)>.workspace-window-bar{
+  min-height:48px!important;
+  margin:0 -20px 18px!important;
+  padding:0 16px!important;
+  border-radius:20px 20px 0 0!important;
+  border-bottom:1px solid var(--v97-line)!important;
+  background:linear-gradient(180deg,#fff,#fcfbfa)!important;
+}
+body.auth-admin .section-title{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  margin:0 0 16px!important;
+  padding:18px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:var(--v97-radius)!important;
+  background:linear-gradient(135deg,#fff,#fbf8f6)!important;
+  box-shadow:0 7px 20px rgba(42,27,32,.03)!important;
+}
+body.auth-admin .section-title h2,
+body.auth-admin .section-title h3,
+body.auth-admin .section-title h4{
+  margin:3px 0 0!important;
+  color:var(--v97-ink)!important;
+  font-weight:800!important;
+  letter-spacing:-.025em!important;
+}
+body.auth-admin .section-title h2{font-size:22px!important}
+body.auth-admin .section-title h3{font-size:16px!important}
+body.auth-admin .eyebrow{
+  color:#9a858c!important;
+  font-size:8px!important;
+  font-weight:850!important;
+  letter-spacing:.15em!important;
+}
+body.auth-admin .small-help,
+body.auth-admin .permission-note,
+body.auth-admin .settings-caption{
+  color:var(--v97-muted)!important;
+  line-height:1.55!important;
+}
+
+/* ===== TOOLBARS / SEARCH / FILTERS ===== */
+body.auth-admin main>section[id]:not(#dashboard)>.toolbar,
+body.auth-admin .attendance-bar,
+body.auth-admin .finance-toolbar,
+body.auth-admin .event-result-toolbar,
+body.auth-admin .ts-list-toolbar,
+body.auth-admin .fund-import-bar,
+body.auth-admin .member-bulk-bar,
+body.auth-admin .trash-bulk-bar{
+  margin:0 0 14px!important;
+  padding:12px!important;
+  gap:9px!important;
+  align-items:center!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:0 7px 20px rgba(42,27,32,.035)!important;
+}
+body.auth-admin main>section[id]:not(#dashboard)>.toolbar{
+  display:flex!important;
+  flex-wrap:wrap!important;
+}
+body.auth-admin main>section[id]:not(#dashboard)>.toolbar>input:first-child{
+  flex:1 1 280px!important;
+  min-width:220px!important;
+}
+body.auth-admin input,
+body.auth-admin select,
+body.auth-admin textarea{
+  border:1px solid var(--v97-line-strong)!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:var(--v97-ink)!important;
+  min-height:40px!important;
+}
+body.auth-admin input:hover,
+body.auth-admin select:hover,
+body.auth-admin textarea:hover{border-color:#cfbfba!important}
+body.auth-admin input:focus,
+body.auth-admin select:focus,
+body.auth-admin textarea:focus{
+  outline:none!important;
+  border-color:rgba(120,29,59,.48)!important;
+  box-shadow:0 0 0 4px rgba(120,29,59,.075)!important;
+}
+body.auth-admin .primary,
+body.auth-admin .secondary,
+body.auth-admin .ghost,
+body.auth-admin .danger{
+  min-height:38px!important;
+  border-radius:10px!important;
+  font-weight:750!important;
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease!important;
+}
+body.auth-admin .primary{
+  background:linear-gradient(135deg,var(--v97-wine-2),var(--v97-wine))!important;
+  box-shadow:0 7px 16px rgba(120,29,59,.15)!important;
+}
+body.auth-admin .secondary,
+body.auth-admin .ghost{
+  border-color:var(--v97-line-strong)!important;
+  background:#fff!important;
+  color:#5e5559!important;
+  box-shadow:none!important;
+}
+body.auth-admin .secondary:hover:not(:disabled),
+body.auth-admin .ghost:hover:not(:disabled){
+  border-color:#cdb8bf!important;
+  background:#fffafa!important;
+  color:var(--v97-wine)!important;
+}
+body.auth-admin .danger{
+  border-color:#edccd4!important;
+  background:var(--v97-red-soft)!important;
+  color:var(--v97-red)!important;
+}
+body.auth-admin button:disabled{opacity:.5!important;cursor:not-allowed!important;transform:none!important}
+
+/* ===== NOTES / STATUS / EMPTY STATES ===== */
+body.auth-admin .section-note,
+body.auth-admin .security-note,
+body.auth-admin .portal-security,
+body.auth-admin .import-order-note,
+body.auth-admin .v76-privacy-note,
+body.auth-admin .free-mode-note,
+body.auth-admin .companion-note,
+body.auth-admin .ts-safety{
+  margin:0 0 14px!important;
+  padding:12px 14px!important;
+  border-radius:12px!important;
+  border:1px solid var(--v97-line)!important;
+  background:var(--v97-surface-2)!important;
+  color:#6f6569!important;
+  line-height:1.55!important;
+  box-shadow:none!important;
+}
+body.auth-admin .security-note,
+body.auth-admin .portal-security,
+body.auth-admin .v76-privacy-note,
+body.auth-admin .ts-safety{
+  border-color:#dce9e1!important;
+  background:#f4f9f6!important;
+  color:#436652!important;
+}
+body.auth-admin .empty{
+  min-height:110px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:28px!important;
+  border:1px dashed #ded4d0!important;
+  border-radius:14px!important;
+  background:#fbfaf9!important;
+  color:#8b8185!important;
+  text-align:center!important;
+}
+
+/* ===== CARDS ===== */
+body.auth-admin :is(.card,.settings-card,.info-card,.table-card,.qr-live-panel,.division-list-panel,.division-detail-panel,.free-lookup-card,.lookup-card,.account-card,.member-qr-admin-card,.ts-card,.v95-card,.approval-card,.audit-item,.trash-item){
+  border:1px solid var(--v97-line)!important;
+  border-radius:var(--v97-radius)!important;
+  background:#fff!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin :is(.settings-card,.info-card,.qr-live-panel,.division-list-panel,.division-detail-panel,.member-qr-admin-card,.ts-card,.v95-card){
+  padding:17px!important;
+}
+body.auth-admin :is(.settings-card,.ts-card,.member-qr-admin-card,.v95-card) h3{
+  color:#342c2f!important;
+  font-weight:800!important;
+  letter-spacing:-.02em!important;
+}
+body.auth-admin .cards{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;
+  gap:11px!important;
+  margin:0 0 15px!important;
+}
+body.auth-admin .cards .card{
+  position:relative!important;
+  overflow:hidden!important;
+  min-height:100px!important;
+  padding:16px!important;
+}
+body.auth-admin .cards .card:before{
+  content:"";
+  position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:0 8px 8px 0;
+  background:linear-gradient(180deg,var(--v97-wine),var(--v97-gold));
+}
+body.auth-admin .cards .card span{color:#8d8286!important;font-size:9px!important;font-weight:800!important;text-transform:uppercase!important;letter-spacing:.08em!important}
+body.auth-admin .cards .card strong{display:block!important;margin-top:7px!important;color:#30272a!important;font-size:22px!important;font-weight:800!important}
+
+/* ===== TABLE SYSTEM ===== */
+body.auth-admin .table-card,
+body.auth-admin .finance-table{
+  overflow:auto!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin .table-head{
+  min-height:56px!important;
+  padding:11px 13px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  border-bottom:1px solid var(--v97-line)!important;
+  background:#fcfbfa!important;
+}
+body.auth-admin .table-head h3{margin:0!important;font-size:14px!important;color:#3a3034!important;font-weight:800!important}
+body.auth-admin table{font-variant-numeric:tabular-nums!important}
+body.auth-admin table thead th{
+  position:relative;
+  padding:10px 10px!important;
+  background:#f8f6f4!important;
+  border-color:#ece6e2!important;
+  color:#685e62!important;
+  font-size:9px!important;
+  font-weight:850!important;
+  letter-spacing:.04em!important;
+}
+body.auth-admin table tbody td{
+  padding:10px!important;
+  border-color:#f0ebe8!important;
+  color:#4e4649!important;
+  font-size:11px!important;
+}
+body.auth-admin table tbody tr:nth-child(even){background:#fdfcfb!important}
+body.auth-admin table tbody tr:hover{background:#fff8f6!important}
+
+/* ===== ATTENDANCE ===== */
+body.auth-admin #manage .attendance-bar{
+  display:grid!important;
+  grid-template-columns:minmax(190px,1fr) repeat(4,max-content)!important;
+}
+body.auth-admin #manage .attendance-bar>label{
+  grid-column:1/-1!important;
+  margin-bottom:-2px!important;
+  color:#655a5e!important;
+  font-size:9px!important;
+  font-weight:850!important;
+  letter-spacing:.04em!important;
+}
+body.auth-admin #manage #attendanceActivitySelect{min-width:0!important;width:100%!important}
+body.auth-admin #manage .qr-live-panel{margin-bottom:14px!important}
+body.auth-admin #manage .qr-live-head{
+  display:flex!important;justify-content:space-between!important;gap:16px!important;align-items:flex-start!important;
+  padding-bottom:13px!important;margin-bottom:12px!important;border-bottom:1px solid var(--v97-line)!important;
+}
+body.auth-admin #manage .qr-live-head h3{margin:3px 0!important;font-size:16px!important}
+body.auth-admin #manage .qr-live-head p{margin:0!important;color:var(--v97-muted)!important;font-size:10px!important;line-height:1.55!important}
+body.auth-admin #manage .attendance-freeze-toolbar{
+  margin:0 0 10px!important;padding:11px 12px!important;border:1px solid var(--v97-line)!important;border-radius:12px!important;background:#fbfaf8!important;
+}
+body.auth-admin #manage .qltv-scroll-hint{margin-bottom:8px!important;color:#8a7f83!important;font-size:9px!important}
+
+/* ===== MEMBERS ===== */
+body.auth-admin #memberList .import-order-note{font-size:10px!important}
+body.auth-admin #memberList .member-bulk-bar{background:#fff8fa!important;border-color:#ead5dc!important}
+body.auth-admin #info .info-layout{
+  display:grid!important;
+  grid-template-columns:minmax(250px,310px) minmax(0,1fr)!important;
+  gap:14px!important;
+  min-height:620px!important;
+}
+body.auth-admin #info .member-list{
+  border:1px solid var(--v97-line)!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  box-shadow:var(--v97-shadow)!important;
+  overflow:hidden!important;
+}
+body.auth-admin #info .member-list .search{
+  padding:12px!important;
+  border-bottom:1px solid var(--v97-line)!important;
+  background:#fbfaf9!important;
+}
+body.auth-admin #info .member-list .search input{width:100%!important}
+body.auth-admin #info .list-scroll{padding:7px!important}
+body.auth-admin #info .info-card{min-width:0!important;min-height:620px!important}
+
+/* ===== DIVISIONS ===== */
+body.auth-admin #divisions .division-summary-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;
+  gap:10px!important;
+  margin-bottom:14px!important;
+}
+body.auth-admin #divisions .division-layout{
+  display:grid!important;
+  grid-template-columns:minmax(260px,.75fr) minmax(0,1.6fr)!important;
+  gap:14px!important;
+}
+body.auth-admin #divisions .division-list-panel,
+body.auth-admin #divisions .division-detail-panel{min-width:0!important}
+body.auth-admin #divisions .division-cards{display:grid!important;gap:8px!important}
+
+/* ===== FINANCE ===== */
+body.auth-admin #finance .finance-toolbar{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(140px,1fr)) max-content!important;
+}
+body.auth-admin #finance .finance-toolbar .quick-chip{
+  min-height:58px!important;
+  padding:10px 12px!important;
+  display:grid!important;
+  align-content:center!important;
+  border-radius:12px!important;
+  background:#fbfaf8!important;
+}
+body.auth-admin #finance .finance-toolbar .quick-chip b{display:block!important;margin-top:3px!important;color:#30282b!important;font-size:13px!important}
+body.auth-admin #finance .fund-import-bar{
+  display:grid!important;
+  grid-template-columns:max-content max-content max-content minmax(220px,1fr)!important;
+}
+body.auth-admin #finance .fund-import-bar>label{grid-column:1/-1!important;font-weight:800!important;color:#5d5155!important}
+body.auth-admin #finance .finance-stack{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important}
+body.auth-admin #finance .finance-member-lists{gap:14px!important}
+
+/* ===== LOOKUP PORTALS ===== */
+body.auth-admin #lookupPortal .portal-settings-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr)!important;
+  gap:14px!important;
+}
+body.auth-admin #lookupPortal .settings-card{min-width:0!important}
+body.auth-admin #lookupPortal .field-toggle-title{
+  margin:15px 0 8px!important;
+  color:#62575b!important;font-size:10px!important;font-weight:850!important;text-transform:uppercase!important;letter-spacing:.055em!important;
+}
+body.auth-admin #lookupPortal .toggle-grid{gap:8px!important}
+body.auth-admin #lookupPortal .toggle-item{
+  border:1px solid var(--v97-line)!important;border-radius:10px!important;background:#fbfaf9!important;
+}
+body.auth-admin #freeLookup .free-lookup-summary{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:9px!important;
+}
+body.auth-admin #freeLookup .free-lookup-summary .quick-chip{
+  min-height:58px!important;padding:11px 13px!important;border:1px solid var(--v97-line)!important;border-radius:12px!important;background:#fbfaf8!important;
+}
+body.auth-admin #freeLookup .free-lookup-list{gap:12px!important}
+
+/* ===== EVENTS ===== */
+body.auth-admin #events .v96-events-hero{
+  border-radius:0!important;
+}
+body.auth-admin #events .v96-event-toolbar{
+  padding:12px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:0 7px 20px rgba(42,27,32,.035)!important;
+}
+body.auth-admin #events .v96-event-info-grid{margin-bottom:14px!important}
+body.auth-admin #events .v96-event-card{
+  border-radius:16px!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin #events .v96-event-actions-primary,
+body.auth-admin #events .v96-event-actions-secondary,
+body.auth-admin #events .v96-event-actions-admin{
+  gap:7px!important;
+}
+body.auth-admin #events .v96-event-actions-primary{padding-bottom:8px!important}
+body.auth-admin #events .v96-event-actions-secondary{
+  padding:8px 0!important;
+  border-top:1px dashed #eee4e0!important;
+}
+body.auth-admin #events .v96-event-actions-admin{
+  padding-top:8px!important;
+  border-top:1px solid #eee4e0!important;
+}
+
+/* ===== EVENT BUILDER: 12-COLUMN ALIGNMENT ===== */
+body.auth-admin #modalWrap .event-builder-modal{
+  width:min(1220px,calc(100vw - 44px))!important;
+  max-width:1220px!important;
+  padding:0 24px 24px!important;
+  background:#f6f4f2!important;
+}
+body.auth-admin #modalWrap .event-builder-modal .modal-head{
+  min-height:78px!important;
+  margin:0 -24px 18px!important;
+  padding:16px 24px!important;
+  background:rgba(255,255,255,.98)!important;
+  border-bottom:1px solid var(--v97-line)!important;
+}
+body.auth-admin #modalWrap .event-builder-modal .modal-head h2{
+  font-size:22px!important;font-weight:800!important;letter-spacing:-.03em!important;
+}
+body.auth-admin .event-builder-modal>.form-grid{
+  display:grid!important;
+  grid-template-columns:repeat(12,minmax(0,1fr))!important;
+  gap:10px!important;
+  align-items:stretch!important;
+}
+body.auth-admin .event-builder-modal>.form-grid>label{
+  grid-column:span 6!important;
+  min-width:0!important;
+  min-height:112px!important;
+  margin:0!important;
+  padding:13px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:7px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  color:#5c5155!important;
+  font-size:9px!important;
+  font-weight:850!important;
+  box-shadow:0 6px 18px rgba(42,27,32,.025)!important;
+}
+body.auth-admin .event-builder-modal>.form-grid>label.full{grid-column:1/-1!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTitle){grid-column:span 7!important;min-height:150px!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSemesterDisplay){grid-column:span 5!important;min-height:150px!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventLinkedActivity),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventDescription){grid-column:1/-1!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventIsOpen),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventOpenAt),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCloseAt){grid-column:span 4!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventResultAction),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventPoints){grid-column:span 6!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinEnabled),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinAudience),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTicketStudioEnabled),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCapacity){grid-column:span 6!important}
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessTitle),
+body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessMessage){grid-column:span 6!important}
+body.auth-admin .event-builder-modal>.form-grid>label>input,
+body.auth-admin .event-builder-modal>.form-grid>label>select,
+body.auth-admin .event-builder-modal>.form-grid>label>textarea{
+  width:100%!important;
+  min-width:0!important;
+  margin-top:1px!important;
+  padding:10px 11px!important;
+  background:#fcfbfa!important;
+}
+body.auth-admin .event-builder-modal>.form-grid>label>textarea{resize:vertical!important}
+body.auth-admin .event-builder-modal>.form-grid>label .permission-note,
+body.auth-admin .event-builder-modal>.form-grid>label .event-points-note{
+  margin-top:auto!important;
+  font-size:8px!important;
+  font-weight:500!important;
+  color:#8b8084!important;
+  line-height:1.45!important;
+}
+body.auth-admin .event-builder-modal #eventTitle{min-height:78px!important}
+body.auth-admin .event-builder-modal #eventDescription{min-height:86px!important}
+body.auth-admin .event-builder-modal>.section-title{
+  margin:18px 0 10px!important;
+  padding:12px 13px!important;
+  background:#fff!important;
+}
+body.auth-admin .event-builder-modal .event-builder-tools{
+  margin-bottom:10px!important;
+  padding:10px 12px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:12px!important;
+  background:#fff!important;
+}
+body.auth-admin .event-builder-modal #eventFieldEditor{
+  display:grid!important;
+  gap:10px!important;
+}
+body.auth-admin .event-builder-modal :is(.event-field-card,.event-section-editor,.rich-editor,.image-field-editor){
+  border:1px solid var(--v97-line)!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  box-shadow:0 6px 18px rgba(42,27,32,.025)!important;
+}
+body.auth-admin #modalWrap .event-builder-modal .modal-actions{
+  position:sticky!important;
+  bottom:0!important;
+  z-index:18!important;
+  margin:18px -24px -24px!important;
+  padding:12px 24px!important;
+  border-top:1px solid var(--v97-line)!important;
+  background:rgba(255,255,255,.97)!important;
+  backdrop-filter:blur(14px)!important;
+}
+body.auth-admin #modalWrap .event-builder-modal .modal-actions button{min-width:120px!important;min-height:42px!important}
+
+/* ===== OPERATIONS ===== */
+body.auth-admin #operations .v95-hero{
+  margin-bottom:14px!important;
+  padding:18px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:16px!important;
+  background:linear-gradient(135deg,#fff,#faf7f5)!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin #operations .v95-grid{gap:12px!important}
+body.auth-admin #operations .v95-room-form{
+  padding:11px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:12px!important;
+  background:#fbfaf9!important;
+}
+
+/* ===== TICKET STUDIO ===== */
+body.auth-admin #ticketStudio .ts-hero{
+  margin-bottom:14px!important;
+  padding:20px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:16px!important;
+  background:
+    radial-gradient(circle at 88% 0%,rgba(184,138,74,.11),transparent 28%),
+    linear-gradient(135deg,#fff,#faf7f4)!important;
+  box-shadow:var(--v97-shadow)!important;
+}
+body.auth-admin #ticketStudio .ts-card{margin-bottom:12px!important}
+body.auth-admin #ticketStudio .ts-section-head{
+  padding-bottom:11px!important;
+  margin-bottom:12px!important;
+  border-bottom:1px solid var(--v97-line)!important;
+}
+body.auth-admin #ticketStudio .ts-top-grid{gap:12px!important}
+
+/* ===== MEMBER QR / ACCOUNT ===== */
+body.auth-admin #memberQr .member-qr-admin-grid{gap:14px!important}
+body.auth-admin #memberQr .member-qr-admin-card h3{margin-top:0!important}
+body.auth-admin #myAccount .self-account-grid{gap:14px!important}
+body.auth-admin #myAccount .self-account-fields{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;
+}
+body.auth-admin #myAccount .self-account-field{
+  min-height:92px!important;padding:13px!important;border:1px solid var(--v97-line)!important;border-radius:12px!important;background:#fbfaf9!important;
+}
+
+/* ===== APPROVALS / AUDIT / TRASH ===== */
+body.auth-admin :is(#approvals,#audit,#trash) :is(.approval-list,.audit-list,.trash-list){
+  display:grid!important;
+  gap:9px!important;
+}
+body.auth-admin #audit .audit-tabs{
+  display:flex!important;gap:6px!important;padding:4px!important;border:1px solid var(--v97-line)!important;border-radius:11px!important;background:#f7f4f2!important;
+}
+body.auth-admin #audit .audit-tabs button{min-height:32px!important}
+body.auth-admin #trash .trash-bulk-bar{background:#fff7f8!important;border-color:#efd4da!important}
+
+/* ===== ACCOUNTS ===== */
+body.auth-admin #accounts .section-note{font-size:10px!important}
+body.auth-admin #accounts .accounts-table table{min-width:900px!important}
+
+/* ===== SETTINGS ===== */
+body.auth-admin #settings .settings-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr)!important;
+  gap:14px!important;
+  align-items:start!important;
+}
+body.auth-admin #settings .settings-card{min-width:0!important}
+body.auth-admin #settings .settings-card>.form-grid{
+  gap:9px!important;
+}
+body.auth-admin #settings .settings-card>.form-grid>label{
+  min-width:0!important;
+  padding:10px!important;
+  border:1px solid var(--v97-line)!important;
+  border-radius:11px!important;
+  background:#fbfaf9!important;
+  color:#62575b!important;
+  font-size:9px!important;
+  font-weight:800!important;
+}
+body.auth-admin #settings .approval-config{
+  display:grid!important;gap:7px!important;margin-top:11px!important;
+}
+body.auth-admin #settings .approval-config label{
+  padding:9px 10px!important;border:1px solid var(--v97-line)!important;border-radius:10px!important;background:#fff!important;
+}
+body.auth-admin #settings .settings-danger-box{
+  margin-top:12px!important;
+  padding:13px!important;
+  border:1px solid #efcfd6!important;
+  border-radius:12px!important;
+  background:#fff7f8!important;
+}
+body.auth-admin #settings .university-settings-card{margin-top:14px!important}
+
+/* ===== GENERIC MODALS ===== */
+body.auth-admin #modalWrap .modal:not(.event-builder-modal){
+  border:1px solid var(--v97-line)!important;
+  background:#fff!important;
+  box-shadow:var(--v97-shadow-lg)!important;
+}
+body.auth-admin #modalWrap .modal:not(.event-builder-modal) .modal-head{
+  border-bottom:1px solid var(--v97-line)!important;
+  background:rgba(255,255,255,.98)!important;
+}
+body.auth-admin #modalWrap .modal:not(.event-builder-modal) .form-grid{
+  gap:10px!important;
+}
+body.auth-admin #modalWrap .modal:not(.event-builder-modal) .form-grid>label{
+  min-width:0!important;
+  display:grid!important;
+  gap:6px!important;
+  color:#62575b!important;
+  font-size:9px!important;
+  font-weight:800!important;
+}
+body.auth-admin #modalWrap .modal:not(.event-builder-modal) .modal-actions{
+  gap:8px!important;
+  padding-top:12px!important;
+  border-top:1px solid var(--v97-line)!important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1180px){
+  body.auth-admin #manage .attendance-bar{grid-template-columns:minmax(190px,1fr) repeat(2,max-content)!important}
+  body.auth-admin #finance .finance-toolbar{grid-template-columns:repeat(2,minmax(150px,1fr)) max-content!important}
+  body.auth-admin #finance .finance-toolbar #financePdfBtn{grid-column:span 1!important}
+  body.auth-admin #finance .fund-import-bar{grid-template-columns:1fr 1fr!important}
+  body.auth-admin #finance .fund-import-bar .small-help{grid-column:1/-1!important}
+  body.auth-admin #lookupPortal .portal-settings-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:980px){
+  body.auth-admin #info .info-layout,
+  body.auth-admin #divisions .division-layout,
+  body.auth-admin #finance .finance-stack,
+  body.auth-admin #settings .settings-grid{grid-template-columns:1fr!important}
+  body.auth-admin #info .info-layout{min-height:0!important}
+  body.auth-admin #info .member-list{max-height:360px!important}
+  body.auth-admin #info .info-card{min-height:420px!important}
+  body.auth-admin .event-builder-modal>.form-grid>label,
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTitle),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSemesterDisplay),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventIsOpen),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventOpenAt),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCloseAt),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventResultAction),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventPoints),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinEnabled),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinAudience),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTicketStudioEnabled),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCapacity),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessTitle),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessMessage){grid-column:span 6!important}
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventLinkedActivity),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventDescription),
+  body.auth-admin .event-builder-modal>.form-grid>label.full{grid-column:1/-1!important}
+}
+@media(max-width:760px){
+  body.auth-admin main>section[id]:not(#dashboard){padding:0 12px 16px!important}
+  body.auth-admin main>section[id]:not(#dashboard)>.workspace-window-bar{margin:0 -12px 12px!important}
+  body.auth-admin .section-title{padding:14px!important;flex-direction:column!important}
+  body.auth-admin main>section[id]:not(#dashboard)>.toolbar{display:grid!important;grid-template-columns:1fr!important}
+  body.auth-admin main>section[id]:not(#dashboard)>.toolbar>*{width:100%!important}
+  body.auth-admin #manage .attendance-bar{grid-template-columns:1fr!important}
+  body.auth-admin #manage .attendance-bar>label{grid-column:auto!important}
+  body.auth-admin #manage .attendance-bar button{width:100%!important}
+  body.auth-admin #manage .qr-live-head{flex-direction:column!important}
+  body.auth-admin #finance .finance-toolbar,
+  body.auth-admin #finance .fund-import-bar,
+  body.auth-admin #freeLookup .free-lookup-summary{grid-template-columns:1fr!important}
+  body.auth-admin #finance .finance-toolbar #financePdfBtn{grid-column:auto!important;width:100%!important}
+  body.auth-admin #lookupPortal .toggle-grid{grid-template-columns:1fr!important}
+  body.auth-admin #myAccount .self-account-fields{grid-template-columns:1fr!important}
+  body.auth-admin #modalWrap .event-builder-modal{width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;padding:0 14px 18px!important}
+  body.auth-admin #modalWrap .event-builder-modal .modal-head{margin:0 -14px 14px!important;padding:13px 14px!important}
+  body.auth-admin .event-builder-modal>.form-grid{grid-template-columns:1fr!important}
+  body.auth-admin .event-builder-modal>.form-grid>label,
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTitle),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSemesterDisplay),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventLinkedActivity),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventDescription),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventIsOpen),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventOpenAt),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCloseAt),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventResultAction),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventPoints),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinEnabled),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventQrCheckinAudience),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventTicketStudioEnabled),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventCapacity),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessTitle),
+  body.auth-admin .event-builder-modal>.form-grid>label:has(#eventSuccessMessage),
+  body.auth-admin .event-builder-modal>.form-grid>label.full{grid-column:1/-1!important;min-height:auto!important}
+  body.auth-admin #modalWrap .event-builder-modal .modal-actions{margin:16px -14px -18px!important;padding:10px 14px!important}
+  body.auth-admin #modalWrap .event-builder-modal .modal-actions button{flex:1!important;min-width:0!important}
+}
+@media(max-width:520px){
+  body.auth-admin .cards{grid-template-columns:1fr 1fr!important}
+  body.auth-admin #freeLookup .free-lookup-summary{grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  body.auth-admin *,body.auth-admin *:before,body.auth-admin *:after{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important}
+}
