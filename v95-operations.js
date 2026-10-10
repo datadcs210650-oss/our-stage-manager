@@ -4,7 +4,7 @@
 
 const q=s=>document.querySelector(s);
 const esc95=v=>typeof esc==="function"?esc(v):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-let opRooms=[],opVotes=[],opTemp=[],opQuota=null,opLoading=false;
+let opRooms=[],opTemp=[],opQuota=null,opLoading=false;
 let controlTimer=null,controlEventId="",controlData=null;
 
 async function api(path,body={},timeout=20000){
@@ -22,7 +22,7 @@ function selectedEventOptions(){
 }
 function operationsShell(){
   const canManage=typeof canEditClub==="function"&&canEditClub(),canRoom=canManage||(typeof canEditModule==="function"&&canEditModule("events"));
-  return `<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER • V95</div><h2>Điều hành nâng cao</h2><p>Đặt phòng, bỏ phiếu ẩn danh, quyền tạm thời và theo dõi quota Firebase trong một nơi.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>
+  return `<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER • V95</div><h2>Điều hành nâng cao</h2><p>Đặt phòng, quyền tạm thời và theo dõi quota Firebase trong một nơi.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>
   <div class="v95-grid">
     <section class="v95-card v95-span-2"><div class="v95-card-head"><div><h3>Room Booking Board</h3><p>Chặn trùng phòng theo thời gian ngay tại server.</p></div></div>
       ${canRoom?`<div class="v95-room-form">
@@ -35,7 +35,6 @@ function operationsShell(){
       </div>`:""}
       <div id="v95RoomList" class="v95-list"></div>
     </section>
-    <section class="v95-card v95-span-2"><div class="v95-card-head"><div><h3>Voting System • Ẩn danh</h3><p>Mỗi tài khoản chỉ bỏ được một phiếu; ballot chỉ lưu hash ẩn danh.</p></div>${canManage?'<button class="primary" onclick="v95OpenVoteCreate()">+ Tạo bình chọn</button>':""}</div><div id="v95VoteList" class="v95-list"></div></section>
     ${canManage?`<section class="v95-card"><div class="v95-card-head"><div><h3>Temporary Permissions</h3><p>Cấp quyền BCN tự hết hạn theo giờ kết thúc sự kiện.</p></div><button class="primary" onclick="v95OpenTempGrant()">+ Cấp quyền</button></div><div id="v95TempList" class="v95-list compact"></div></section>
     <section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Đọc số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section>`:""}
   </div>`;
@@ -50,10 +49,10 @@ window.renderV95Operations=renderV95Operations;
 async function v95RefreshOperations(show=true){
   if(opLoading)return;opLoading=true;
   try{
-    const calls=[api("/api/operations",{action:"rooms-list",semester}),api("/api/operations",{action:"votes-list",semester})];
+    const calls=[api("/api/operations",{action:"rooms-list",semester})];
     if(canEditClub())calls.push(api("/api/operations",{action:"temp-list"}));
-    const r=await Promise.all(calls);opRooms=r[0].rows||[];opVotes=r[1].rows||[];if(canEditClub())opTemp=r[2].rows||[];
-    renderRooms();renderVotes();if(canEditClub()){renderTemp();await v95LoadQuota(false)}
+    const r=await Promise.all(calls);opRooms=r[0].rows||[];if(canEditClub())opTemp=r[1].rows||[];
+    renderRooms();if(canEditClub()){renderTemp();await v95LoadQuota(false)}
     if(show&&typeof toast==="function")toast("Đã cập nhật Điều hành nâng cao");
   }catch(e){console.error("v95 operations",e);if(show)alert("Không tải được Điều hành nâng cao: "+(e.message||e))}
   finally{opLoading=false}
@@ -77,28 +76,6 @@ window.v95CreateRoom=v95CreateRoom;
 async function v95CancelRoom(id){if(!confirm("Hủy lịch đặt phòng này?"))return;try{await api("/api/operations",{action:"room-cancel",bookingId:id});toast("Đã hủy lịch phòng");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
 window.v95CancelRoom=v95CancelRoom;
 
-function renderVotes(){
-  const root=q("#v95VoteList");if(!root)return;
-  root.innerHTML=opVotes.length?opVotes.map(p=>`<div class="v95-poll"><div class="v95-poll-head"><div><b>${esc95(p.title)}</b><small>${p.open?"Đang mở":"Đã đóng"} • đóng ${fmt(p.closesAt)}</small></div>${canEditClub()&&p.open?`<button class="danger" onclick="v95CloseVote('${p.id}')">Đóng</button>`:""}</div>${p.description?`<p>${esc95(p.description)}</p>`:""}
-    ${p.resultsVisible?pollResults(p):p.hasVoted?'<div class="v95-voted">✓ Bạn đã bỏ phiếu. Kết quả được ẩn cho đến khi đóng bình chọn.</div>':`<div class="v95-vote-options">${p.options.map((o,i)=>`<label><input type="radio" name="vote_${p.id}" value="${i}"> ${esc95(o)}</label>`).join("")}</div><button class="primary" onclick="v95CastVote('${p.id}')">Bỏ phiếu</button>`}</div>`).join(""):'<div class="empty">Chưa có bình chọn trong học kỳ.</div>';
-}
-function pollResults(p){
-  const total=Math.max(1,Number(p.totalVotes||0));return `<div class="v95-results">${p.options.map((o,i)=>{const n=Number(p.counts?.[i]||0),pct=Math.round(n/total*100);return `<div><span>${esc95(o)} <b>${n}</b></span><div class="v95-bar"><i style="width:${pct}%"></i></div></div>`}).join("")}</div><small>Tổng ${Number(p.totalVotes||0)} phiếu ẩn danh</small>`;
-}
-async function v95CastVote(id){const pick=q(`input[name="vote_${CSS.escape(id)}"]:checked`);if(!pick)return alert("Hãy chọn một phương án.");try{await api("/api/operations",{action:"vote-cast",pollId:id,optionIndex:Number(pick.value)});toast("Đã ghi nhận phiếu ẩn danh");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
-window.v95CastVote=v95CastVote;
-async function v95CloseVote(id){if(!confirm("Đóng bình chọn? Sau khi đóng sẽ hiển thị kết quả."))return;try{await api("/api/operations",{action:"vote-close",pollId:id});await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
-window.v95CloseVote=v95CloseVote;
-function v95OpenVoteCreate(){
-  const defaultClose=dtLocal(Date.now()+24*60*60*1000);
-  q("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(720px,100%)"><div class="modal-head"><div><h2>Tạo bình chọn ẩn danh</h2><div class="small-help">Không lưu UID/email trong ballot.</div></div><button onclick="closeModal()">×</button></div><div class="form-grid">
-    <label>Tiêu đề<input id="v95VoteTitle" maxlength="180"></label><label>Đóng lúc<input id="v95VoteClose" type="datetime-local" value="${defaultClose}"></label>
-    <label class="full">Mô tả<textarea id="v95VoteDesc" rows="3"></textarea></label><label class="full">Các lựa chọn<textarea id="v95VoteOptions" rows="5" placeholder="Mỗi dòng một lựa chọn"></textarea></label>
-  </div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="v95CreateVote()">Tạo bình chọn</button></div></div></div>`;q("#modalWrap").classList.remove("hidden");if(typeof syncModalBodyState==="function")syncModalBodyState();
-}
-window.v95OpenVoteCreate=v95OpenVoteCreate;
-async function v95CreateVote(){try{const title=q("#v95VoteTitle")?.value.trim(),description=q("#v95VoteDesc")?.value.trim(),closesAt=q("#v95VoteClose")?.value,options=(q("#v95VoteOptions")?.value||"").split(/\n+/).map(x=>x.trim()).filter(Boolean);await api("/api/operations",{action:"vote-create",semester,title,description,closesAt:new Date(closesAt).toISOString(),options});closeModal();toast("Đã tạo bình chọn");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
-window.v95CreateVote=v95CreateVote;
 
 function renderTemp(){
   const root=q("#v95TempList");if(!root)return;
@@ -106,7 +83,7 @@ function renderTemp(){
   root.innerHTML=active.length?active.map(x=>`<div class="v95-list-row"><div><b>${esc95(x.displayName||x.email)}</b><span>${esc95(x.temporaryPermissions.label||"Quyền tạm thời")}</span><small>Hết hạn ${fmt(x.temporaryPermissions.expiresAt)}</small></div><button class="danger" onclick="v95ClearTemp('${x.uid}')">Thu hồi</button></div>`).join(""):'<div class="empty">Không có quyền tạm thời đang hoạt động.</div>';
 }
 function permissionChecks(){
-  const rows=[["Attendance","Điểm danh"],["Members","Thành viên"],["Finance","Thu chi"],["Events","Cổng sự kiện"]];
+  const rows=[["Attendance","Điểm danh"],["Members","Thành viên"],["Finance","Thu chi"],["Events","Sự kiện"]];
   return rows.map(([k,l])=>`<div class="v95-perm-row"><b>${l}</b><label><input type="checkbox" data-v95-perm="view${k}"> Xem</label><label><input type="checkbox" data-v95-perm="edit${k}" onchange="if(this.checked)this.closest('.v95-perm-row').querySelector('[data-v95-perm=view${k}]').checked=true"> Sửa</label></div>`).join("")+`<div class="v95-perm-row"><b>Tra cứu</b><label><input type="checkbox" data-v95-perm="viewLookup"> Xem</label></div>`;
 }
 function v95OpenTempGrant(){
