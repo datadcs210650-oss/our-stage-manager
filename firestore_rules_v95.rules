@@ -473,15 +473,7 @@ service cloud.firestore {
     match /roomBookings/{bookingId} {
       allow read, create, update, delete: if false;
     }
-
-    match /clubVotes/{pollId} {
-      allow read, create, update, delete: if false;
-      match /ballots/{ballotId} {
-        allow read, create, update, delete: if false;
-      }
-    }
-
-    // ===== Custom lookup admin/private data =====
+// ===== Custom lookup admin/private data =====
     match /customLookupAdmin/{portalId} {
       allow read: if admin();
 
