@@ -1,6 +1,5 @@
 "use strict";
 
-const crypto=require("crypto");
 const {
   admin,getDb,sendJson,readJsonBody,requireUser,requireManager,
   validateUid,getTargetProfile,ensureTargetManageable,PERMISSION_KEYS,handleError
@@ -23,7 +22,7 @@ function status(code){
   if(code==="osc/unauthenticated")return 401;
   if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;
   if(["osc/not-found","osc/target-not-found"].includes(code))return 404;
-  if(["osc/room-conflict","osc/already-voted","osc/vote-closed","osc/semester-locked"].includes(code))return 409;
+  if(["osc/room-conflict","osc/semester-locked"].includes(code))return 409;
   return 400;
 }
 
@@ -66,46 +65,6 @@ async function roomCancel(req,body){
   return{ok:true,version:95,cancelled:true}
 }
 
-/* ===== Anonymous Voting ===== */
-function pollPublic(doc,actor,ballot=null){
-  const d=doc.data?doc.data()||{}:doc||{},closed=d.open!==true||(millis(d.closesAt)&&Date.now()>=millis(d.closesAt)),manager=isManager(actor);
-  return{id:String(doc.id||d.id||""),title:String(d.title||""),description:String(d.description||""),semester:String(d.semester||""),
-    options:Array.isArray(d.options)?d.options.map(String):[],open:!closed,closesAt:millis(d.closesAt),hasVoted:!!ballot,
-    resultsVisible:closed||manager};
-}
-function voterHash(uid,salt){return crypto.createHmac("sha256",String(salt)).update(String(uid)).digest("hex")}
-async function votesList(req,body){
-  const actor=await requireUser(req),db=getDb(),semester=normalizeSemester(body.semester),snap=await db.collection("clubVotes").where("semester","==",semester).get(),rows=[];
-  for(const doc of snap.docs){
-    const d=doc.data()||{},hash=d.ballotSalt?voterHash(actor.decoded.uid,d.ballotSalt):"",ballot=hash?await doc.ref.collection("ballots").doc(hash).get():null,p=pollPublic(doc,actor,ballot?.exists);
-    if(p.resultsVisible){const bs=await doc.ref.collection("ballots").get(),counts=(p.options||[]).map(()=>0);for(const b of bs.docs){const ix=Number(b.data()?.optionIndex);if(Number.isInteger(ix)&&ix>=0&&ix<counts.length)counts[ix]++}p.counts=counts;p.totalVotes=counts.reduce((a,b)=>a+b,0)}
-    rows.push(p);
-  }
-  rows.sort((a,b)=>(b.closesAt||0)-(a.closesAt||0));return{ok:true,version:95,rows,canManage:isManager(actor)}
-}
-async function voteCreate(req,body){
-  const actor=await requireManager(req),db=getDb(),state=await loadState(db),semester=normalizeSemester(body.semester);if(semesterLocked(state,semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  const title=clean(body.title,180),description=clean(body.description,600),options=[...new Set((Array.isArray(body.options)?body.options:[]).map(x=>clean(x,120)).filter(Boolean))].slice(0,12);
-  if(!title||options.length<2)throw bad("Bình chọn cần tiêu đề và ít nhất 2 lựa chọn.");
-  const closes=dateValue(body.closesAt,"Thời gian đóng");if(closes.getTime()<=Date.now())throw bad("Thời gian đóng phải ở tương lai.");
-  const ref=db.collection("clubVotes").doc();await ref.set({semester,title,description,options,open:true,closesAt:admin.firestore.Timestamp.fromDate(closes),ballotSalt:crypto.randomBytes(32).toString("hex"),
-    createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid,createdByName:clean(actor.profile.displayName||actor.decoded.email||"Admin",120)},{merge:false});
-  return{ok:true,version:95,pollId:ref.id}
-}
-async function voteCast(req,body){
-  const actor=await requireUser(req),db=getDb(),pollId=cleanId(body.pollId,"Bình chọn"),ref=db.collection("clubVotes").doc(pollId),poll=await ref.get();if(!poll.exists)throw bad("Bình chọn không tồn tại.","osc/not-found");
-  const d=poll.data()||{},state=await loadState(db);if(semesterLocked(state,d.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  if(d.open!==true||(millis(d.closesAt)&&Date.now()>=millis(d.closesAt)))throw bad("Bình chọn đã đóng.","osc/vote-closed");
-  const optionIndex=Number(body.optionIndex),options=Array.isArray(d.options)?d.options:[];if(!Number.isInteger(optionIndex)||optionIndex<0||optionIndex>=options.length)throw bad("Lựa chọn không hợp lệ.");
-  const hash=voterHash(actor.decoded.uid,d.ballotSalt),ballotRef=ref.collection("ballots").doc(hash);
-  await db.runTransaction(async tx=>{const s=await tx.get(ballotRef);if(s.exists)throw bad("Bạn đã bỏ phiếu cho nội dung này.","osc/already-voted");tx.create(ballotRef,{optionIndex,createdAt:admin.firestore.FieldValue.serverTimestamp()})});
-  return{ok:true,version:95,voted:true}
-}
-async function voteClose(req,body){
-  const actor=await requireManager(req),db=getDb(),id=cleanId(body.pollId,"Bình chọn"),ref=db.collection("clubVotes").doc(id),snap=await ref.get();if(!snap.exists)throw bad("Bình chọn không tồn tại.","osc/not-found");
-  await ref.set({open:false,closedAt:admin.firestore.FieldValue.serverTimestamp(),closedBy:actor.decoded.uid},{merge:true});return{ok:true,version:95,open:false}
-}
-
 /* ===== Temporary Permissions ===== */
 function normalizeTempPermissions(input){
   const src=input&&typeof input==="object"?input:{},out={};for(const key of PERMISSION_KEYS)out[key]=src[key]===true;
@@ -145,10 +104,6 @@ module.exports=async function handler(req,res){
     if(action==="rooms-list")out=await roomsList(req,body);
     else if(action==="room-create")out=await roomCreate(req,body);
     else if(action==="room-cancel")out=await roomCancel(req,body);
-    else if(action==="votes-list")out=await votesList(req,body);
-    else if(action==="vote-create")out=await voteCreate(req,body);
-    else if(action==="vote-cast")out=await voteCast(req,body);
-    else if(action==="vote-close")out=await voteClose(req,body);
     else if(action==="temp-list")out=await tempList(req,body);
     else if(action==="temp-set")out=await tempSet(req,body);
     else if(action==="temp-clear")out=await tempClear(req,body);
