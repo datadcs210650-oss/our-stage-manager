@@ -321,3 +321,78 @@ body.auth-admin #events>.workspace-window-bar{margin-bottom:0!important}
   #events .event-actions button{width:100%}
   #events .v96-event-actions-admin:before{grid-column:1/-1}
 }
+
+
+/* V96.1 — Sans-serif correction + Events workspace polish */
+body,button,input,select,textarea,.brand,.topbar h1,.dashboard-hero h2,.panel-head h3,.section-title h2,.settings-card h3,.event-card h3,.v95-card h3,.simple-brand-name,.simple-login-head h2{font-family:var(--v96-ui)!important}
+body.auth-admin .brand,body.auth-admin .topbar h1,body.auth-admin .dashboard-hero h2,body.auth-admin .panel-head h3,body.auth-admin .section-title h2,body.auth-admin .settings-card h3,body.auth-admin .event-card h3,body.auth-admin .v95-card h3,body.auth-login .simple-brand-name,body.auth-login .simple-login-head h2{font-family:var(--v96-ui)!important;letter-spacing:-.025em!important}
+body.auth-admin .event-card h3{font-weight:800!important}
+body.auth-admin #events{padding-bottom:20px!important}
+
+/* Events summary / toolbar */
+body.auth-admin #events>.finance-toolbar{margin:0 0 14px!important;padding:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,220px))!important;gap:10px!important;background:transparent!important;border:0!important}
+body.auth-admin #events>.finance-toolbar .quick-chip{min-height:64px!important;padding:12px 14px!important;display:grid!important;align-content:center!important;gap:4px!important;border:1px solid var(--v96-line)!important;border-radius:15px!important;background:linear-gradient(180deg,#fff,#fbf8f5)!important;color:#85777b!important;box-shadow:0 8px 22px rgba(45,24,31,.04)!important;font-size:10px!important}
+body.auth-admin #events>.finance-toolbar .quick-chip b{display:block!important;color:#2d2226!important;font-size:17px!important;line-height:1.2!important;font-weight:800!important}
+body.auth-admin #events>.toolbar{margin:0 0 14px!important;padding:12px!important;display:grid!important;grid-template-columns:minmax(260px,1fr) repeat(5,max-content)!important;gap:8px!important;align-items:center!important;border:1px solid var(--v96-line)!important;border-radius:16px!important;background:rgba(255,255,255,.92)!important;box-shadow:0 10px 28px rgba(45,24,31,.045)!important}
+body.auth-admin #events>.toolbar #eventSearch{height:44px!important;padding-left:14px!important;background:#fbfaf8!important;border-color:rgba(76,47,56,.12)!important}
+body.auth-admin #events>.toolbar button{min-height:40px!important;padding:0 13px!important}
+body.auth-admin #events>.section-note,body.auth-admin #events>.security-note{margin:0 0 10px!important;padding:11px 13px!important;border-radius:13px!important;font-size:10px!important;line-height:1.5!important}
+body.auth-admin #events>.section-note{background:#f8f5f1!important;border:1px solid rgba(122,93,71,.10)!important;color:#74676b!important}
+body.auth-admin #events>.security-note{background:#f4f8f5!important;border:1px solid #dce9e1!important;color:#3f6652!important}
+body.auth-admin #events>.security-note b{color:#2e5b45!important}
+
+/* Event cards: hierarchy first, actions second */
+body.auth-admin #events .event-card-list{display:grid!important;gap:14px!important}
+body.auth-admin #events .event-card{position:relative!important;overflow:hidden!important;padding:18px 18px 16px 20px!important;border:1px solid rgba(76,47,56,.11)!important;border-left:0!important;border-radius:18px!important;background:linear-gradient(180deg,#fff,#fffdfa)!important;box-shadow:0 13px 34px rgba(45,24,31,.06)!important}
+body.auth-admin #events .event-card:before{content:""!important;position:absolute!important;left:0!important;top:15px!important;bottom:15px!important;width:3px!important;border-radius:0 8px 8px 0!important;background:linear-gradient(180deg,var(--v96-wine),var(--v96-gold))!important}
+body.auth-admin #events .event-card:after{display:none!important}
+body.auth-admin #events .event-card-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:16px!important;align-items:start!important}
+body.auth-admin #events .event-card-title{margin:0 0 7px!important;color:#2e2427!important;font-size:18px!important;line-height:1.3!important;text-transform:none!important}
+body.auth-admin #events .event-card-description{max-width:900px!important;color:#75696d!important;font-size:11px!important;line-height:1.55!important}
+body.auth-admin #events .event-card-head .small-help{margin-top:11px!important;display:flex!important;align-items:center!important;gap:6px!important;flex-wrap:wrap!important;font-size:0!important;line-height:1!important;color:transparent!important}
+body.auth-admin #events .event-card-head .small-help>b{display:none!important}
+body.auth-admin #events .event-card-head .small-help>span{font-size:9px!important;line-height:1.2!important;margin:0!important;padding:5px 8px!important;border-radius:999px!important;border:1px solid rgba(76,47,56,.10)!important;background:#f8f5f3!important;color:#65585d!important;font-weight:800!important;white-space:nowrap!important}
+body.auth-admin #events .event-card-head .small-help>.portal-state-open{background:#eff8f3!important;border-color:#d1eadb!important;color:#23704e!important}
+body.auth-admin #events .event-card-head .small-help>.portal-state-closed{background:#fff2f4!important;border-color:#efd2d9!important;color:#963c52!important}
+body.auth-admin #events .event-card-head .small-help>.event-schedule-badge{white-space:normal!important}
+body.auth-admin #events .account-role,body.auth-admin #events .companion-badge{margin:0!important;white-space:nowrap!important;align-self:start!important}
+body.auth-admin #events .event-actions{margin-top:15px!important;padding-top:13px!important;border-top:1px solid rgba(76,47,56,.08)!important;display:flex!important;gap:7px!important;flex-wrap:wrap!important}
+body.auth-admin #events .event-actions button{min-height:36px!important;padding:0 11px!important;border-radius:10px!important;font-size:9px!important;box-shadow:none!important}
+body.auth-admin #events .event-actions .primary{box-shadow:0 7px 16px rgba(98,23,48,.14)!important}
+body.auth-admin #events .event-actions .danger{margin-left:0!important}
+
+/* Event Builder — aligned, calm, easier to scan */
+body.auth-admin #modalWrap .event-builder-modal{width:min(1180px,calc(100vw - 48px))!important;max-width:1180px!important;padding:0 24px 24px!important;background:#f8f6f3!important}
+body.auth-admin #modalWrap .event-builder-modal .modal-head{margin:0 -24px 18px!important;padding:16px 24px!important;min-height:74px!important;background:rgba(255,255,255,.97)!important;border-bottom:1px solid rgba(76,47,56,.09)!important}
+body.auth-admin #modalWrap .event-builder-modal .modal-head h2{font-family:var(--v96-ui)!important;font-size:23px!important;font-weight:800!important;color:#2d2427!important}
+body.auth-admin #modalWrap .event-builder-modal .modal-kicker{margin-top:5px!important;font-family:var(--v96-ui)!important;color:#938589!important;font-size:8px!important;letter-spacing:.15em!important}
+body.auth-admin .event-builder-modal>.form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;align-items:stretch!important}
+body.auth-admin .event-builder-modal>.form-grid>label{min-width:0!important;margin:0!important;padding:13px 14px!important;display:flex!important;flex-direction:column!important;gap:7px!important;border:1px solid rgba(76,47,56,.10)!important;border-radius:14px!important;background:#fff!important;color:#574a4f!important;font-size:10px!important;font-weight:800!important;line-height:1.35!important;box-shadow:0 7px 20px rgba(45,24,31,.03)!important}
+body.auth-admin .event-builder-modal>.form-grid>label.full{grid-column:1/-1!important}
+body.auth-admin .event-builder-modal>.form-grid>label>input,body.auth-admin .event-builder-modal>.form-grid>label>select,body.auth-admin .event-builder-modal>.form-grid>label>textarea{margin-top:1px!important;width:100%!important;min-width:0!important;min-height:43px!important;padding:10px 11px!important;border-radius:10px!important;background:#fcfbfa!important}
+body.auth-admin .event-builder-modal>.form-grid>label>textarea{resize:vertical!important;line-height:1.5!important}
+body.auth-admin .event-builder-modal #eventTitle{min-height:78px!important}
+body.auth-admin .event-builder-modal #eventDescription{min-height:92px!important}
+body.auth-admin .event-builder-modal .permission-note,body.auth-admin .event-builder-modal .event-points-note{margin-top:auto!important;color:#8b7d81!important;font-size:8.5px!important;font-weight:500!important;line-height:1.5!important}
+body.auth-admin .event-builder-modal>.section-title{margin:18px 0 10px!important;padding:0!important}
+body.auth-admin .event-builder-modal>.section-title h4{font-size:14px!important;color:#34282c!important;font-weight:800!important}
+body.auth-admin .event-builder-modal .event-builder-tools{margin:0 0 12px!important;padding:10px 11px!important;display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;border:1px solid rgba(76,47,56,.09)!important;border-radius:12px!important;background:#fff!important}
+body.auth-admin .event-builder-modal #eventFieldEditor{display:grid!important;gap:11px!important}
+body.auth-admin .event-builder-modal .event-field-card,body.auth-admin .event-builder-modal .event-section-editor,body.auth-admin .event-builder-modal .rich-editor,body.auth-admin .event-builder-modal .image-field-editor{margin:0!important;padding:13px!important;border:1px solid rgba(76,47,56,.11)!important;border-radius:14px!important;background:#fff!important;box-shadow:0 7px 20px rgba(45,24,31,.025)!important}
+body.auth-admin .event-builder-modal .event-field-card-head{min-height:34px!important;margin-bottom:10px!important;padding-bottom:9px!important;display:flex!important;align-items:center!important;gap:7px!important;border-bottom:1px solid rgba(76,47,56,.07)!important}
+body.auth-admin .event-builder-modal .event-field-number{width:26px!important;height:26px!important;display:grid!important;place-items:center!important;border-radius:8px!important;background:#f4e8ec!important;color:#75213c!important;font-size:9px!important;font-weight:900!important}
+body.auth-admin .event-builder-modal .event-field-card-head strong{margin-right:auto!important;color:#403237!important;font-size:11px!important}
+body.auth-admin .event-builder-modal .event-field-card-head button{min-height:30px!important;height:30px!important;padding:0 9px!important;font-size:9px!important}
+body.auth-admin .event-builder-modal .event-field-row,body.auth-admin .event-builder-modal .event-field-row-v71{display:grid!important;grid-template-columns:minmax(240px,1.35fr) minmax(160px,.7fr) minmax(120px,.45fr) minmax(220px,1fr)!important;gap:9px!important;align-items:end!important;max-width:none!important}
+body.auth-admin .event-builder-modal .event-field-row>label,body.auth-admin .event-builder-modal .event-field-row-v71>label{min-width:0!important;display:grid!important;gap:5px!important;color:#66585d!important;font-size:9px!important;font-weight:800!important}
+body.auth-admin .event-builder-modal .event-field-row input,body.auth-admin .event-builder-modal .event-field-row select,body.auth-admin .event-builder-modal .event-field-row textarea{width:100%!important;min-width:0!important;min-height:39px!important}
+body.auth-admin .event-builder-modal .event-required-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;min-height:39px!important;padding:0 10px!important;border:1px solid rgba(76,47,56,.12)!important;border-radius:10px!important;background:#fbfaf8!important}
+body.auth-admin .event-builder-modal .event-required-toggle input{width:16px!important;min-height:16px!important;height:16px!important}
+body.auth-admin .event-builder-modal .free-mode-note{margin:14px 0 0!important;border-radius:12px!important;background:#faf7f4!important;border-color:rgba(76,47,56,.10)!important;color:#786a6f!important}
+body.auth-admin #modalWrap .event-builder-modal .modal-actions{margin:20px -24px -24px!important;padding:12px 24px!important;background:rgba(255,255,255,.97)!important}
+body.auth-admin #modalWrap .event-builder-modal .modal-actions button{min-width:120px!important;min-height:42px!important}
+
+@media(max-width:1180px){body.auth-admin #events>.toolbar{grid-template-columns:minmax(250px,1fr) repeat(3,max-content)!important}body.auth-admin #events>.toolbar .admin-only-action{display:none}}
+@media(max-width:900px){body.auth-admin #events>.toolbar{grid-template-columns:1fr 1fr!important}body.auth-admin #events>.toolbar #eventSearch{grid-column:1/-1!important}body.auth-admin #events>.toolbar button{width:100%!important}body.auth-admin .event-builder-modal .event-field-row,body.auth-admin .event-builder-modal .event-field-row-v71{grid-template-columns:1fr 1fr!important}}
+@media(max-width:700px){body.auth-admin #events>.finance-toolbar{grid-template-columns:1fr 1fr!important}body.auth-admin #events .event-card-head{grid-template-columns:1fr!important}body.auth-admin #events .account-role,body.auth-admin #events .companion-badge{justify-self:start!important}body.auth-admin .event-builder-modal>.form-grid{grid-template-columns:1fr!important}body.auth-admin .event-builder-modal>.form-grid>label.full{grid-column:auto!important}body.auth-admin .event-builder-modal .event-builder-tools{align-items:stretch!important;flex-direction:column!important}body.auth-admin .event-builder-modal .event-field-row,body.auth-admin .event-builder-modal .event-field-row-v71{grid-template-columns:1fr!important}}
+@media(max-width:520px){body.auth-admin #events>.toolbar{grid-template-columns:1fr!important}body.auth-admin #events>.toolbar #eventSearch{grid-column:auto!important}body.auth-admin #events>.finance-toolbar{grid-template-columns:1fr!important}}
