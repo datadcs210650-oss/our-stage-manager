@@ -97,9 +97,6 @@ async function getHistory(reset){
     data.cursor=result.nextBefore;data.more=result.hasMore===true;data.loadedHistory=true;data.day=vnKey(Date.now());renderHistory();notice("")
   }catch(e){notice(e.message||String(e));renderHistory()}finally{data.historyBusy=false}
 }
-function modalClose(){var m=el("#rbModal");if(m)m.remove();document.removeEventListener("keydown",modalKey,true)}
-function modalKey(e){if(e.key==="Escape"){e.preventDefault();modalClose()}}
-
 /* The catalog is a shared, admin-managed schedule template; BCN may read but never mutate it. */
 async function loadSlots(force){
   if(data.slotBusy)return;
@@ -149,10 +146,11 @@ function addSlotRow(){
   syncDraftSlots();
   if(data.slots.length>=48){slotError("Chỉ được tạo tối đa 48 slot.");return}
   var end=data.slots.length?data.slots[data.slots.length-1].end:"07:00";
-  var start=end!=="24:00"?end:"07:00";
+  if(end==="24:00"||end==="23:59"){slotError("Không còn thời gian trống để thêm slot ở cuối ngày.");return}
+  var start=end;
   var n=Number(start.slice(0,2))*60+Number(start.slice(3));
-  var stop=Math.min(n+50,1440);
-  var endStr=stop===1440?"24:00":String(Math.floor(stop/60)).padStart(2,"0")+":"+String(stop%60).padStart(2,"0");
+  var stop=Math.min(n+50,1439);
+  var endStr=String(Math.floor(stop/60)).padStart(2,"0")+":"+String(stop%60).padStart(2,"0");
   if(start==="24:00"||Number(start.slice(0,2))*60+Number(start.slice(3))>=1440){slotError("Đã hết khung giờ trong ngày. Hãy chỉnh sửa một slot cũ.");return}
   data.slots.push({id:newSlotId(),label:"Slot "+(data.slots.length+1),start:start,end:endStr});
   renderSlots();
@@ -235,7 +233,9 @@ async function openForm(booking){
   var first=selected.length===previous.length&&selected.length?selected[0]:present[0].id;
   var last=selected.length===previous.length&&selected.length?selected[selected.length-1]:present[0].id;
   // Existing free-time bookings or bookings with removed slots can still be edited after selecting fresh slots.
-  var moved=booking&&selected.length&&selected.length===previous.length&&present.find(function(x){return x.id===first}).start!==inputDate(booking.startAt).slice(11);
+  var moved=booking&&selected.length&&selected.length===previous.length&&(
+    present.find(function(x){return x.id===first}).start!==inputDate(booking.startAt).slice(11)||
+    present.find(function(x){return x.id===last}).end!==inputDate(booking.endAt).slice(11));
   var priorWarning=booking&&(!selected.length||selected.length!==previous.length||moved)?
     '<div class="rb-form-tip">Lịch này được tạo trước khi có danh sách slot (hoặc slot cũ đã đổi). Hãy chọn lại slot hiện tại trước khi lưu.</div>':"";
   var slotOptions=present.map(function(x){return '<option value="'+safe(x.id)+'">'+safe(slotLabel(x))+'</option>'}).join("");
