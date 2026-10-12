@@ -200,9 +200,9 @@ function read(){return normalize(seatState)}
 function setEnabled(v){seatState.enabled=v===true;if(seatState.enabled&&!seatState.sections.length)seatState.sections=[defaultSection(0)];render()}
 function globalUpdate(k,v){if(k==="canvasHeight")seatState[k]=Math.round(clamp(v,360,1400));else seatState[k]=String(v||"").slice(0,k==="title"?100:80);render()}
 function stageUpdate(k,v){if(!["x","y","w","h"].includes(k))return;const st=seatState.stage||normalizeStage();st[k]=clamp(v,k==="w"?10:k==="h"?3:0,k==="x"?95:k==="y"?90:k==="w"?100:30);if(st.x+st.w>100)st.x=Math.max(0,100-st.w);if(st.y+st.h>100)st.y=Math.max(0,100-st.h);seatState.stage=st;render()}
-function addSection(){if(seatState.sections.length>=30)return alert("Tối đa 30 khu ghế.");seatState.sections.push(defaultSection(seatState.sections.length));render()}
-function cloneSection(i){const src=seatState.sections[i];if(!src)return;if(seatState.sections.length>=30)return alert("Tối đa 30 khu ghế.");const copy=normalizeSection({...src,id:uid(),name:(src.name+" bản sao").slice(0,60),x:clamp(src.x+3,0,94),y:clamp(src.y+3,0,94)},seatState.sections.length);seatState.sections.splice(i+1,0,copy);render()}
-function removeSection(i){if(!seatState.sections[i])return;if(!confirm("Xóa khu ghế này khỏi sơ đồ?"))return;seatState.sections.splice(i,1);render()}
+function addSection(){if(seatState.sections.length>=30)return oscAlert("Tối đa 30 khu ghế.");seatState.sections.push(defaultSection(seatState.sections.length));render()}
+function cloneSection(i){const src=seatState.sections[i];if(!src)return;if(seatState.sections.length>=30)return oscAlert("Tối đa 30 khu ghế.");const copy=normalizeSection({...src,id:uid(),name:(src.name+" bản sao").slice(0,60),x:clamp(src.x+3,0,94),y:clamp(src.y+3,0,94)},seatState.sections.length);seatState.sections.splice(i+1,0,copy);render()}
+async function removeSection(i){if(!seatState.sections[i])return;if(!await oscConfirm("Xóa khu ghế này khỏi sơ đồ?"))return;seatState.sections.splice(i,1);render()}
 function moveSection(i,d){const j=i+Number(d);if(i<0||j<0||i>=seatState.sections.length||j>=seatState.sections.length)return;[seatState.sections[i],seatState.sections[j]]=[seatState.sections[j],seatState.sections[i]];render()}
 function update(i,k,v){
   const sec=seatState.sections[i];if(!sec)return;
