@@ -54,7 +54,7 @@ async function v95RefreshOperations(show=true){
     const r=await Promise.all(calls);opRooms=r[0].rows||[];if(canEditClub())opTemp=r[1].rows||[];
     renderRooms();if(canEditClub()){renderTemp();await v95LoadQuota(false)}
     if(show&&typeof toast==="function")toast("Đã cập nhật Điều hành nâng cao");
-  }catch(e){console.error("v95 operations",e);if(show)alert("Không tải được Điều hành nâng cao: "+(e.message||e))}
+  }catch(e){console.error("v95 operations",e);if(show)oscAlert("Không tải được Điều hành nâng cao: "+(e.message||e))}
   finally{opLoading=false}
 }
 window.v95RefreshOperations=v95RefreshOperations;
@@ -67,13 +67,13 @@ function renderRooms(){
 async function v95CreateRoom(){
   try{
     const roomName=q("#v95RoomName")?.value.trim(),purpose=q("#v95RoomPurpose")?.value.trim(),startAt=q("#v95RoomStart")?.value,endAt=q("#v95RoomEnd")?.value,eventId=q("#v95RoomEvent")?.value||"";
-    if(!roomName||!purpose||!startAt||!endAt)return alert("Hãy nhập đầy đủ phòng, mục đích và thời gian.");
+    if(!roomName||!purpose||!startAt||!endAt)return oscAlert("Hãy nhập đầy đủ phòng, mục đích và thời gian.");
     await api("/api/operations",{action:"room-create",semester,roomName,purpose,startAt:new Date(startAt).toISOString(),endAt:new Date(endAt).toISOString(),eventId});
     toast("Đã đặt phòng");await v95RefreshOperations(false);
-  }catch(e){alert("Không đặt được phòng: "+(e.message||e))}
+  }catch(e){oscAlert("Không đặt được phòng: "+(e.message||e))}
 }
 window.v95CreateRoom=v95CreateRoom;
-async function v95CancelRoom(id){if(!confirm("Hủy lịch đặt phòng này?"))return;try{await api("/api/operations",{action:"room-cancel",bookingId:id});toast("Đã hủy lịch phòng");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
+async function v95CancelRoom(id){if(!await oscConfirm("Hủy lịch đặt phòng này?"))return;try{await api("/api/operations",{action:"room-cancel",bookingId:id});toast("Đã hủy lịch phòng");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
 window.v95CancelRoom=v95CancelRoom;
 
 
@@ -98,9 +98,9 @@ function v95OpenTempGrant(){
 window.v95OpenTempGrant=v95OpenTempGrant;
 function v95TempEventChanged(){const id=q("#v95TempEvent")?.value,e=(state.events||[]).find(x=>x.id===id);if(e?.closeAt){const ms=e.closeAt?.toMillis?.()||e.closeAt?.toDate?.()?.getTime?.()||new Date(e.closeAt).getTime();if(ms>Date.now())q("#v95TempExpires").value=dtLocal(ms)}}
 window.v95TempEventChanged=v95TempEventChanged;
-async function v95SaveTemp(){try{const permissions={};document.querySelectorAll("[data-v95-perm]").forEach(x=>permissions[x.dataset.v95Perm]=x.checked);const uid=q("#v95TempUser")?.value,eventId=q("#v95TempEvent")?.value||"",label=q("#v95TempLabel")?.value||"",value=q("#v95TempExpires")?.value;if(!value)return alert("Hãy chọn thời gian hết hạn.");await api("/api/operations",{action:"temp-set",uid,eventId,label,expiresAt:new Date(value).toISOString(),permissions});closeModal();toast("Đã cấp quyền tạm thời");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
+async function v95SaveTemp(){try{const permissions={};document.querySelectorAll("[data-v95-perm]").forEach(x=>permissions[x.dataset.v95Perm]=x.checked);const uid=q("#v95TempUser")?.value,eventId=q("#v95TempEvent")?.value||"",label=q("#v95TempLabel")?.value||"",value=q("#v95TempExpires")?.value;if(!value)return oscAlert("Hãy chọn thời gian hết hạn.");await api("/api/operations",{action:"temp-set",uid,eventId,label,expiresAt:new Date(value).toISOString(),permissions});closeModal();toast("Đã cấp quyền tạm thời");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
 window.v95SaveTemp=v95SaveTemp;
-async function v95ClearTemp(uid){if(!confirm("Thu hồi quyền tạm thời ngay?"))return;try{await api("/api/operations",{action:"temp-clear",uid});toast("Đã thu hồi quyền");await v95RefreshOperations(false)}catch(e){alert(e.message||e)}}
+async function v95ClearTemp(uid){if(!await oscConfirm("Thu hồi quyền tạm thời ngay?"))return;try{await api("/api/operations",{action:"temp-clear",uid});toast("Đã thu hồi quyền");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
 window.v95ClearTemp=v95ClearTemp;
 
 async function v95LoadQuota(show=true){
@@ -155,7 +155,7 @@ function v95ShowAssign(seatId,label){
   panel.classList.remove("hidden");panel.innerHTML=`<div><b>Cấp ghế ${esc95(label)}</b><span>Chọn người đăng ký để Admin cấp ghế dành riêng.</span></div><select id="v95AssignSubmission"><option value="">-- Chọn người --</option>${list.map(x=>`<option value="${x.id}">${esc95(x.label)}${x.mssv?" • "+esc95(x.mssv):""}</option>`).join("")}</select><button class="primary" onclick="v95AssignSeat('${seatId}')">Cấp ghế</button><button class="ghost" onclick="this.parentElement.classList.add('hidden')">Hủy</button>`;
 }
 window.v95ShowAssign=v95ShowAssign;
-async function v95AssignSeat(seatId){const submissionId=q("#v95AssignSubmission")?.value;if(!submissionId)return alert("Hãy chọn người đăng ký.");try{await api("/api/event-seating",{action:"admin-assign-seat",eventId:controlEventId,submissionId,seatId});toast("Đã cấp ghế dành riêng");await refreshControl()}catch(e){alert("Không cấp được ghế: "+(e.message||e))}}
+async function v95AssignSeat(seatId){const submissionId=q("#v95AssignSubmission")?.value;if(!submissionId)return oscAlert("Hãy chọn người đăng ký.");try{await api("/api/event-seating",{action:"admin-assign-seat",eventId:controlEventId,submissionId,seatId});toast("Đã cấp ghế dành riêng");await refreshControl()}catch(e){oscAlert("Không cấp được ghế: "+(e.message||e))}}
 window.v95AssignSeat=v95AssignSeat;
 
 const style=document.createElement("style");
