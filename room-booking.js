@@ -65,7 +65,7 @@ function renderWeek(){
     else if(!schedule.length)html+='<div class="rb-empty-day">Chưa có lịch phòng</div>';
     else for(var j=0;j<schedule.length;j++){
       var x=schedule[j];
-      html+='<article class="rb-item"><span class="rb-hours">'+clock(Math.max(x.startAt,d))+' – '+clock(Math.min(x.endAt-1,d+DAY-1)+1)+'</span><strong>'+safe(x.roomName)+'</strong><span>'+safe(x.purpose)+'</span>'+(x.slotSnapshot&&x.slotSnapshot.length?'<span class="rb-slot-display">'+safe(x.slotSnapshot.map(function(t){return t.label}).join(' · '))+'</span>':'')+(manager()?'<button class="rb-edit" type="button" data-action="edit" data-id="'+safe(x.id)+'">Chỉnh sửa ↗</button>':'')+'</article>';
+      html+='<article class="rb-item"><span class="rb-hours">'+(x.slotSnapshot&&x.slotSnapshot.length?x.slotSnapshot.map(function(t){return t.start+'–'+t.end}).join(' · '):clock(Math.max(x.startAt,d))+' – '+clock(Math.min(x.endAt-1,d+DAY-1)+1))+'</span><strong>'+safe(x.roomName)+'</strong><span>'+safe(x.purpose)+'</span>'+(x.slotSnapshot&&x.slotSnapshot.length?'<span class="rb-slot-display">'+safe(x.slotSnapshot.map(function(t){return t.label}).join(' · '))+'</span>':'')+(manager()?'<button class="rb-edit" type="button" data-action="edit" data-id="'+safe(x.id)+'">Chỉnh sửa ↗</button>':'')+'</article>';
     }
     html+='</div></div>';
   }
