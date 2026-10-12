@@ -112,7 +112,7 @@ saveEventBuilder=async function(){
   const fields=Array.isArray(eventBuilderFields)?eventBuilderFields:[];
   const seating=typeof seatStudioRead==="function"?seatStudioRead():{enabled:false};
   if(!seating?.enabled&&fields.some(f=>isChoice(f)&&Object.values(f.optionDestinations||{}).includes("seat"))){
-    alert("Có lựa chọn dẫn tới “Chọn ghế” nhưng sự kiện chưa bật sơ đồ ghế.");return;
+    oscAlert("Có lựa chọn dẫn tới “Chọn ghế” nhưng sự kiện chưa bật sơ đồ ghế.");return;
   }
   const sectionIds=new Set(fields.filter(f=>f.type==="section").map(f=>f.id));
   for(let fi=0;fi<fields.length;fi++){
@@ -120,9 +120,9 @@ saveEventBuilder=async function(){
     for(const d of Object.values(f.optionDestinations||{})){
       if(!String(d).startsWith("section:"))continue;
       const targetId=String(d).slice(8),targetIndex=fields.findIndex(x=>x.type==="section"&&x.id===targetId);
-      if(!sectionIds.has(targetId)||targetIndex<=fi){alert("Section Branching chỉ được chuyển tới một Phần nằm phía sau câu hỏi nguồn. Hãy chọn lại đích đến.");return}
+      if(!sectionIds.has(targetId)||targetIndex<=fi){oscAlert("Section Branching chỉ được chuyển tới một Phần nằm phía sau câu hỏi nguồn. Hãy chọn lại đích đến.");return}
     }
-    const r=normalizeVisibility(f);if(r.sourceFieldId&&!fields.some(x=>x.id===r.sourceFieldId&&isChoice(x))){alert("Có điều kiện hiển thị đang trỏ tới câu hỏi không còn tồn tại.");return}
+    const r=normalizeVisibility(f);if(r.sourceFieldId&&!fields.some(x=>x.id===r.sourceFieldId&&isChoice(x))){oscAlert("Có điều kiện hiển thị đang trỏ tới câu hỏi không còn tồn tại.");return}
   }
   return originalSaveEventBuilder();
 };
