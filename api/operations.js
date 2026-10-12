@@ -135,10 +135,11 @@ function resolveRoomFromSlots(body,slots){
   if(roundtrip!==date)throw bad("Ngày sử dụng phòng không hợp lệ.");
   const ids=body.slotIds;
   if(!Array.isArray(ids)||ids.length===0||ids.length>48||new Set(ids).size!==ids.length)throw bad("Vui lòng chọn slot hợp lệ.");
-  const selected=ids.map(id=>slots.find(x=>x.id===id));
-  if(selected.some(x=>!x))throw bad("Slot đã được thay đổi. Hãy tải lại và chọn lại slot.");
-  selected.sort((a,b)=>slotMinutes(a.start)-slotMinutes(b.start));
-  for(let i=1;i<selected.length;i++)if(selected[i-1].end!==selected[i].start)throw bad("Các slot được chọn phải liền giờ, không có khoảng trống.");
+  const positions=ids.map(id=>slots.findIndex(x=>x.id===id)).sort((a,b)=>a-b);
+  if(positions.some(i=>i<0))throw bad("Slot đã được thay đổi. Hãy tải lại và chọn lại slot.");
+  for(let i=1;i<positions.length;i++)if(positions[i]!==positions[i-1]+1)throw bad("Vui lòng chọn các slot liền nhau trong danh sách.");
+  // A short break between adjacent slots remains reserved to prevent double-booking.
+  const selected=positions.map(i=>slots[i]);
   const start=new Date(localDay.getTime()+slotMinutes(selected[0].start)*60000);
   const end=new Date(localDay.getTime()+slotMinutes(selected[selected.length-1].end,true)*60000);
   return{date,slotIds:selected.map(x=>x.id),slotSnapshot:selected,start,end};
