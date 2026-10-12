@@ -79,9 +79,9 @@ function renderHistory(){
   target.innerHTML=html;
 }
 async function getWeek(){
-  if(data.busy)return;data.busy=true;notice("Đang tải lịch phòng…");
-  try{var selected=data.week;var result=await request("room-board",{weekStart:new Date(selected).toISOString()});if(selected!==data.week)return;data.rows=result.rows||[];data.day=vnKey(Date.now());renderWeek();notice("")}
-  catch(e){notice(e.message||String(e))}finally{data.busy=false}
+  var selected=data.week,version=(data.weekVersion||0)+1;data.weekVersion=version;data.busy=true;notice("Đang tải lịch phòng…");
+  try{var result=await request("room-board",{weekStart:new Date(selected).toISOString()});if(selected!==data.week||version!==data.weekVersion)return;data.rows=result.rows||[];data.day=vnKey(Date.now());renderWeek();notice("")}
+  catch(e){if(version===data.weekVersion)notice(e.message||String(e))}finally{if(version===data.weekVersion)data.busy=false}
 }
 async function getHistory(reset){
   if(data.historyBusy)return;
