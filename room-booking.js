@@ -53,7 +53,7 @@ function paintTabs(){var w=el("#rbWeekTab"),h=el("#rbHistoryTab"),t=el("#rbSlots
 function switchTab(mode){if(mode==="slots"&&!manager())return;data.tab=mode;paintTabs();if(mode==="week"){renderWeek();if(!data.rows.length)getWeek()}else if(mode==="history"){renderHistory();if(!data.loadedHistory)getHistory(true)}else{renderSlots();loadSlots(true)}}
 function renderWeek(){
   var target=el("#rbContent");if(!target||data.tab!=="week")return;
-  var today=startDay(Date.now()),rows=data.rows.filter(function(r){return r.status==="active"&&startDay(r.endAt)>=today});
+  var today=startDay(Date.now()),rows=data.rows.filter(function(r){return r.status==="active"&&startDay(r.endAt-1)>=today});
   var unique=new Set(rows.map(function(r){return String(r.roomName||"").toLocaleLowerCase("vi")})).size;
   var html='<div class="rb-week-header"><div><span class="rb-kicker">KẾ HOẠCH SỬ DỤNG PHÒNG</span><h3>'+dayLabel(data.week)+' – '+dayLabel(data.week+6*DAY)+'</h3><p>'+rows.length+' lượt sử dụng · '+unique+' phòng · GMT+7</p></div><div class="rb-pager"><button type="button" class="rb-button rb-outline" data-action="prev" '+(data.week<=monday(Date.now())?'disabled':'')+'>‹</button><button type="button" class="rb-button rb-outline" data-action="today">Tuần này</button><button type="button" class="rb-button rb-outline" data-action="next">›</button></div></div>';
   html+='<div class="rb-stats"><div><span>Số phòng trong tuần</span><strong>'+unique+'</strong></div><div><span>Lượt sử dụng</span><strong>'+rows.length+'</strong></div><div><span>Tuần đang xem</span><strong>'+pad(vnParts(data.week).d)+'/'+pad(vnParts(data.week).m)+'</strong></div></div><div class="rb-week-grid">';
@@ -64,7 +64,7 @@ function renderWeek(){
     else if(!schedule.length)html+='<div class="rb-empty-day">Chưa có lịch phòng</div>';
     else for(var j=0;j<schedule.length;j++){
       var x=schedule[j];
-      html+='<article class="rb-item"><span class="rb-hours">'+clock(Math.max(x.startAt,d))+' – '+clock(Math.min(x.endAt,d+DAY))+'</span><strong>'+safe(x.roomName)+'</strong><span>'+safe(x.purpose)+'</span>'+(manager()?'<button class="rb-edit" type="button" data-action="edit" data-id="'+safe(x.id)+'">Chỉnh sửa ↗</button>':'')+'</article>';
+      html+='<article class="rb-item"><span class="rb-hours">'+clock(Math.max(x.startAt,d))+' – '+clock(Math.min(x.endAt-1,d+DAY-1)+1)+'</span><strong>'+safe(x.roomName)+'</strong><span>'+safe(x.purpose)+'</span>'+(x.slotSnapshot&&x.slotSnapshot.length?'<span class="rb-slot-display">'+safe(x.slotSnapshot.map(function(t){return t.label}).join(' · '))+'</span>':'')+(manager()?'<button class="rb-edit" type="button" data-action="edit" data-id="'+safe(x.id)+'">Chỉnh sửa ↗</button>':'')+'</article>';
     }
     html+='</div></div>';
   }
@@ -153,6 +153,7 @@ function addSlotRow(){
   var n=Number(start.slice(0,2))*60+Number(start.slice(3));
   var stop=Math.min(n+50,1440);
   var endStr=stop===1440?"24:00":String(Math.floor(stop/60)).padStart(2,"0")+":"+String(stop%60).padStart(2,"0");
+  if(start==="24:00"||Number(start.slice(0,2))*60+Number(start.slice(3))>=1440){slotError("Đã hết khung giờ trong ngày. Hãy chỉnh sửa một slot cũ.");return}
   data.slots.push({id:newSlotId(),label:"Slot "+(data.slots.length+1),start:start,end:endStr});
   renderSlots();
   var last=el("#rbContent .rb-slot-row:last-child [data-slot-field=label]");if(last)last.focus();
@@ -234,7 +235,8 @@ async function openForm(booking){
   var first=selected.length===previous.length&&selected.length?selected[0]:present[0].id;
   var last=selected.length===previous.length&&selected.length?selected[selected.length-1]:present[0].id;
   // Existing free-time bookings or bookings with removed slots can still be edited after selecting fresh slots.
-  var priorWarning=booking&&(!selected.length||selected.length!==previous.length)?
+  var moved=booking&&selected.length&&selected.length===previous.length&&present.find(function(x){return x.id===first}).start!==inputDate(booking.startAt).slice(11);
+  var priorWarning=booking&&(!selected.length||selected.length!==previous.length||moved)?
     '<div class="rb-form-tip">Lịch này được tạo trước khi có danh sách slot (hoặc slot cũ đã đổi). Hãy chọn lại slot hiện tại trước khi lưu.</div>':"";
   var slotOptions=present.map(function(x){return '<option value="'+safe(x.id)+'">'+safe(slotLabel(x))+'</option>'}).join("");
   var overlay=document.createElement("div");overlay.id="rbModal";overlay.className="rb-modal-shade";
