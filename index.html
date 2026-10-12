@@ -2131,7 +2131,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/osc-v96-stagecraft.css?v=96.1">
 <link rel="stylesheet" href="/osc-v97-unified.css?v=97">
 <link rel="stylesheet" href="/osc-dialogs.css?v=98">
-<link rel="stylesheet" href="/room-booking.css?v=99">
+<link rel="stylesheet" href="/room-booking.css?v=100">
 </head>
 <body class="auth-login">
 
@@ -7489,6 +7489,7 @@ function renderEvents(){
         ${ev.qrCheckinEnabled===true?`<span id="eventQrSummary_${esc(ev.id)}" class="event-checkin-count-badge">Check-in: …</span>`:""}
         ${activityName?`<span class="event-linked-activity-badge">Hoạt động: ${esc(activityName)}</span>`:""}
         ${scheduleText?`<span class="event-schedule-badge">${scheduleText}</span>`:""}
+        ${ev.eventDate?`<span class="event-schedule-badge">Ngày diễn ra: ${esc(formatDateVN(ev.eventDate))}</span>`:""}
       </div>
 
       <div class="event-actions">
@@ -7788,6 +7789,7 @@ async function openEventBuilder(eventId=""){
       <label class="full">Liên kết với hoạt động<select id="eventLinkedActivity">${eventBuilderActivityOptions(eventBuilderLinkedActivityId,eventSemesterKey)}</select><div class="permission-note">Có thể tạo cổng ngay từ Thiết lập → Hoạt động. Liên kết này giúp biết cổng thuộc hoạt động nào và không tạo thêm cột điểm trùng.</div></label>
       <label class="full">Mô tả<textarea id="eventDescription" rows="3">${esc(ev?.description||tpl?.description||"")}</textarea></label>
       <label>Trạng thái<select id="eventIsOpen"><option value="1" ${ev?.isOpen!==false?"selected":""}>Cho phép hoạt động theo lịch</option><option value="0" ${ev?.isOpen===false?"selected":""}>Đóng cổng thủ công</option></select></label>
+      <label>Ngày diễn ra sự kiện (không bắt buộc)<input id="eventDate" type="date" value="${esc(ev?.eventDate||"")}"><div class="permission-note">Dùng để tự ẩn sự kiện khỏi Room Booking sau ngày diễn ra, độc lập với thời gian đóng form.</div></label>
       <label>Mở từ (không bắt buộc)<input id="eventOpenAt" type="datetime-local" value="${esc(dateTimeLocalValue(ev?.openAt))}"><div class="permission-note">Để trống = mở ngay khi trạng thái cho phép.</div></label>
       <label>Đóng lúc (không bắt buộc)<input id="eventCloseAt" type="datetime-local" value="${esc(dateTimeLocalValue(ev?.closeAt))}"><div class="permission-note">Đến giờ sẽ ngừng nhận phản hồi.</div></label>
       <label>Xử lý kết quả<select id="eventResultAction">
@@ -8396,6 +8398,8 @@ async function saveEventBuilder(){
     }
   }
 
+  const eventDate=$("#eventDate")?.value||"";
+  if(eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(eventDate))return oscAlert("Ngày diễn ra sự kiện không hợp lệ.");
   const openAtRaw=$("#eventOpenAt")?.value||"",closeAtRaw=$("#eventCloseAt")?.value||"";
   const openAt=openAtRaw?new Date(openAtRaw):null,closeAt=closeAtRaw?new Date(closeAtRaw):null;
   if(openAt&&Number.isNaN(openAt.getTime()))return oscAlert("Thời gian mở không hợp lệ.");
@@ -8435,6 +8439,7 @@ async function saveEventBuilder(){
     linkedActivityGroupId:linkedActivity?.group?.id||"",
     linkedActivityName:linkedActivity?.item?.name||"",
     isOpen:$("#eventIsOpen").value==="1",
+    eventDate,
     openAt:openAt?firebase.firestore.Timestamp.fromDate(openAt):null,
     closeAt:closeAt?firebase.firestore.Timestamp.fromDate(closeAt):null,
     resultAction:eventBuilderSpecialType==="continuation"?"continuationAuto":action,
@@ -10920,7 +10925,7 @@ function renderAll(){
 <script src="/ticket-studio-admin.js?v=95"></script>
 <script src="/event-routing-admin.js?v=95"></script>
 <script src="/v95-operations.js?v=98"></script>
-<script src="/room-booking.js?v=99.2"></script>
+<script src="/room-booking.js?v=100"></script>
 <script src="/osc-v96-stagecraft.js?v=96.1"></script>
 </body>
 </html>
