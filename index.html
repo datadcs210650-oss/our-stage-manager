@@ -4494,7 +4494,7 @@ function showApp(){
   if(!initialRouteApplied){
     initialRouteApplied=true;
     const requestedTab=new URLSearchParams(location.search).get("tab");
-    const btn=requestedTab?document.querySelector(`.nav button[data-tab="${requestedTab}"]:not(.hidden)`):null;
+    const btn=requestedTab?[...document.querySelectorAll(".nav button[data-tab]:not(.hidden)")].find(b=>b.dataset.tab===requestedTab):null;
     if(btn)setTimeout(()=>btn.click(),0);
   }
   if(canEditClub()){
@@ -10925,7 +10925,7 @@ function renderAll(){
 <script src="/ticket-studio-admin.js?v=95"></script>
 <script src="/event-routing-admin.js?v=95"></script>
 <script src="/v95-operations.js?v=98"></script>
-<script src="/room-booking.js?v=100"></script>
+<script src="/room-booking.js?v=100.1"></script>
 <script src="/osc-v96-stagecraft.js?v=96.1"></script>
 </body>
 </html>
