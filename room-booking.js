@@ -115,14 +115,14 @@ function slotRange(first,last){
   var end=data.slots.findIndex(function(x){return x.id===last});
   if(start<0||end<start)throw Error("Chọn slot bắt đầu và slot kết thúc hợp lệ.");
   var selected=data.slots.slice(start,end+1);
-  for(var i=1;i<selected.length;i++)if(selected[i-1].end!==selected[i].start)throw Error("Các slot được chọn phải nối tiếp nhau, không có khoảng trống.");
+  // All slot indexes between the first and last are included; breaks are reserved too.
   return selected;
 }
 function slotLabel(x){return x.label+" ("+x.start+"–"+x.end+")"}
 function slotError(msg){var node=el("#rbSlotError");if(node)node.textContent=msg||""}
 function renderSlots(){
   var root=el("#rbContent");if(!root||data.tab!=="slots"||!manager())return;
-  var html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO ADMIN</span><h3>Danh sách slot sử dụng phòng</h3><p>Cài giờ từng slot một lần. Khi nhập lịch, Admin chọn một slot hoặc nhiều slot liền giờ; hệ thống tự xác định thời gian bắt đầu và kết thúc.</p></div><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div>';
+  var html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO ADMIN</span><h3>Danh sách slot sử dụng phòng</h3><p>Cài giờ từng slot một lần. Khi nhập lịch, Admin chọn một hoặc nhiều slot liên tiếp trong danh sách; khoảng nghỉ giữa các slot cũng được giữ phòng.</p></div><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div>';
   html+='<div class="rb-slot-heading"><b>Tên slot</b><b>Giờ bắt đầu</b><b>Giờ kết thúc</b><span></span></div><div class="rb-slot-rows">';
   data.slots.forEach(function(slot){
     html+='<div class="rb-slot-row" data-slot-id="'+safe(slot.id)+'"><input type="text" data-slot-field="label" maxlength="60" value="'+safe(slot.label)+'" aria-label="Tên slot" required><input type="time" data-slot-field="start" value="'+safe(slot.start)+'" required aria-label="Giờ bắt đầu"><input type="time" data-slot-field="end" value="'+safe(slot.end)+'" required aria-label="Giờ kết thúc"><button type="button" class="rb-button rb-danger" data-action="slot-delete" data-id="'+safe(slot.id)+'">Xóa</button></div>';
@@ -181,7 +181,7 @@ function previewSlots(form){
   var note=form.querySelector("#rbSelectedSlots");if(!note)return;
   try{
     var chosen=slotRange(form.querySelector("#rbFirstSlot").value,form.querySelector("#rbLastSlot").value);
-    note.textContent=chosen.length+" slot · "+chosen[0].start+" – "+chosen[chosen.length-1].end+" (GMT+7)";
+    note.textContent=chosen.length+" slot · Giữ phòng "+chosen[0].start+" – "+chosen[chosen.length-1].end+" (kể cả khoảng nghỉ)";
     note.classList.remove("rb-preview-error");
   }catch(e){note.textContent=e.message||String(e);note.classList.add("rb-preview-error")}
 }
