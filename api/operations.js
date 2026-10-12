@@ -129,9 +129,10 @@ function resolveRoomFromSlots(body,slots){
   const date=String(body.date||"");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw bad("Ngày sử dụng phòng không hợp lệ.");
   const localDay=new Date(date+"T00:00:00+07:00");
+  if(Number.isNaN(localDay.getTime()))throw bad("Ngày sử dụng phòng không hợp lệ.");
   const parts=vnDateParts(localDay.getTime());
   const roundtrip=parts.y+"-"+String(parts.m).padStart(2,"0")+"-"+String(parts.d).padStart(2,"0");
-  if(Number.isNaN(localDay.getTime())||roundtrip!==date)throw bad("Ngày sử dụng phòng không hợp lệ.");
+  if(roundtrip!==date)throw bad("Ngày sử dụng phòng không hợp lệ.");
   const ids=body.slotIds;
   if(!Array.isArray(ids)||ids.length===0||ids.length>48||new Set(ids).size!==ids.length)throw bad("Vui lòng chọn slot hợp lệ.");
   const selected=ids.map(id=>slots.find(x=>x.id===id));
@@ -161,9 +162,9 @@ async function roomBoard(req,body){
 }
 async function roomHistory(req,body){
   const actor=await requireUser(req),db=getDb(),now=Date.now();
-  const todayStart=vnMidnight(now),before=body.before==null?todayStart:Number(body.before);
+  const todayStart=vnMidnight(now),limitExclusive=todayStart+1,before=body.before==null?limitExclusive:Number(body.before);
   if(!Number.isFinite(before)||before<=0)throw bad("Mốc lịch sử không hợp lệ.");
-  const until=Math.min(todayStart,before),limit=60;
+  const until=Math.min(limitExclusive,before),limit=60;
   const snap=await db.collection("roomBookings")
     .where("endAt","<",admin.firestore.Timestamp.fromMillis(until))
     .orderBy("endAt","desc").limit(limit+1).get();
