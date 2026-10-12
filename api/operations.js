@@ -64,6 +64,46 @@ function normalizeRoomBooking(body,slots){
   const roomKey=roomName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
   return{roomName,roomKey,purpose,eventId,...resolveRoomFromSlots(body,slots)};
 }
+
+function timeSegments(entry){
+  // Old bookings did not have slotSnapshot; preserve their original uninterrupted interval.
+  const snapshots=Array.isArray(entry.slotSnapshot)?entry.slotSnapshot:[];
+  const date=String(entry.date||"");
+  if(snapshots.length && /^\d{4}-\d{2}-\d{2}$/.test(date)){
+    const base=Date.parse(date+"T00:00:00+07:00");
+    if(Number.isFinite(base)){
+      return snapshots.map(s=>[base+slotMinutes(String(s.start))*60000,
+        base+slotMinutes(String(s.end),true)*60000]);
+    }
+  }
+  const begin=entry.start instanceof Date?entry.start.getTime():millis(entry.startAt);
+  const finish=entry.end instanceof Date?entry.end.getTime():millis(entry.endAt);
+  return [[begin,finish]];
+}
+function roomSegmentsOverlap(a,b){
+  for(const x of timeSegments(a))for(const y of timeSegments(b))
+    if(x[0]<y[1]&&x[1]>y[0])return true;
+  return false;
+}
+function validBookingEventDate(v){
+  return typeof v==="string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+"T00:00:00+07:00"));
+}
+async function assertBookableEvent(tx,db,eventId,semester){
+  if(!eventId)return;
+  const snap=await tx.get(db.collection("eventPortals").doc(eventId));
+  if(!snap.exists)throw bad("Sự kiện không tồn tại hoặc đã được xóa.","osc/not-found");
+  const event=snap.data()||{};
+  const now=Date.now();
+  if(event.semester!==semester)throw bad("Sự kiện không thuộc học kỳ của lịch phòng.");
+  if(event.isOpen!==true)throw bad("Cổng sự kiện đã đóng; không thể gắn với Room Booking.");
+  if(millis(event.closeAt)>0&&millis(event.closeAt)<=now)throw bad("Sự kiện đã hết hạn nhận phản hồi.");
+  // eventDate is the actual day of the event, independent of the submission portal closeAt.
+  const eventDate=String(event.eventDate||"");
+  if(validBookingEventDate(eventDate) && eventDate<new Intl.DateTimeFormat("en-CA",{
+    timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"
+  }).format(new Date(now)))throw bad("Sự kiện đã qua ngày tổ chức.");
+}
+
 function ensureRoomManager(actor){
   if(!isManager(actor))throw bad("Chỉ Admin hoặc Super Admin được tạo, sửa và hủy lịch phòng.","osc/forbidden");
 }
@@ -79,7 +119,7 @@ async function assertNoRoomOverlap(tx,db,data,exceptId=""){
     if(d.status==="cancelled")continue;
     const key=String(d.roomKey||d.roomName||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
     if(key!==data.roomKey)continue;
-    if(data.start.getTime()<millis(d.endAt)&&data.end.getTime()>millis(d.startAt))
+    if(roomSegmentsOverlap(data,d))
       throw bad("Phòng "+data.roomName+" đã có lịch trùng thời gian.","osc/room-conflict");
   }
 }
@@ -137,8 +177,7 @@ function resolveRoomFromSlots(body,slots){
   if(!Array.isArray(ids)||ids.length===0||ids.length>48||new Set(ids).size!==ids.length)throw bad("Vui lòng chọn slot hợp lệ.");
   const positions=ids.map(id=>slots.findIndex(x=>x.id===id)).sort((a,b)=>a-b);
   if(positions.some(i=>i<0))throw bad("Slot đã được thay đổi. Hãy tải lại và chọn lại slot.");
-  for(let i=1;i<positions.length;i++)if(positions[i]!==positions[i-1]+1)throw bad("Vui lòng chọn các slot liền nhau trong danh sách.");
-  // A short break between adjacent slots remains reserved to prevent double-booking.
+  // Any combination is supported; conflict checking uses each chosen slot, not the bounding range.
   const selected=positions.map(i=>slots[i]);
   const start=new Date(localDay.getTime()+slotMinutes(selected[0].start)*60000);
   const end=new Date(localDay.getTime()+slotMinutes(selected[selected.length-1].end,true)*60000);
@@ -183,6 +222,7 @@ async function roomCreate(req,body){
     const data=normalizeRoomBooking(body,slots);
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
+    await assertBookableEvent(tx,db,data.eventId,semester);
     await assertNoRoomOverlap(tx,db,data);
     tx.set(mutex,{revision:(current.data()?.revision||0)+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
     tx.set(ref,{
@@ -207,6 +247,7 @@ async function roomUpdate(req,body){
     const data=normalizeRoomBooking(body,slots);
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
+    await assertBookableEvent(tx,db,data.eventId,existing.data().semester);
     await assertNoRoomOverlap(tx,db,data,id);
     tx.set(mutex,{revision:(current.data()?.revision||0)+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
     tx.update(ref,{
