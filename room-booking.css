@@ -73,3 +73,30 @@
 @media(max-width:760px){.rb-hero,.rb-week-header,.rb-history-header{padding:17px;flex-direction:column;align-items:stretch}.rb-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rb-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.rb-stats>div{padding:12px}.rb-stats strong{font-size:20px}.rb-history-row{grid-template-columns:1fr;gap:10px;padding:15px}.rb-past-pill{justify-self:start}.rb-tabs{width:100%}.rb-tabs button{flex:1}}
 @media(max-width:480px){.rb-week-grid{grid-template-columns:1fr}.rb-day{min-height:100px}.rb-day-content{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.rb-day-title{display:flex;justify-content:space-between;align-items:center}.rb-day-title b{font-size:17px}.rb-stats{grid-template-columns:1fr 1fr}.rb-stats>div:last-child{display:none}.rb-form-grid{grid-template-columns:1fr}.rb-modal{padding:22px 18px}.rb-hero-buttons .rb-button{flex:1}.rb-form-buttons .rb-button{flex:1}}
 @media(prefers-reduced-motion:reduce){.rb-button{transition:none!important}}
+
+
+/* V99 — Admin-defined slot editor and booking slot picker */
+.rb-slot-settings{border:1px solid #eee5e9;border-radius:17px;background:#fff;padding:clamp(14px,2vw,24px)}
+.rb-slot-intro{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}
+.rb-slot-intro h3{font-size:21px;font-weight:850;color:#392430;letter-spacing:-.02em;margin:5px 0 7px}
+.rb-slot-intro p{max-width:670px;color:#756b71;font-size:13px;line-height:1.65;margin:0}
+.rb-slot-heading,.rb-slot-row{display:grid;grid-template-columns:minmax(150px,2fr) minmax(115px,1fr) minmax(115px,1fr) auto;gap:12px;align-items:center}
+.rb-slot-heading{padding:10px 12px;color:#77656e;font-size:11px;font-weight:850;letter-spacing:.025em;border-bottom:1px solid #eee6e9}
+.rb-slot-rows{display:grid;gap:9px;margin:12px 0 14px}
+.rb-slot-row{padding:10px 12px;border:1px solid #ece4e8;border-radius:12px;background:linear-gradient(120deg,#fff,#fdf9fa)}
+.rb-slot-row input{width:100%!important;max-width:100%;min-width:0;min-height:41px!important;border:1px solid #ded5d9!important;border-radius:9px!important;padding:9px 10px!important;background:#fff!important;color:#32252b!important;font:600 13px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important}
+.rb-slot-row input:focus{outline:3px solid rgba(120,29,59,.12);border-color:#a14b66!important}
+.rb-slot-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:18px;border-top:1px solid #eee6e9}
+.rb-slot-footer span{max-width:680px;color:#82777e;font-size:12px;line-height:1.65}
+.rb-slot-footer button{flex:none}
+.rb-slot-preview{padding:12px 14px;border:1px solid #e9d4dd;border-radius:12px;background:#fcf3f6;color:#812747;font-size:13px;font-weight:800}
+.rb-slot-preview.rb-preview-error{color:#a02e4b;background:#fff5f6;border-color:#f0c9d4}
+@media(max-width:820px){
+  .rb-slot-intro{flex-direction:column;align-items:stretch}
+  .rb-slot-heading{display:none}
+  .rb-slot-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .rb-slot-row [data-slot-field="label"]{grid-column:1/-1}
+  .rb-slot-row [data-action="slot-delete"]{justify-self:end}
+  .rb-slot-footer{flex-direction:column;align-items:stretch}
+}
+@media(max-width:420px){.rb-slot-row{gap:7px;padding:9px}.rb-slot-footer .rb-button{width:100%}}
