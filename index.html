@@ -2130,6 +2130,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 </style>
 <link rel="stylesheet" href="/osc-v96-stagecraft.css?v=96.1">
 <link rel="stylesheet" href="/osc-v97-unified.css?v=97">
+<link rel="stylesheet" href="/osc-dialogs.css?v=98">
 </head>
 <body class="auth-login">
 
@@ -2758,6 +2759,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <div id="modalWrap" class="hidden"></div><div id="toast" class="toast hidden"></div>
 
 <script src="/firebase-public-config.js"></script>
+<script src="/osc-dialogs.js?v=98"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
 const firebaseConfigReady=
@@ -3048,7 +3050,7 @@ function lockedActivityMessage(itemId,semKey=semester){
 }
 function ensureActivityColumnUnlocked(itemId,semKey=semester,{silent=false}={}){
   if(!activityColumnLocked(itemId,semKey))return true;
-  if(!silent)alert(lockedActivityMessage(itemId,semKey));
+  if(!silent)oscAlert(lockedActivityMessage(itemId,semKey));
   return false;
 }
 
@@ -3557,7 +3559,7 @@ function semesterLocked(semKey=semester){return !!state.semesters?.[semKey]?.loc
 function semesterEditable(semKey=semester){return !semesterLocked(semKey)}
 function currentUserLabel(){return currentProfile?.displayName||currentFirebaseUser?.email||"Người dùng"}
 function ensureSemesterEditable(semKey=semester,message="Dữ liệu học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi chỉnh sửa."){
-  if(semesterLocked(semKey)){alert(message);return false}
+  if(semesterLocked(semKey)){oscAlert(message);return false}
   return true;
 }
 function firestorePlain(v){
@@ -4034,7 +4036,7 @@ async function repairGoogleCredentialConflict({email,password,originalUser,pendi
   if(expectedEmail&&duplicateEmail&&expectedEmail!==duplicateEmail)throw Object.assign(new Error("Email Google không trùng với email tài khoản chính."),{code:"osc/google-email-mismatch"});
   const duplicateProfile=await fbDb.collection("users").doc(duplicateUser.uid).get();
   if(duplicateProfile.exists)throw Object.assign(new Error("Google đang gắn với một Firebase User khác đã có hồ sơ quyền."),{code:"osc/google-conflict-authorized"});
-  const allowCleanup=confirm("Phát hiện Google đang gắn với một Firebase User phụ chưa có quyền truy cập hệ thống.\n\nBạn có muốn xóa User phụ này và liên kết Google vào đúng tài khoản Email/Mật khẩu hiện tại không?");
+  const allowCleanup=await oscConfirm("Phát hiện Google đang gắn với một Firebase User phụ chưa có quyền truy cập hệ thống.\n\nBạn có muốn xóa User phụ này và liên kết Google vào đúng tài khoản Email/Mật khẩu hiện tại không?");
   if(!allowCleanup)throw Object.assign(new Error("Bạn đã hủy xử lý xung đột Google."),{code:"osc/google-repair-cancelled"});
   await duplicateUser.delete();
   const back=await fbAuth.signInWithEmailAndPassword(email,password);
@@ -4199,14 +4201,14 @@ async function linkGoogleToCurrentAccount(){
         pendingGoogleEmail=normalizeAuthEmail(user.email);
         pendingGoogleOrphanUid="";
       }
-      alert("Google này đang được gắn với một Firebase User khác. Đăng xuất rồi bấm “Tiếp tục với Google”; nếu hệ thống yêu cầu, nhập mật khẩu tài khoản chính một lần để liên kết an toàn.");
+      oscAlert("Google này đang được gắn với một Firebase User khác. Đăng xuất rồi bấm “Tiếp tục với Google”; nếu hệ thống yêu cầu, nhập mật khẩu tài khoản chính một lần để liên kết an toàn.");
     }else{
       const msg=e?.code==="auth/provider-already-linked"
         ?"Tài khoản Google đã được liên kết."
         :e?.code==="auth/requires-recent-login"
           ?"Hãy đăng xuất, đăng nhập lại rồi thử liên kết Google."
           :googleAuthErrorMessage(e);
-      alert(msg);
+      oscAlert(msg);
     }
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Liên kết Google"}
@@ -4529,7 +4531,7 @@ async function refreshAdminData(showMessage=true){
     if(canEditClub()&&lookupConfig()?.enabled)await syncLookupSemester({silent:true});
     const stamp=new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});if($("#manualSyncStatus"))$("#manualSyncStatus").textContent=`SYNC ${stamp}`;
     if(showMessage)toast("Đã tải dữ liệu mới nhất");
-  }catch(e){console.error("manual refresh",e);if(showMessage)alert("Không tải được dữ liệu mới: "+(e.message||e))}
+  }catch(e){console.error("manual refresh",e);if(showMessage)oscAlert("Không tải được dữ liệu mới: "+(e.message||e))}
   finally{if(btn){btn.classList.remove("is-loading");btn.disabled=false}}
 }
 function permissionPlaceholder(label){
@@ -4891,9 +4893,9 @@ function applyAttendanceUpdatesToLocal(itemId,updates,semKey=semester){
 
 $("#uploadAttendanceBtn").onclick=()=>{
   const key=$("#attendanceActivitySelect").value;
-  if(!key)return alert("Chưa có hoạt động để nhập.");
+  if(!key)return oscAlert("Chưa có hoạt động để nhập.");
   const selected=getAllActivities().find(a=>a.key===key);
-  if(selected?.item?.locked)return alert(lockedActivityMessage(selected.item.id));
+  if(selected?.item?.locked)return oscAlert(lockedActivityMessage(selected.item.id));
   $("#attendanceExcelInput").click();
 };
 
@@ -4907,11 +4909,11 @@ $("#attendanceExcelInput").onchange=async e=>{
   const group=sem().groups?.[gi],item=group?.items?.[ii];
   if(!group||!item){
     e.target.value="";
-    return alert("Không tìm thấy hoạt động đã chọn.");
+    return oscAlert("Không tìm thấy hoạt động đã chọn.");
   }
   if(item.locked){
     e.target.value="";
-    return alert(lockedActivityMessage(item.id));
+    return oscAlert(lockedActivityMessage(item.id));
   }
 
   attendanceTarget={gi,ii,group,item,semesterKey:semester,fileName:file.name||"Danh sách tham gia"};
@@ -4920,17 +4922,17 @@ $("#attendanceExcelInput").onchange=async e=>{
   try{({ws}=await readSpreadsheetSecure(file))}
   catch(err){
     e.target.value="";
-    return alert("Không đọc được file Excel: "+(err.message||err));
+    return oscAlert("Không đọc được file Excel: "+(err.message||err));
   }
 
   const rows=XLSX.utils.sheet_to_json(ws,{defval:"",raw:false,blankrows:false});
   if(rows.length>MAX_SPREADSHEET_ROWS){
     e.target.value="";
-    return alert("File có quá nhiều dòng.");
+    return oscAlert("File có quá nhiều dòng.");
   }
   if(!rows.length){
     e.target.value="";
-    return alert("File Excel không có dữ liệu thành viên.");
+    return oscAlert("File Excel không có dữ liệu thành viên.");
   }
 
   // IMPORTANT: build the scan index from the full current-semester member list.
@@ -4988,7 +4990,7 @@ async function applyAttendanceImport(){
   if(!canEditModule("attendance")||!attendanceTarget)return;
 
   const {group,item,semesterKey,fileName}=attendanceTarget;
-  if(semesterKey!==semester)return alert("Bạn đã đổi học kỳ sau khi chọn file. Hãy upload lại danh sách cho học kỳ hiện tại.");
+  if(semesterKey!==semester)return oscAlert("Bạn đã đổi học kỳ sau khi chọn file. Hãy upload lại danh sách cho học kỳ hiện tại.");
   if(!ensureActivityColumnUnlocked(item.id))return;
 
   const seen=new Set(),updates=[];
@@ -5004,7 +5006,7 @@ async function applyAttendanceImport(){
   }
 
   if(!updates.length){
-    return alert("Không có thành viên nào trong file khớp với Danh sách thành viên của học kỳ này.");
+    return oscAlert("Không có thành viên nào trong file khớp với Danh sách thành viên của học kỳ này.");
   }
 
   if(shouldRequestApproval("bulkAttendance")){
@@ -5069,7 +5071,7 @@ async function applyAttendanceImport(){
     }
     persistStateOnly();
     renderQLTV();
-    alert("Không nhập được điểm danh: "+(e.message||e));
+    oscAlert("Không nhập được điểm danh: "+(e.message||e));
   }
 }
 
@@ -5085,9 +5087,9 @@ $("#fundExcelInput").onchange=async e=>{
   const file=e.target.files[0]; if(!file)return;
   let ws;
   try{({ws}=await readSpreadsheetSecure(file))}
-  catch(err){e.target.value="";return alert("Không đọc được file Excel: "+(err.message||err))}
+  catch(err){e.target.value="";return oscAlert("Không đọc được file Excel: "+(err.message||err))}
   const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
-  if(rows.length>MAX_SPREADSHEET_ROWS){e.target.value="";return alert("File có quá nhiều dòng.");}
+  if(rows.length>MAX_SPREADSHEET_ROWS){e.target.value="";return oscAlert("File có quá nhiều dòng.");}
   const current=members();
   fundPreviewRows=rows.map((row,idx)=>{
     const entries=Object.entries(row);
@@ -5115,7 +5117,7 @@ function openFundPreview(){
 async function applyFundImport(){
   if(!canEditModule("finance"))return;const paidIds=new Set(fundPreviewRows.filter(r=>r.memberId).map(r=>r.memberId)),current=members();
   try{await commitInChunks(current.map(m=>b=>b.set(fbDb.collection("members").doc(m.id),{fundPaid:paidIds.has(m.id),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true})));closeModal();toast(`Đã đồng bộ đóng quỹ cho ${paidIds.size} thành viên`)}
-  catch(e){alert("Không đồng bộ được quỹ: "+(e.message||e))}
+  catch(e){oscAlert("Không đồng bộ được quỹ: "+(e.message||e))}
 }
 
 
@@ -5167,14 +5169,14 @@ function findContinuationItem(itemId){
   return null;
 }
 async function setContinuationFromAttendance(memberId,itemId,nextState,control=null){
-  if(!canEditModule("events"))return alert("Tài khoản này chưa có quyền chỉnh sửa kết quả sự kiện.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa, không thể chỉnh sửa kết quả đồng hành.");
+  if(!canEditModule("events"))return oscAlert("Tài khoản này chưa có quyền chỉnh sửa kết quả sự kiện.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa, không thể chỉnh sửa kết quả đồng hành.");
   const member=findMember(memberId),item=findContinuationItem(itemId);
-  if(!member||!item)return alert("Không tìm thấy thành viên hoặc hoạt động đồng hành.");
-  if(item.locked===true)return alert(lockedActivityMessage(item.id));
+  if(!member||!item)return oscAlert("Không tìm thấy thành viên hoặc hoạt động đồng hành.");
+  if(item.locked===true)return oscAlert(lockedActivityMessage(item.id));
   const ev=companionEventForActivity(item);
-  if(!ev||ev.specialType!=="continuation")return alert("Không tìm thấy Form Đồng hành liên kết với hoạt động này.");
-  const mssv=normalizeMssvKey(member.mssv);if(!mssv)return alert("Thành viên chưa có MSSV hợp lệ.");
+  if(!ev||ev.specialType!=="continuation")return oscAlert("Không tìm thấy Form Đồng hành liên kết với hoạt động này.");
+  const mssv=normalizeMssvKey(member.mssv);if(!mssv)return oscAlert("Thành viên chưa có MSSV hợp lệ.");
   if(!["none","yes","no"].includes(nextState))return;
   const oldValue=companionResponseForMember(member,item).decision||"none";
   if(control)control.classList.add("continuation-syncing");
@@ -5185,7 +5187,7 @@ async function setContinuationFromAttendance(memberId,itemId,nextState,control=n
     const latest=latestContinuationSubmissionMap(ev,mine).get(mssv)||null;
     if(nextState==="none"){
       if(mine.length){
-        if(!confirm(`Đưa toàn bộ ${mine.length} phản hồi Đồng hành của ${member.name} vào Thùng rác?\n\nSau thao tác này Điểm danh sẽ trở về “Chưa điền”.`)){renderQLTV();return}
+        if(!await oscConfirm(`Đưa toàn bộ ${mine.length} phản hồi Đồng hành của ${member.name} vào Thùng rác?\n\nSau thao tác này Điểm danh sẽ trở về “Chưa điền”.`)){renderQLTV();return}
         for(const s of mine)await moveToTrash("eventSubmission",s.id,s,{eventId:ev.id,label:s.submitterLabel||member.name||mssv,semester:ev.semester});
         await commitInChunks(mine.map(s=>batch=>batch.delete(col.doc(s.id))));
       }
@@ -5194,7 +5196,7 @@ async function setContinuationFromAttendance(memberId,itemId,nextState,control=n
       toast("Đã cập nhật: Chưa điền");renderQLTV();return;
     }
     if(latest){
-      const f=continuationDecisionField(ev);if(!f)return alert("Form Đồng hành không còn trường xác nhận Có/Không.");
+      const f=continuationDecisionField(ev);if(!f)return oscAlert("Form Đồng hành không còn trường xác nhận Có/Không.");
       const answers={...(latest.answers||{})};answers[f.id]=continuationOptionForDecision(ev,nextState);
       await col.doc(latest.id).update({answers,editedAt:firebase.firestore.FieldValue.serverTimestamp(),editedBy:currentFirebaseUser?.uid||"",editedByName:currentUserLabel(),adminEditedFromAttendance:true,continuationSyncedAt:firebase.firestore.FieldValue.delete()});
     }else{
@@ -5204,7 +5206,7 @@ async function setContinuationFromAttendance(memberId,itemId,nextState,control=n
     await reconcileContinuationMember(ev,mssv,{silent:true});
     await logAudit({action:"continuation-inline-edit",module:"attendance",entityType:"member",entityId:member.id,summary:`Sửa Form Đồng hành từ Điểm danh: ${member.name} → ${nextState==="yes"?"Tiếp tục":"Dừng đồng hành"}`,before:{decision:oldValue},after:{decision:nextState},semesterKey:ev.semester});
     toast(nextState==="yes"?"Đã cập nhật: Tiếp tục đồng hành":"Đã cập nhật: Dừng đồng hành");renderQLTV();
-  }catch(e){console.error("setContinuationFromAttendance",e);alert("Không cập nhật được Form Đồng hành: "+(e.message||e));renderQLTV()}finally{if(control)control.classList.remove("continuation-syncing")}
+  }catch(e){console.error("setContinuationFromAttendance",e);oscAlert("Không cập nhật được Form Đồng hành: "+(e.message||e));renderQLTV()}finally{if(control)control.classList.remove("continuation-syncing")}
 }
 
 function companionItemColumns(item){return item?.specialType==="continuation"?3:1}
@@ -5443,10 +5445,10 @@ async function setScore(id,itemId,val){
     next=Number(val||0);
     const max=activityMaxPoints(act.item);
     if(!Number.isFinite(next)||next<0){
-      alert("Điểm phải từ 0 trở lên.");renderQLTV();return;
+      oscAlert("Điểm phải từ 0 trở lên.");renderQLTV();return;
     }
     if(next>max){
-      alert(`Hoạt động "${act.item.name}" tối đa ${max} điểm. Không thể nhập ${next} điểm.`);
+      oscAlert(`Hoạt động "${act.item.name}" tối đa ${max} điểm. Không thể nhập ${next} điểm.`);
       renderQLTV();return;
     }
   }
@@ -5457,11 +5459,11 @@ async function setScore(id,itemId,val){
     await logAudit({action:"update",module:"attendance",entityType:"member",entityId:id,summary:`Sửa điểm ${m.name} • ${act.item.name}`,before,after:next,undo:{type:"memberScore",memberId:id,itemId,value:before}});
   }catch(e){
     m.scores[itemId]=before;renderQLTV();
-    alert("Không lưu được điểm: "+(e.message||e));
+    oscAlert("Không lưu được điểm: "+(e.message||e));
   }
 }
-async function setFund(id,val){if(!canEditModule("finance"))return;const m=findMember(id);if(!m)return;const before=!!m.fundPaid;m.fundPaid=!!val;persistStateOnly();renderQLTV();renderFinance();try{await fbDb.collection("members").doc(id).set({fundPaid:!!val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true});await logAudit({action:"update",module:"finance",entityType:"member",entityId:id,summary:`${m.name}: ${val?"Đã đóng quỹ":"Chưa đóng quỹ"}`,before,after:!!val,undo:{type:"fund",memberId:id,value:before}})}catch(e){alert("Không lưu được trạng thái đóng quỹ: "+(e.message||e))}}
-async function deleteMember(id){if(!canEditModule("members"))return;const m=findMember(id);if(!m)return;if(shouldRequestApproval("deleteMember"))return createApprovalRequest("deleteMember",{id},`Xóa thành viên ${m.name}`);if(!confirm("Chuyển thành viên này vào Thùng rác?"))return;try{await moveToTrash("member",id,m,{label:m.name,semester:m.semester});await deleteMemberRealtime(id);await logAudit({action:"delete",module:"members",entityType:"member",entityId:id,summary:`Xóa thành viên ${m.name}`});toast("Đã chuyển thành viên vào Thùng rác")}catch(e){alert("Không xóa được thành viên: "+(e.message||e))}}
+async function setFund(id,val){if(!canEditModule("finance"))return;const m=findMember(id);if(!m)return;const before=!!m.fundPaid;m.fundPaid=!!val;persistStateOnly();renderQLTV();renderFinance();try{await fbDb.collection("members").doc(id).set({fundPaid:!!val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""},{merge:true});await logAudit({action:"update",module:"finance",entityType:"member",entityId:id,summary:`${m.name}: ${val?"Đã đóng quỹ":"Chưa đóng quỹ"}`,before,after:!!val,undo:{type:"fund",memberId:id,value:before}})}catch(e){oscAlert("Không lưu được trạng thái đóng quỹ: "+(e.message||e))}}
+async function deleteMember(id){if(!canEditModule("members"))return;const m=findMember(id);if(!m)return;if(shouldRequestApproval("deleteMember"))return createApprovalRequest("deleteMember",{id},`Xóa thành viên ${m.name}`);if(!await oscConfirm("Chuyển thành viên này vào Thùng rác?"))return;try{await moveToTrash("member",id,m,{label:m.name,semester:m.semester});await deleteMemberRealtime(id);await logAudit({action:"delete",module:"members",entityType:"member",entityId:id,summary:`Xóa thành viên ${m.name}`});toast("Đã chuyển thành viên vào Thùng rác")}catch(e){oscAlert("Không xóa được thành viên: "+(e.message||e))}}
 $("#searchManage").oninput=renderQLTV;$("#addMemberBtn").onclick=()=>openMemberModal();
 
 /* V38 member status / duplicate controls */
@@ -5514,10 +5516,10 @@ async function saveMemberModal(id){
     m.schoolType=existing?.schoolType||legacySchoolTypeForUniversity(m.universityId);
     m.divisions=Array.isArray(existing?.divisions)?existing.divisions:[];
   }
-  ensureMemberScores(m);if(!m.name)return alert("Vui lòng nhập họ và tên.");
+  ensureMemberScores(m);if(!m.name)return oscAlert("Vui lòng nhập họ và tên.");
   m.data=m.data||{};if(!m.data.status)m.data.status="Đang hoạt động";
   const conflicts=memberDuplicateConflicts(m,id||"");
-  if(conflicts.length){const details=conflicts.slice(0,4).map(x=>`${x.name} (${x.mssv||"không MSSV"}${x.data?.email?` • ${x.data.email}`:""})`).join("\n");return alert(`Không thể lưu vì MSSV hoặc Email đang trùng với thành viên khác trong học kỳ:\n${details}`)}
+  if(conflicts.length){const details=conflicts.slice(0,4).map(x=>`${x.name} (${x.mssv||"không MSSV"}${x.data?.email?` • ${x.data.email}`:""})`).join("\n");return oscAlert(`Không thể lưu vì MSSV hoặc Email đang trùng với thành viên khác trong học kỳ:\n${details}`)}
   try{
     const payload=memberDocPayload(m);
     if(id&&!canEditModule("finance"))delete payload.fundPaid;
@@ -5525,7 +5527,7 @@ async function saveMemberModal(id){
     const idx=state.members.findIndex(x=>x.id===m.id);if(idx>=0)state.members[idx]={...state.members[idx],...m};else state.members.push(m);
     await logAudit({action:id?"update":"create",module:"members",entityType:"member",entityId:m.id,summary:`${id?"Cập nhật":"Thêm"} thành viên ${m.name}`,after:{name:m.name,mssv:m.mssv,universityId:m.universityId,universitySource:m.universitySource,divisions:m.divisions,tags:m.tags||[]}});
     persistStateOnly();renderAll();if(canEditClub())scheduleAutoLookupSync(true);closeModal();toast("Đã lưu thành viên");
-  }catch(e){alert("Không lưu được thành viên: "+(e.message||e))}
+  }catch(e){oscAlert("Không lưu được thành viên: "+(e.message||e))}
 }
 function editMember(id){openMemberModal(findMember(id))}function syncModalBodyState(){
   const wrap=$("#modalWrap");
@@ -5571,13 +5573,13 @@ function toggleSelectAllMembers(checked){
   members().filter(m=>!q||(m.name+" "+m.mssv).toLowerCase().includes(q)).forEach(m=>checked?selectedMemberIds.add(m.id):selectedMemberIds.delete(m.id));
   renderMemberList();
 }
-$("#deleteSelectedMembersBtn").onclick=async()=>{if(!canEditModule("members"))return;const ids=[...selectedMemberIds].filter(id=>findMember(id)?.semester===semester);if(!ids.length)return;if(shouldRequestApproval("deleteMember")){for(const id of ids){const m=findMember(id);await createApprovalRequest("deleteMember",{id},`Xóa thành viên ${m?.name||id}`)}selectedMemberIds.clear();renderMemberList();return}if(!confirm(`Chuyển ${ids.length} thành viên vào Thùng rác?`))return;try{for(const id of ids){const m=findMember(id);if(m)await moveToTrash("member",id,m,{label:m.name,semester:m.semester})}await commitInChunks(ids.map(id=>b=>b.delete(fbDb.collection("members").doc(id))));ids.forEach(id=>selectedMemberIds.delete(id));await logAudit({action:"bulk-delete",module:"members",summary:`Xóa ${ids.length} thành viên`,after:{count:ids.length}});toast(`Đã chuyển ${ids.length} thành viên vào Thùng rác`)}catch(e){alert("Không xóa được danh sách thành viên: "+(e.message||e))}};
+$("#deleteSelectedMembersBtn").onclick=async()=>{if(!canEditModule("members"))return;const ids=[...selectedMemberIds].filter(id=>findMember(id)?.semester===semester);if(!ids.length)return;if(shouldRequestApproval("deleteMember")){for(const id of ids){const m=findMember(id);await createApprovalRequest("deleteMember",{id},`Xóa thành viên ${m?.name||id}`)}selectedMemberIds.clear();renderMemberList();return}if(!await oscConfirm(`Chuyển ${ids.length} thành viên vào Thùng rác?`))return;try{for(const id of ids){const m=findMember(id);if(m)await moveToTrash("member",id,m,{label:m.name,semester:m.semester})}await commitInChunks(ids.map(id=>b=>b.delete(fbDb.collection("members").doc(id))));ids.forEach(id=>selectedMemberIds.delete(id));await logAudit({action:"bulk-delete",module:"members",summary:`Xóa ${ids.length} thành viên`,after:{count:ids.length}});toast(`Đã chuyển ${ids.length} thành viên vào Thùng rác`)}catch(e){oscAlert("Không xóa được danh sách thành viên: "+(e.message||e))}};
 $("#clearSelectedMembersBtn").onclick=()=>{selectedMemberIds.clear();renderMemberList()};
 async function markSelectedMembersLeft(){
   if(!canEditModule("members"))return;
   const ids=[...selectedMemberIds].filter(id=>findMember(id)?.semester===semester);
   if(!ids.length)return;
-  if(!confirm(`Đánh dấu ${ids.length} thành viên là “Rời CLB”? Dữ liệu và lịch sử điểm vẫn được giữ.`))return;
+  if(!await oscConfirm(`Đánh dấu ${ids.length} thành viên là “Rời CLB”? Dữ liệu và lịch sử điểm vẫn được giữ.`))return;
   try{
     const now=new Date().toISOString();
     await commitInChunks(ids.map(id=>batch=>batch.set(fbDb.collection("members").doc(id),{
@@ -5587,7 +5589,7 @@ async function markSelectedMembersLeft(){
     for(const id of ids){const m=findMember(id);if(m){m.data=m.data||{};m.data.status="Rời CLB";m.data.leftAt=now}}
     await logAudit({action:"bulk-leave",module:"members",summary:`Đánh dấu ${ids.length} thành viên Rời CLB`,after:{count:ids.length}});
     selectedMemberIds.clear();renderMemberList();renderInfo();toast(`Đã cập nhật ${ids.length} thành viên`);
-  }catch(e){alert("Không cập nhật được trạng thái: "+(e.message||e))}
+  }catch(e){oscAlert("Không cập nhật được trạng thái: "+(e.message||e))}
 }
 $("#markSelectedLeftBtn").onclick=markSelectedMembersLeft;
 
@@ -5634,10 +5636,10 @@ function memberExportValue(m,key){
 function exportMembersByMode(){
   const mode=document.querySelector('input[name="memberExportMode"]:checked')?.value||"info";
   const selectedKeys=$$(".member-export-field:checked").map(x=>x.value);
-  if(!selectedKeys.length)return alert("Hãy chọn ít nhất một thông tin thành viên để xuất.");
+  if(!selectedKeys.length)return oscAlert("Hãy chọn ít nhất một thông tin thành viên để xuất.");
 
   const selectedUniversityIds=$$(".member-export-university:checked").map(x=>x.value);
-  if(!selectedUniversityIds.length)return alert("Hãy chọn ít nhất một trường đại học để xuất.");
+  if(!selectedUniversityIds.length)return oscAlert("Hãy chọn ít nhất một trường đại học để xuất.");
   const activities=getAllActivities();
   let source=members().filter(m=>selectedUniversityIds.includes(memberUniversityId(m)));
   if(mode==="score")source.sort((a,b)=>scoreMember(b).total-scoreMember(a).total||String(a.name||"").localeCompare(String(b.name||""),"vi"));
@@ -5683,7 +5685,7 @@ function memberImportFieldDefs(){return [...state.memberFields.map(f=>({...f,ext
 function autoMemberHeaderMap(headers){const saved=userPreferences.importMappings?.members||{},out={};for(const f of memberImportFieldDefs()){const aliases=[normalizeText(f.label),normalizeText(f.key),...(f.key==="name"?["ho va ten","ho ten","full name","name"]:f.key==="mssv"?["mssv","ma so sinh vien","student id"]:f.key==="email"?["email","mail"]:f.key==="phone"?["so dien thoai","dien thoai","phone","sdt"]:f.key==="university"?["truong dai hoc","ten truong","truong","university","school","nhom sinh vien","loai sinh vien","school type"]:f.key==="divisions"?["phan ban","cac phan ban","division","divisions"]:[])];const h=saved[f.key]&&headers.includes(saved[f.key])?saved[f.key]:headers.find(x=>aliases.includes(normalizeText(x)));out[f.key]=h||""}return out}
 function prepareMemberImport(rows,headers,fileName){memberImportHeaders=headers;window.__memberImportRawRows=rows;window.__memberImportFileName=fileName;const map=autoMemberHeaderMap(headers),unmapped=state.memberFields.filter(f=>!map[f.key]);if(unmapped.length)return openMemberImportMappingModal(map);applyMemberImportMapping(map)}
 function openMemberImportMappingModal(map){const defs=memberImportFieldDefs();$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>Ghép cột Excel</h2><div class="small-help">Trường đại học và Phân ban là tùy chọn. Nếu bỏ trống Trường đại học, hệ thống tự nhận diện theo MSSV. Phân ban có thể ghi nhiều tên, cách nhau bằng dấu phẩy hoặc dấu chấm phẩy.</div></div><button onclick="closeModal()">×</button></div><div class="import-map-grid">${defs.map(f=>`<label>${esc(f.label)}<select id="map_${f.key}"><option value="">— Bỏ qua —</option>${memberImportHeaders.map(h=>`<option value="${esc(h)}" ${map[f.key]===h?"selected":""}>${esc(h)}</option>`).join("")}</select></label>`).join("")}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="confirmMemberImportMapping()">Tiếp tục</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
-async function confirmMemberImportMapping(){const map={};for(const f of memberImportFieldDefs())map[f.key]=$("#map_"+f.key).value;if(!map.name)return alert("Hãy chọn cột Họ và tên.");userPreferences.importMappings=userPreferences.importMappings||{};userPreferences.importMappings.members=map;await saveUserPreferences();applyMemberImportMapping(map)}
+async function confirmMemberImportMapping(){const map={};for(const f of memberImportFieldDefs())map[f.key]=$("#map_"+f.key).value;if(!map.name)return oscAlert("Hãy chọn cột Họ và tên.");userPreferences.importMappings=userPreferences.importMappings||{};userPreferences.importMappings.members=map;await saveUserPreferences();applyMemberImportMapping(map)}
 function applyMemberImportMapping(map){const rows=window.__memberImportRawRows||[];const defs=memberImportFieldDefs();const remapped=rows.map(row=>{const o={};for(const f of defs){const h=map[f.key];if(h)o[f.label]=row[h]??""}return o});closeModal();detectMemberImport(remapped);openMemberImportPreview()}
 function detectMemberImport(rows){
   const normalizedFields=state.memberFields.map(f=>({...f,norm:normalizeText(f.label)}));
@@ -5814,10 +5816,10 @@ async function applyMemberImport(){
     await commitInChunks(ops);
     if(canEditClub())await saveCloudStateNow();
     await loadRealtimeCollectionsOnce();persistStateOnly();renderAll();if(canEditClub())scheduleAutoLookupSync(true);
-    closeModal();alert(`Đã nhập dữ liệu thành viên theo đúng thứ tự file.\n- Thêm mới: ${added}\n- Cập nhật: ${updated}\n- Bỏ qua: ${skipped}`);
-  }catch(e){alert("Không nhập được danh sách thành viên: "+(e.message||e))}
+    closeModal();oscAlert(`Đã nhập dữ liệu thành viên theo đúng thứ tự file.\n- Thêm mới: ${added}\n- Cập nhật: ${updated}\n- Bỏ qua: ${skipped}`);
+  }catch(e){oscAlert("Không nhập được danh sách thành viên: "+(e.message||e))}
 }
-$("#excelInput").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const {ws}=await readSpreadsheetSecure(file),rows=XLSX.utils.sheet_to_json(ws,{defval:""}),headers=rows.length?Object.keys(rows[0]):[];if(rows.length>MAX_SPREADSHEET_ROWS)throw new Error("File có quá nhiều dòng.");e.target.value="";prepareMemberImport(rows,headers,file.name)}catch(err){console.error(err);e.target.value="";alert("Không đọc được file Excel: "+(err.message||err))}};
+$("#excelInput").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const {ws}=await readSpreadsheetSecure(file),rows=XLSX.utils.sheet_to_json(ws,{defval:""}),headers=rows.length?Object.keys(rows[0]):[];if(rows.length>MAX_SPREADSHEET_ROWS)throw new Error("File có quá nhiều dòng.");e.target.value="";prepareMemberImport(rows,headers,file.name)}catch(err){console.error(err);e.target.value="";oscAlert("Không đọc được file Excel: "+(err.message||err))}};
 
 
 /* ===== Member filters / tags / timeline / import mapping ===== */
@@ -5845,7 +5847,7 @@ function openMemberFilter(){
 }
 function applyMemberFilterModal(){activeMemberFilter={fund:$("#fltFund").value,minScore:$("#fltMin").value,maxScore:$("#fltMax").value,department:$("#fltDepartment").value,status:$("#fltStatus").value,tag:$("#fltTag").value,schoolType:$("#fltSchoolType").value,division:$("#fltDivision").value};closeModal();renderMemberList()}
 function clearMemberFilter(){activeMemberFilter={fund:"all",minScore:"",maxScore:"",department:"",status:"",tag:"",schoolType:"",division:""};closeModal();renderMemberList()}
-async function saveCurrentMemberFilter(){applyMemberFilterModal();const name=prompt("Tên bộ lọc, ví dụ: Chưa đóng quỹ");if(!name)return;userPreferences.savedFilters=userPreferences.savedFilters||[];userPreferences.savedFilters.push({id:uid(),name,filter:structuredClone(activeMemberFilter)});await saveUserPreferences();renderSavedFilterSelect();toast("Đã lưu bộ lọc")}
+async function saveCurrentMemberFilter(){applyMemberFilterModal();const name=await oscPrompt("Tên bộ lọc, ví dụ: Chưa đóng quỹ");if(!name)return;userPreferences.savedFilters=userPreferences.savedFilters||[];userPreferences.savedFilters.push({id:uid(),name,filter:structuredClone(activeMemberFilter)});await saveUserPreferences();renderSavedFilterSelect();toast("Đã lưu bộ lọc")}
 function renderSavedFilterSelect(){const el=$("#savedFilterSelect");if(!el)return;el.innerHTML=`<option value="">Bộ lọc đã lưu</option>`+(userPreferences.savedFilters||[]).map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("")}
 $("#memberFilterBtn").onclick=openMemberFilter;$("#savedFilterSelect").onchange=e=>{const f=(userPreferences.savedFilters||[]).find(x=>x.id===e.target.value);if(f){activeMemberFilter=structuredClone(f.filter);renderMemberList()}};
 
@@ -5895,15 +5897,15 @@ function openDivisionManager(){
 async function addDivision(){
   if(!canEditClub())return;
   const name=sanitizeDivisionName($("#newDivisionName")?.value);
-  if(!name)return alert("Nhập tên phân ban.");
-  if(state.divisions.some(d=>normalizeText(d.name)===normalizeText(name)))return alert("Phân ban này đã tồn tại.");
+  if(!name)return oscAlert("Nhập tên phân ban.");
+  if(state.divisions.some(d=>normalizeText(d.name)===normalizeText(name)))return oscAlert("Phân ban này đã tồn tại.");
   const d={id:divisionIdFromName(name),name,createdAt:new Date().toISOString()};
   state.divisions.push(d);
   state.divisionSetupVersion=1;
   const ok=await saveCloudStateNow();
   if(!ok){
     state.divisions=state.divisions.filter(x=>x.id!==d.id);
-    return alert("Không lưu được phân ban lên Firestore.");
+    return oscAlert("Không lưu được phân ban lên Firestore.");
   }
   persistStateOnly();renderDivisions();openDivisionManager();
   await logAudit({action:"create-division",module:"members",entityType:"division",entityId:d.id,summary:`Tạo phân ban • ${d.name}`,after:{name:d.name}});
@@ -5912,12 +5914,12 @@ async function addDivision(){
 async function renameDivision(id){
   if(!canEditClub())return;
   const d=divisionById(id);if(!d)return;
-  const next=sanitizeDivisionName(prompt("Tên phân ban:",d.name));
+  const next=sanitizeDivisionName(await oscPrompt("Tên phân ban:",d.name));
   if(!next)return;
-  if(state.divisions.some(x=>x.id!==id&&normalizeText(x.name)===normalizeText(next)))return alert("Tên phân ban đã tồn tại.");
+  if(state.divisions.some(x=>x.id!==id&&normalizeText(x.name)===normalizeText(next)))return oscAlert("Tên phân ban đã tồn tại.");
   const before=d.name;d.name=next;
   const ok=await saveCloudStateNow();
-  if(!ok){d.name=before;return alert("Không lưu được tên phân ban.")}
+  if(!ok){d.name=before;return oscAlert("Không lưu được tên phân ban.")}
   persistStateOnly();renderDivisions();
   if(!$("#modalWrap").classList.contains("hidden"))openDivisionManager();
   await logAudit({action:"rename-division",module:"members",entityType:"division",entityId:id,summary:`Đổi tên phân ban • ${before} → ${next}`,before:{name:before},after:{name:next}});
@@ -5926,7 +5928,7 @@ async function renameDivision(id){
 async function deleteDivision(id){
   if(!canEditClub())return;
   const d=divisionById(id);if(!d)return;
-  if(!confirm(`Xóa phân ban "${d.name}"?\n\nThành viên không bị xóa, chỉ gỡ đánh dấu phân ban này.`))return;
+  if(!await oscConfirm(`Xóa phân ban "${d.name}"?\n\nThành viên không bị xóa, chỉ gỡ đánh dấu phân ban này.`))return;
 
   const beforeDivisions=structuredClone(state.divisions);
   const affected=(state.members||[]).filter(m=>(m.divisions||[]).includes(id));
@@ -5967,7 +5969,7 @@ async function deleteDivision(id){
       }
     }catch(rollbackErr){console.error("division rollback",rollbackErr)}
     renderAll();openDivisionManager();
-    alert("Không xóa được phân ban: "+(e.message||e));
+    oscAlert("Không xóa được phân ban: "+(e.message||e));
   }
 }
 /* info */
@@ -6074,7 +6076,7 @@ function pdfBaseDoc(title=""){
     info:{title,author:"OUR STAGE CLUB",creator:"OUR STAGE CLUB MANAGER"}
   };
 }
-function ensurePdfMake(){if(!window.pdfMake){alert("Không tải được thư viện tạo PDF. Hãy kiểm tra Internet rồi tải lại trang và thử lại.");return false}return true}
+function ensurePdfMake(){if(!window.pdfMake){oscAlert("Không tải được thư viện tạo PDF. Hãy kiểm tra Internet rồi tải lại trang và thử lại.");return false}return true}
 
 function memberRecordForSemester(baseMember,semKey){
   return sameMemberAcrossSemesters(baseMember).find(x=>x.semester===semKey)||null;
@@ -6106,7 +6108,7 @@ function exportMemberProfilePDF(memberId){
   const base=findMember(memberId);if(!base)return;if(!ensurePdfMake())return;
   const semKey=$("#memberPdfSemester")?.value||base.semester;
   const m=memberRecordForSemester(base,semKey);
-  if(!m)return alert("Không tìm thấy hồ sơ thành viên ở học kỳ đã chọn.");
+  if(!m)return oscAlert("Không tìm thấy hồ sơ thành viên ở học kỳ đã chọn.");
 
   const choices={
     basic:$("#pdfBasic")?.checked!==false,
@@ -6116,7 +6118,7 @@ function exportMemberProfilePDF(memberId){
     history:$("#pdfHistory")?.checked!==false,
     note:!!$("#pdfInternalNote")?.checked
   };
-  if(!Object.values(choices).some(Boolean))return alert("Hãy chọn ít nhất một nội dung để xuất PDF.");
+  if(!Object.values(choices).some(Boolean))return oscAlert("Hãy chọn ít nhất một nội dung để xuất PDF.");
 
   const cfg=state.semesters?.[semKey]||{name:semKey},s=scoreMemberForSemester(m,semKey);
   const activities=memberTimeline(m,semKey).filter(x=>!["Có trong danh sách học kỳ","Đã đóng quỹ"].includes(x.title));
@@ -6222,7 +6224,7 @@ function renderDashboardCommandCenter(){
   root.innerHTML=items.slice(0,8).filter(x=>canAccessTab(x.tab)).map(x=>`<div class="command-center-item ${x.level}" onclick="openTab('${x.tab}')"><b>${esc(x.title)}</b><span>${esc(x.desc)}</span></div>`).join("");
 }
 function openSemesterCompare(){
-  const keys=Object.keys(state.semesters||{});if(keys.length<2)return alert("Cần ít nhất 2 học kỳ để so sánh.");
+  const keys=Object.keys(state.semesters||{});if(keys.length<2)return oscAlert("Cần ít nhất 2 học kỳ để so sánh.");
   const prev=previousMainSemesterCode(semester),defaultB=state.semesters[prev]?prev:keys.find(k=>k!==semester)||keys[0];
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(900px,100%)"><div class="modal-head"><div><h2>So sánh học kỳ</h2><div class="small-help">So sánh thành viên, hoạt động và tài chính.</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Học kỳ A<select id="cmpA">${keys.map(k=>`<option value="${k}" ${k===semester?"selected":""}>${esc(state.semesters[k].name||k)}</option>`).join("")}</select></label><label>Học kỳ B<select id="cmpB">${keys.map(k=>`<option value="${k}" ${k===defaultB?"selected":""}>${esc(state.semesters[k].name||k)}</option>`).join("")}</select></label></div><div id="semesterCompareResult"></div><div class="modal-actions"><button class="primary" onclick="renderSemesterCompareResult()">So sánh</button></div></div></div>`;$("#modalWrap").classList.remove("hidden");renderSemesterCompareResult();
 }
@@ -6351,7 +6353,7 @@ async function downloadSemesterEndReportPDF(){
     toast("Đã tạo báo cáo cuối kỳ PDF");
   }catch(e){
     console.error("semester PDF",e);
-    alert("Không xuất được PDF học kỳ: "+(e?.message||e));
+    oscAlert("Không xuất được PDF học kỳ: "+(e?.message||e));
   }finally{
     if(btn){btn.disabled=false;btn.textContent=oldText||"Báo cáo cuối kỳ PDF"}
   }
@@ -6499,16 +6501,16 @@ async function downloadFinanceReportPDF(){
     pdfMake.createPdf(doc).download(`Bao_cao_tai_chinh_${pdfSafeFileName(semester)}.pdf`);
   }catch(e){
     console.error("finance PDF",e);
-    alert("Không xuất được PDF tài chính: "+(e?.message||e));
+    oscAlert("Không xuất được PDF tài chính: "+(e?.message||e));
   }
 }
 $("#financePdfBtn").onclick=downloadFinanceReportPDF;
 
 $$("[data-addtx]").forEach(b=>b.onclick=()=>{if(canEditModule("finance"))openTx({id:"",semester,type:b.dataset.addtx,description:"",amount:0,date:"",proof:""})});
 function openTx(t){if(!canEditModule("finance"))return;$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><h2>${t.id?"Sửa giao dịch":"Thêm giao dịch"}</h2><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Loại<select id="txType"><option value="income" ${t.type==="income"?"selected":""}>Khoản thu</option><option value="expense" ${t.type==="expense"?"selected":""}>Khoản chi</option></select></label><label>Số tiền<input id="txAmount" class="currency-input" inputmode="numeric" value="${formatCurrency(t.amount||0)}" placeholder="Ví dụ 300.000"></label><label class="full">Nội dung<input id="txDesc" value="${esc(t.description||"")}"></label><label>Ngày<input id="txDate" type="date" value="${esc(t.date||"")}"></label><label>Minh chứng<input id="txProof" value="${esc(t.proof||"")}"></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="saveTx('${t.id||""}')">Lưu</button></div></div></div>`;$("#modalWrap").classList.remove("hidden");applyZeroClearBehavior();bindCurrencyInputs($("#modalWrap"))}
-async function saveTx(id){if(!canEditModule("finance"))return;const before=id?structuredClone(state.transactions.find(x=>x.id===id)||null):null;const t={id:id||uid(),semester,type:$("#txType").value,amount:parseCurrency($("#txAmount").value),description:$("#txDesc").value.trim(),date:$("#txDate").value,proof:$("#txProof").value.trim()};if(!t.description)return alert("Vui lòng nhập nội dung giao dịch.");try{await fbDb.collection("financeTransactions").doc(t.id).set(txDocPayload(t),{merge:true});await logAudit({action:id?"update":"create",module:"finance",entityType:"finance",entityId:t.id,summary:`${id?"Sửa":"Thêm"} ${t.type==="income"?"khoản thu":"khoản chi"}: ${t.description}`,before,after:t,undo:before?{type:"finance",id:t.id,data:before}:null});closeModal();toast("Đã lưu giao dịch")}catch(e){alert("Không lưu được giao dịch: "+(e.message||e))}}
+async function saveTx(id){if(!canEditModule("finance"))return;const before=id?structuredClone(state.transactions.find(x=>x.id===id)||null):null;const t={id:id||uid(),semester,type:$("#txType").value,amount:parseCurrency($("#txAmount").value),description:$("#txDesc").value.trim(),date:$("#txDate").value,proof:$("#txProof").value.trim()};if(!t.description)return oscAlert("Vui lòng nhập nội dung giao dịch.");try{await fbDb.collection("financeTransactions").doc(t.id).set(txDocPayload(t),{merge:true});await logAudit({action:id?"update":"create",module:"finance",entityType:"finance",entityId:t.id,summary:`${id?"Sửa":"Thêm"} ${t.type==="income"?"khoản thu":"khoản chi"}: ${t.description}`,before,after:t,undo:before?{type:"finance",id:t.id,data:before}:null});closeModal();toast("Đã lưu giao dịch")}catch(e){oscAlert("Không lưu được giao dịch: "+(e.message||e))}}
 function editTx(id){const t=state.transactions.find(x=>x.id===id);if(t)openTx(t)}
-async function deleteTx(id){if(!canEditModule("finance"))return;const t=state.transactions.find(x=>x.id===id);if(!t)return;if(shouldRequestApproval("deleteFinance"))return createApprovalRequest("deleteFinance",{id},`Xóa giao dịch ${t.description}`);if(!confirm("Chuyển giao dịch này vào Thùng rác?"))return;try{await moveToTrash("finance",id,t,{label:t.description,semester:t.semester});await fbDb.collection("financeTransactions").doc(id).delete();await logAudit({action:"delete",module:"finance",entityType:"finance",entityId:id,summary:`Xóa giao dịch ${t.description}`,before:t});toast("Đã chuyển giao dịch vào Thùng rác")}catch(e){alert("Không xóa được giao dịch: "+(e.message||e))}}
+async function deleteTx(id){if(!canEditModule("finance"))return;const t=state.transactions.find(x=>x.id===id);if(!t)return;if(shouldRequestApproval("deleteFinance"))return createApprovalRequest("deleteFinance",{id},`Xóa giao dịch ${t.description}`);if(!await oscConfirm("Chuyển giao dịch này vào Thùng rác?"))return;try{await moveToTrash("finance",id,t,{label:t.description,semester:t.semester});await fbDb.collection("financeTransactions").doc(id).delete();await logAudit({action:"delete",module:"finance",entityType:"finance",entityId:id,summary:`Xóa giao dịch ${t.description}`,before:t});toast("Đã chuyển giao dịch vào Thùng rác")}catch(e){oscAlert("Không xóa được giao dịch: "+(e.message||e))}}
 
 
 
@@ -6684,18 +6686,18 @@ function renderFreeLookupBuilderFields(recordCount=0){
     </div>`).join("");
 }
 function addFreeLookupBuilderField(){
-  if(freeLookupBuilderFields.length>=30)return alert("Một cổng hỗ trợ tối đa 30 trường dữ liệu.");
+  if(freeLookupBuilderFields.length>=30)return oscAlert("Một cổng hỗ trợ tối đa 30 trường dữ liệu.");
   freeLookupBuilderFields.push(newFreeLookupBuilderField(`TRUONG_${freeLookupBuilderFields.length+1}`,`Trường ${freeLookupBuilderFields.length+1}`));
   renderFreeLookupBuilderFields(Number($("#flExistingRecordCount")?.value||0));
 }
 function removeFreeLookupBuilderField(index){
   const f=freeLookupBuilderFields[index];if(!f)return;
-  if(f.id===freeLookupBuilderSearchFieldId)return alert("Không thể xóa trường đang dùng làm khóa tra cứu. Hãy chọn trường khác trước.");
+  if(f.id===freeLookupBuilderSearchFieldId)return oscAlert("Không thể xóa trường đang dùng làm khóa tra cứu. Hãy chọn trường khác trước.");
   freeLookupBuilderFields.splice(index,1);
   renderFreeLookupBuilderFields(Number($("#flExistingRecordCount")?.value||0));
 }
 function validateFreeLookupBuilderFields({silent=false}={}){
-  if(!freeLookupBuilderFields.length){if(!silent)alert("Cần ít nhất một trường dữ liệu.");return null}
+  if(!freeLookupBuilderFields.length){if(!silent)oscAlert("Cần ít nhất một trường dữ liệu.");return null}
   const fields=freeLookupBuilderFields.map(f=>({
     ...f,
     sourceHeader:String(f.sourceHeader||"").trim(),
@@ -6703,22 +6705,22 @@ function validateFreeLookupBuilderFields({silent=false}={}){
     type:f.type||"text",
     visible:f.visible!==false
   }));
-  if(fields.some(f=>!f.sourceHeader)){if(!silent)alert("Mỗi trường cần có Tên cột Excel.");return null}
-  if(fields.some(f=>!f.label)){if(!silent)alert("Mỗi trường cần có Tên hiển thị.");return null}
+  if(fields.some(f=>!f.sourceHeader)){if(!silent)oscAlert("Mỗi trường cần có Tên cột Excel.");return null}
+  if(fields.some(f=>!f.label)){if(!silent)oscAlert("Mỗi trường cần có Tên hiển thị.");return null}
   const normalized=fields.map(f=>normalizeText(f.sourceHeader));
-  if(new Set(normalized).size!==normalized.length){if(!silent)alert("Tên cột Excel không được trùng nhau.");return null}
+  if(new Set(normalized).size!==normalized.length){if(!silent)oscAlert("Tên cột Excel không được trùng nhau.");return null}
   const search=fields.find(f=>f.id===freeLookupBuilderSearchFieldId);
-  if(!search){if(!silent)alert("Hãy chọn một trường làm khóa tra cứu.");return null}
-  if(!fields.some(f=>f.visible)){if(!silent)alert("Cần ít nhất một trường công khai.");return null}
+  if(!search){if(!silent)oscAlert("Hãy chọn một trường làm khóa tra cứu.");return null}
+  if(!fields.some(f=>f.visible)){if(!silent)oscAlert("Cần ít nhất một trường công khai.");return null}
   return {fields,search};
 }
 function openFreeLookupBuilder(id=""){
   if(!canEditClub())return;
-  if(!semester||!state.semesters?.[semester])return alert("Không xác định được học kỳ đang chọn.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi tạo hoặc chỉnh sửa cổng tra cứu.");
+  if(!semester||!state.semesters?.[semester])return oscAlert("Không xác định được học kỳ đang chọn.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi tạo hoặc chỉnh sửa cổng tra cứu.");
 
   const p=id?freeLookupPortalById(id):null;
-  if(p?.scopeSemester&&p.scopeSemester!==semester)return alert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+  if(p?.scopeSemester&&p.scopeSemester!==semester)return oscAlert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
 
   freeLookupBuilderFields=structuredClone((p?.fields||[]).length?p.fields:defaultFreeLookupBuilderFields());
   freeLookupBuilderSearchFieldId=p?.searchFieldId||freeLookupBuilderFields[0]?.id||"";
@@ -6838,7 +6840,7 @@ function downloadFreeLookupTemplate(id){
   const p=freeLookupPortalById(id);if(!p)return;
   const fields=p.fields||[];
   const search=fields.find(f=>f.id===p.searchFieldId);
-  if(!fields.length||!search)return alert("Cổng chưa có cấu hình trường dữ liệu.");
+  if(!fields.length||!search)return oscAlert("Cổng chưa có cấu hình trường dữ liệu.");
   const wb=buildFreeLookupTemplate(fields,search,p.title||"Cong_Tra_Cuu");
   const safe=(p.title||"Cong_Tra_Cuu").replace(/[\/:*?"<>|]+/g,"_").replace(/\s+/g,"_").slice(0,60);
   XLSX.writeFile(wb,`Mau_Du_Lieu_${safe}.xlsx`);
@@ -6854,23 +6856,23 @@ async function syncFreeLookupPublicRecords(p){
 }
 async function saveFreeLookupBuilder(id=""){
   if(!canEditClub())return;
-  if(!semester||!state.semesters?.[semester])return alert("Không xác định được học kỳ đang chọn.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi lưu cổng tra cứu.");
+  if(!semester||!state.semesters?.[semester])return oscAlert("Không xác định được học kỳ đang chọn.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi lưu cổng tra cứu.");
 
   const title=$("#flTitle").value.trim();
-  if(!title)return alert("Vui lòng nhập tên cổng.");
+  if(!title)return oscAlert("Vui lòng nhập tên cổng.");
 
   const checked=validateFreeLookupBuilderFields();
   if(!checked)return;
 
   const existing=id?freeLookupPortalById(id):null;
   if(existing?.scopeSemester&&existing.scopeSemester!==semester){
-    return alert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+    return oscAlert("Cổng này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
   }
 
   const recordCount=Number(existing?.recordCount||0);
   if(recordCount>0&&existing?.searchFieldId&&checked.search.id!==existing.searchFieldId){
-    return alert("Cổng đang có dữ liệu nên không thể đổi khóa tra cứu trong phần Thiết lập. Hãy Upload Excel và dùng chế độ Thay toàn bộ dữ liệu cũ.");
+    return oscAlert("Cổng đang có dữ liệu nên không thể đổi khóa tra cứu trong phần Thiết lập. Hãy Upload Excel và dùng chế độ Thay toàn bộ dữ liệu cũ.");
   }
 
   const portalId=id||("lookup_"+uid());
@@ -6923,38 +6925,38 @@ async function saveFreeLookupBuilder(id=""){
     const message=String(e?.message||e||"");
     if(e?.code==="permission-denied"||/permission/i.test(message)){
       if(semesterLocked()){
-        return alert("Không lưu được cổng vì học kỳ đang bị khóa. Hãy vào Thiết lập → mở khóa học kỳ rồi thử lại.");
+        return oscAlert("Không lưu được cổng vì học kỳ đang bị khóa. Hãy vào Thiết lập → mở khóa học kỳ rồi thử lại.");
       }
-      return alert("Không lưu được cổng do Firestore Rules chưa cho phép dữ liệu của học kỳ này. Hãy cập nhật Firestore Rules V36 và Publish lại.");
+      return oscAlert("Không lưu được cổng do Firestore Rules chưa cho phép dữ liệu của học kỳ này. Hãy cập nhật Firestore Rules V36 và Publish lại.");
     }
 
-    alert("Không lưu được cổng: "+message);
+    oscAlert("Không lưu được cổng: "+message);
   }
 }
 async function toggleFreeLookup(id){
   const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
-  if(p.scopeSemester!==semester)return alert("Cổng này không thuộc học kỳ đang chọn.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa.");
+  if(p.scopeSemester!==semester)return oscAlert("Cổng này không thuộc học kỳ đang chọn.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa.");
   if(!p.searchFieldId||!(p.fields||[]).length||!p.recordCount){
-    if(p.open!==true)return alert("Hãy upload dữ liệu và cấu hình trường tra cứu trước khi mở cổng.");
+    if(p.open!==true)return oscAlert("Hãy upload dữ liệu và cấu hình trường tra cứu trước khi mở cổng.");
   }
   p.open=p.open!==true;
   try{
     await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).set({open:p.open,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).set(publicFreeLookupMeta(p),{merge:true});
     toast(p.open?"Đã mở cổng tra cứu":"Đã đóng cổng tra cứu");await renderFreeLookup();
-  }catch(e){alert("Không đổi được trạng thái cổng: "+(e.message||e))}
+  }catch(e){oscAlert("Không đổi được trạng thái cổng: "+(e.message||e))}
 }
 async function deleteFreeLookupPortal(id){
   if(!canEditClub())return;const p=freeLookupPortalById(id);if(!p)return;
-  if(!confirm(`Xóa vĩnh viễn cổng "${p.title}"?\n\nToàn bộ dữ liệu upload của cổng này cũng sẽ bị xóa. Thao tác không thể hoàn tác.`))return;
+  if(!await oscConfirm(`Xóa vĩnh viễn cổng "${p.title}"?\n\nToàn bộ dữ liệu upload của cổng này cũng sẽ bị xóa. Thao tác không thể hoàn tác.`))return;
   try{
     await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records"));
     await deleteFreeLookupCollection(fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).collection("records"));
     await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).delete();
     await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).delete();
     toast("Đã xóa cổng tra cứu");await renderFreeLookup();
-  }catch(e){alert("Không xóa được cổng: "+(e.message||e))}
+  }catch(e){oscAlert("Không xóa được cổng: "+(e.message||e))}
 }
 function startFreeLookupImport(id){freeLookupImportPortalId=id;$("#freeLookupExcelInput").value="";$("#freeLookupExcelInput").click()}
 $("#freeLookupExcelInput").onchange=async e=>{
@@ -6963,16 +6965,16 @@ $("#freeLookupExcelInput").onchange=async e=>{
     const {ws}=await readSpreadsheetSecure(file,{allowCsv:true});
     const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false,blankrows:false});
     if(matrix.length>MAX_SPREADSHEET_ROWS+1)throw new Error("File có quá nhiều dòng.");
-    if(matrix.length<2)return alert("File cần có hàng tiêu đề và ít nhất 1 dòng dữ liệu.");
+    if(matrix.length<2)return oscAlert("File cần có hàng tiêu đề và ít nhất 1 dòng dữ liệu.");
     const rawHeaders=(matrix[0]||[]).map((x,i)=>String(x??"").trim()||`Cột ${i+1}`);
     const normalized=rawHeaders.map(x=>normalizeText(x));
     const duplicates=normalized.filter((x,i,a)=>x&&a.indexOf(x)!==i);
-    if(duplicates.length)return alert("File có tên cột bị trùng. Hãy đổi tên các cột để mỗi tiêu đề là duy nhất.");
+    if(duplicates.length)return oscAlert("File có tên cột bị trùng. Hãy đổi tên các cột để mỗi tiêu đề là duy nhất.");
     const portal=freeLookupPortalById(freeLookupImportPortalId);
     const configuredHeaders=(portal?.fields||[]).map(f=>String(f.sourceHeader||"").trim()).filter(Boolean);
     const missingHeaders=configuredHeaders.filter(h=>!rawHeaders.some(rh=>normalizeText(rh)===normalizeText(h)));
     if(missingHeaders.length){
-      return alert(
+      return oscAlert(
         "File đang thiếu các cột đã cấu hình:\n- "+missingHeaders.join("\n- ")+
         "\n\nHãy bấm “Tải Excel mẫu” của cổng để dùng đúng cấu trúc."
       );
@@ -6980,7 +6982,7 @@ $("#freeLookupExcelInput").onchange=async e=>{
     freeLookupImportHeaders=rawHeaders;
     freeLookupImportRows=matrix.slice(1).filter(row=>row.some(v=>String(v??"").trim()!==""));
     openFreeLookupImportPreview();
-  }catch(err){console.error(err);alert("Không đọc được file: "+(err.message||err))}
+  }catch(err){console.error(err);oscAlert("Không đọc được file: "+(err.message||err))}
   finally{e.target.value=""}
 };
 function existingFreeLookupFieldForHeader(p,header){return (p.fields||[]).find(f=>normalizeText(f.sourceHeader||"")===normalizeText(header))}
@@ -7026,17 +7028,17 @@ function updateFreeLookupImportStats(){
 async function applyFreeLookupImport(){
   if(!canEditClub())return;const p=freeLookupPortalById(freeLookupImportPortalId);if(!p)return;
   const a=freeLookupImportAnalysis();
-  if(a.missing)return alert(`Có ${a.missing} dòng thiếu giá trị tra cứu. Hãy bổ sung trước khi nhập.`);
-  if(a.duplicate)return alert(`Có ${a.duplicate} giá trị tra cứu bị trùng trong file. Mỗi khóa phải duy nhất.`);
+  if(a.missing)return oscAlert(`Có ${a.missing} dòng thiếu giá trị tra cứu. Hãy bổ sung trước khi nhập.`);
+  if(a.duplicate)return oscAlert(`Có ${a.duplicate} giá trị tra cứu bị trùng trong file. Mỗi khóa phải duy nhất.`);
   const fields=freeLookupImportHeaders.map((h,i)=>({
     id:document.querySelector(`[data-fl-field-row="${i}"]`).dataset.fieldId,
     sourceHeader:h,label:$("#flLabel_"+i).value.trim()||h,type:$("#flType_"+i).value,visible:$("#flVisible_"+i).checked
   }));
-  if(!fields.some(f=>f.visible))return alert("Cần chọn ít nhất một trường hiển thị công khai.");
-  const searchField=fields[a.idx];if(!searchField)return alert("Không xác định được trường tra cứu.");
+  if(!fields.some(f=>f.visible))return oscAlert("Cần chọn ít nhất một trường hiển thị công khai.");
+  const searchField=fields[a.idx];if(!searchField)return oscAlert("Không xác định được trường tra cứu.");
   const mode=$("#flImportMode").value;
   if(mode==="merge"&&Number(p.recordCount||0)>0&&p.searchFieldId&&searchField.id!==p.searchFieldId){
-    return alert("Không thể đổi khóa tra cứu khi dùng chế độ Thêm / cập nhật. Hãy chọn Thay toàn bộ dữ liệu cũ nếu muốn đổi khóa tra cứu.");
+    return oscAlert("Không thể đổi khóa tra cứu khi dùng chế độ Thêm / cập nhật. Hãy chọn Thay toàn bộ dữ liệu cũ nếu muốn đổi khóa tra cứu.");
   }
   try{
     if(mode==="replace"){
@@ -7058,10 +7060,10 @@ async function applyFreeLookupImport(){
     await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(p.id).set({fields,searchFieldId:p.searchFieldId,searchFieldLabel:p.searchFieldLabel,searchLabel:p.searchLabel,recordCount:count,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(p.id).set(publicFreeLookupMeta(p),{merge:true});
     closeModal();toast(`Đã nhập ${freeLookupImportRows.length} dòng dữ liệu`);await renderFreeLookup();
-  }catch(e){console.error(e);alert("Không nhập được dữ liệu: "+(e.message||e))}
+  }catch(e){console.error(e);oscAlert("Không nhập được dữ liệu: "+(e.message||e))}
 }
 function openFreeLookupFieldConfig(id){
-  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;if(!(p.fields||[]).length)return alert("Hãy upload dữ liệu trước.");
+  const p=freeLookupPortalById(id);if(!p||!canEditClub())return;if(!(p.fields||[]).length)return oscAlert("Hãy upload dữ liệu trước.");
   freeLookupConfigDraft=structuredClone(p.fields||[]);
   renderFreeLookupFieldConfigModal(p);
 }
@@ -7080,9 +7082,9 @@ function addFreeLookupManualField(id){const p=freeLookupPortalById(id);freeLooku
 function removeFreeLookupConfigField(i,searchId){if(freeLookupConfigDraft[i]?.id===searchId)return;freeLookupConfigDraft.splice(i,1);const p=freeLookupPortals.find(x=>x.searchFieldId===searchId);if(p)renderFreeLookupFieldConfigModal(p)}
 async function saveFreeLookupFieldConfig(id){
   const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
-  if(!freeLookupConfigDraft.length)return alert("Cần ít nhất một trường.");
-  if(freeLookupConfigDraft.some(f=>!String(f.label||"").trim()))return alert("Có trường chưa có tên hiển thị.");
-  if(!freeLookupConfigDraft.some(f=>f.visible!==false))return alert("Cần ít nhất một trường công khai.");
+  if(!freeLookupConfigDraft.length)return oscAlert("Cần ít nhất một trường.");
+  if(freeLookupConfigDraft.some(f=>!String(f.label||"").trim()))return oscAlert("Có trường chưa có tên hiển thị.");
+  if(!freeLookupConfigDraft.some(f=>f.visible!==false))return oscAlert("Cần ít nhất một trường công khai.");
   try{
     const privateSnap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();
     const effective={...p,fields:structuredClone(freeLookupConfigDraft)};
@@ -7093,11 +7095,11 @@ async function saveFreeLookupFieldConfig(id){
     await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).set({fields:p.fields,searchFieldLabel:p.searchFieldLabel,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(id).set(publicFreeLookupMeta(p),{merge:true});
     closeModal();toast("Đã cập nhật trường hiển thị");await renderFreeLookup();
-  }catch(e){alert("Không lưu được cấu hình: "+(e.message||e))}
+  }catch(e){oscAlert("Không lưu được cấu hình: "+(e.message||e))}
 }
 async function openFreeLookupData(id){
   const p=freeLookupPortalById(id);if(!p||!canEditClub())return;
-  if(!(p.fields||[]).length)return alert("Cổng chưa có cấu trúc dữ liệu. Hãy upload Excel/CSV trước.");
+  if(!(p.fields||[]).length)return oscAlert("Cổng chưa có cấu trúc dữ liệu. Hãy upload Excel/CSV trước.");
   try{
     const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").limit(200).get();
     freeLookupRecordCache=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -7106,7 +7108,7 @@ async function openFreeLookupData(id){
       <div class="toolbar"><input id="flDataSearch" placeholder="Tìm theo khóa tra cứu…" oninput="renderFreeLookupDataTable('${id}')"><button class="primary" onclick="openFreeLookupRecordEditor('${id}')">+ Thêm bản ghi</button><button class="secondary" onclick="exportFreeLookupData('${id}')">Xuất Excel</button></div>
       <div id="flDataTable"></div>
     </div></div>`;$("#modalWrap").classList.remove("hidden");renderFreeLookupDataTable(id);
-  }catch(e){alert("Không tải được dữ liệu: "+(e.message||e))}
+  }catch(e){oscAlert("Không tải được dữ liệu: "+(e.message||e))}
 }
 function renderFreeLookupDataTable(id){
   const p=freeLookupPortalById(id);if(!p)return;const q=($("#flDataSearch")?.value||"").trim().toUpperCase();const fields=p.fields||[];
@@ -7119,21 +7121,21 @@ function openFreeLookupRecordEditor(portalId,recordId=""){
 }
 async function saveFreeLookupRecord(portalId,oldId=""){
   const p=freeLookupPortalById(portalId);if(!p)return;const fields=p.fields||[],data={};fields.forEach(f=>data[f.id]=$("#flRec_"+f.id)?.value??"");
-  const searchValue=String(data[p.searchFieldId]??"").trim();if(!searchValue)return alert("Trường dùng để tra cứu không được để trống.");if(searchValue.length>300)return alert("Giá trị tra cứu quá dài.");
+  const searchValue=String(data[p.searchFieldId]??"").trim();if(!searchValue)return oscAlert("Trường dùng để tra cứu không được để trống.");if(searchValue.length>300)return oscAlert("Giá trị tra cứu quá dài.");
   const newId=freeLookupDocId(searchValue),priv={searchValue,searchNormalized:normalizeFreeLookupKey(searchValue),data,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""};
   try{
     if(oldId&&oldId!==newId){await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(oldId).delete();await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(oldId).delete()}
     await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(newId).set(priv,{merge:false});
     await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(newId).set(publicFreeLookupRecord(p,priv),{merge:false});
     p.recordCount=await refreshFreeLookupCount(portalId);toast("Đã lưu bản ghi");await renderFreeLookup();await openFreeLookupData(portalId);
-  }catch(e){alert("Không lưu được bản ghi: "+(e.message||e))}
+  }catch(e){oscAlert("Không lưu được bản ghi: "+(e.message||e))}
 }
 async function deleteFreeLookupRecord(portalId,recordId){
-  const p=freeLookupPortalById(portalId);if(!p||!confirm("Xóa bản ghi này?"))return;
-  try{await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(recordId).delete();await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(recordId).delete();p.recordCount=await refreshFreeLookupCount(portalId);toast("Đã xóa bản ghi");await renderFreeLookup();await openFreeLookupData(portalId)}catch(e){alert("Không xóa được bản ghi: "+(e.message||e))}
+  const p=freeLookupPortalById(portalId);if(!p||!await oscConfirm("Xóa bản ghi này?"))return;
+  try{await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(portalId).collection("records").doc(recordId).delete();await fbDb.collection(FREE_LOOKUP_PUBLIC_ROOT).doc(portalId).collection("records").doc(recordId).delete();p.recordCount=await refreshFreeLookupCount(portalId);toast("Đã xóa bản ghi");await renderFreeLookup();await openFreeLookupData(portalId)}catch(e){oscAlert("Không xóa được bản ghi: "+(e.message||e))}
 }
 async function exportFreeLookupData(id){
-  const p=freeLookupPortalById(id);if(!p)return;try{const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();const fields=p.fields||[];const rows=snap.docs.map((d,i)=>{const r=d.data(),o={STT:i+1};fields.forEach(f=>o[f.label]=r.data?.[f.id]??"");return o});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"DU LIEU");XLSX.writeFile(wb,`Tra_Cuu_${String(p.title||id).replace(/[^a-zA-Z0-9À-ỹ_-]+/g,"_")}.xlsx`)}catch(e){alert("Không xuất được dữ liệu: "+(e.message||e))}
+  const p=freeLookupPortalById(id);if(!p)return;try{const snap=await fbDb.collection(FREE_LOOKUP_ADMIN_ROOT).doc(id).collection("records").get();const fields=p.fields||[];const rows=snap.docs.map((d,i)=>{const r=d.data(),o={STT:i+1};fields.forEach(f=>o[f.label]=r.data?.[f.id]??"");return o});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"DU LIEU");XLSX.writeFile(wb,`Tra_Cuu_${String(p.title||id).replace(/[^a-zA-Z0-9À-ỹ_-]+/g,"_")}.xlsx`)}catch(e){oscAlert("Không xuất được dữ liệu: "+(e.message||e))}
 }
 $("#createFreeLookupBtn").onclick=()=>openFreeLookupBuilder();
 $("#freeLookupSearch").oninput=()=>renderFreeLookup();
@@ -7165,9 +7167,9 @@ function activityPortalTemplate(gi,ii){
   };
 }
 function createActivityEventPortal(gi,ii){
-  if(!canEditModule("events"))return alert("Tài khoản chưa có quyền chỉnh sửa Sự kiện.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa. Hãy mở khóa trước khi tạo sự kiện.");
-  const tpl=activityPortalTemplate(gi,ii);if(!tpl)return alert("Không tìm thấy hoạt động.");
+  if(!canEditModule("events"))return oscAlert("Tài khoản chưa có quyền chỉnh sửa Sự kiện.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa. Hãy mở khóa trước khi tạo sự kiện.");
+  const tpl=activityPortalTemplate(gi,ii);if(!tpl)return oscAlert("Không tìm thấy hoạt động.");
   window.__eventTemplate=tpl;
   closeModal();
   setTimeout(()=>openEventBuilder(""),0);
@@ -7243,18 +7245,18 @@ async function ensureEventPointActivity(ev){
 }
 async function applyEventPoints(eventId,submissionId,{silent=false}={}){
   if(!canEditModule("attendance")){
-    if(!silent)alert("Tài khoản này chưa có quyền chỉnh sửa Điểm danh / điểm.");
+    if(!silent)oscAlert("Tài khoản này chưa có quyền chỉnh sửa Điểm danh / điểm.");
     return false;
   }
   const ev=eventFor(eventId);if(!ev)return false;
   const linked=ev.linkedActivityId?activityItemById(ev.linkedActivityId,ev.semester):null;
   const points=eventPointsValue(ev);
   if(!points&&!linked){
-    if(!silent)alert("Sự kiện này không cấu hình điểm hoặc hoạt động liên kết.");
+    if(!silent)oscAlert("Sự kiện này không cấu hình điểm hoặc hoạt động liên kết.");
     return false;
   }
   if(semesterLocked(ev.semester)){
-    if(!silent)alert("Học kỳ của sự kiện đang bị khóa.");
+    if(!silent)oscAlert("Học kỳ của sự kiện đang bị khóa.");
     return false;
   }
 
@@ -7266,26 +7268,26 @@ async function applyEventPoints(eventId,submissionId,{silent=false}={}){
   const mssv=submissionMssv(ev,sub);
   if(!mssv){
     await ref.set({pointsStatus:"Không tìm thấy trường MSSV",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert("Phản hồi này không có MSSV để đối chiếu thành viên.");
+    if(!silent)oscAlert("Phản hồi này không có MSSV để đối chiếu thành viên.");
     return false;
   }
 
   const target=(state.members||[]).find(m=>m.semester===ev.semester&&normalizeMssvKey(m.mssv)===mssv);
   if(!target){
     await ref.set({pointsStatus:"Không tìm thấy MSSV trong học kỳ",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert("Không tìm thấy thành viên có MSSV này trong học kỳ của sự kiện.");
+    if(!silent)oscAlert("Không tìm thấy thành viên có MSSV này trong học kỳ của sự kiện.");
     return false;
   }
 
   const item=linked?.item||await ensureEventPointActivity(ev);
   if(!item){
     await ref.set({pointsStatus:"Không tìm thấy hoạt động đã liên kết",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert("Hoạt động liên kết không còn tồn tại. Hãy chỉnh lại sự kiện.");
+    if(!silent)oscAlert("Hoạt động liên kết không còn tồn tại. Hãy chỉnh lại sự kiện.");
     return false;
   }
   if(item?.locked===true){
     await ref.set({pointsStatus:"Cột điểm đã khóa",pointsCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert(lockedActivityMessage(item.id,ev.semester));
+    if(!silent)oscAlert(lockedActivityMessage(item.id,ev.semester));
     return false;
   }
   target.scores=target.scores||{};
@@ -7348,7 +7350,7 @@ function eventQrCheckinTimeLabel(v){return v?dateTime(v):"vừa xong"}
 async function eventCheckinApi(body,timeoutMs=15000){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/event-checkin",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},timeoutMs);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||(res.status===404?"API /api/event-checkin chưa được deploy trên Vercel.":`API trả về lỗi ${res.status}`));e.code=data.code||"";e.status=res.status;throw e}return data}
 
 async function commitEventStudentQrCheckin(eventId,payload,{method="school_qr",decision=""}={}){return eventCheckinApi({action:"admin-scan",eventId,payload,method,decision})}
-async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),ticketPayload=extractTicketStudioQr(rawText),mssv=ticketPayload?"":extractEventStudentMssv(rawText),scanKey=ticketPayload||mssv,now=Date.now();if(!scanKey){eventStudentQrStatus("error","Không nhận diện được QR","QR không phải mã thành viên hoặc vé Ticket Studio hợp lệ. Dữ liệu QR gốc không được lưu.");return}if(scanKey===eventStudentQrLastText&&now-eventStudentQrLastAt<3200)return;eventStudentQrLastText=scanKey;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,scanKey,{method:ticketPayload?"ticket_qr":method});if(result.needsConfirmation){const ok=confirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên sự kiện này.\n\nBạn có xác nhận cho phép check-in không?`);if(!ok){eventStudentQrStatus("warn","Chưa ghi nhận check-in",`MSSV ${mssv}`);return}result=await commitEventStudentQrCheckin(ev.id,scanKey,{method,decision:"approve"})}const isTicket=result.attendeeType==="ticket",name=result.memberName||(isTicket?"Khách có vé":mssv||"Người tham dự"),identity=isTicket?`Mã vé ${result.ticketCode||""}`:`MSSV ${result.mssv||mssv}`;if(result.pendingAdmin){eventStudentQrStatus("warn",`Chờ Admin duyệt • ${name}`,identity,3000);return}if(result.duplicate){eventStudentQrStatus("warn",`Đã check-in trước đó • ${name}`,identity,3000);return}eventStudentQrStatus("success",`✓ Đã check-in thành công • ${name}`,identity,2800)}catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}finally{loadEventStudentQrCheckins(ev.id,{silent:true}).catch(()=>{});refreshEventQrSummaryBadges({force:true}).catch(()=>{});setTimeout(()=>{eventStudentQrBusy=false},650)}}
+async function processEventStudentQrPayload(raw,{method="school_qr"}={}){const ev=eventFor(eventStudentQrEventId);if(!ev||eventStudentQrBusy)return;const rawText=String(raw??"").trim(),ticketPayload=extractTicketStudioQr(rawText),mssv=ticketPayload?"":extractEventStudentMssv(rawText),scanKey=ticketPayload||mssv,now=Date.now();if(!scanKey){eventStudentQrStatus("error","Không nhận diện được QR","QR không phải mã thành viên hoặc vé Ticket Studio hợp lệ. Dữ liệu QR gốc không được lưu.");return}if(scanKey===eventStudentQrLastText&&now-eventStudentQrLastAt<3200)return;eventStudentQrLastText=scanKey;eventStudentQrLastAt=now;eventStudentQrBusy=true;try{let result=await commitEventStudentQrCheckin(ev.id,scanKey,{method:ticketPayload?"ticket_qr":method});if(result.needsConfirmation){const ok=await oscConfirm(`${result.memberName||mssv} (${mssv}) là thành viên CLB nhưng chưa đăng ký trên sự kiện này.\n\nBạn có xác nhận cho phép check-in không?`);if(!ok){eventStudentQrStatus("warn","Chưa ghi nhận check-in",`MSSV ${mssv}`);return}result=await commitEventStudentQrCheckin(ev.id,scanKey,{method,decision:"approve"})}const isTicket=result.attendeeType==="ticket",name=result.memberName||(isTicket?"Khách có vé":mssv||"Người tham dự"),identity=isTicket?`Mã vé ${result.ticketCode||""}`:`MSSV ${result.mssv||mssv}`;if(result.pendingAdmin){eventStudentQrStatus("warn",`Chờ Admin duyệt • ${name}`,identity,3000);return}if(result.duplicate){eventStudentQrStatus("warn",`Đã check-in trước đó • ${name}`,identity,3000);return}eventStudentQrStatus("success",`✓ Đã check-in thành công • ${name}`,identity,2800)}catch(e){console.error("event QR check-in",e);eventStudentQrStatus("error","Không check-in được",e?.message||String(e))}finally{loadEventStudentQrCheckins(ev.id,{silent:true}).catch(()=>{});refreshEventQrSummaryBadges({force:true}).catch(()=>{});setTimeout(()=>{eventStudentQrBusy=false},650)}}
 async function submitManualEventStudentMssv(){const input=$("#eventStudentQrManual");if(!input)return;const value=input.value.trim();if(!value)return;input.value="";await processEventStudentQrPayload(value,{method:"manual_mssv"})}
 
 async function stopEventStudentQrScanner({silent=false,keepWatch=true}={}){eventStudentQrBusy=false;if(eventStudentQrStatusTimer){clearTimeout(eventStudentQrStatusTimer);eventStudentQrStatusTimer=0}eventStudentQrStatusSeq++;if(!keepWatch&&eventStudentQrCheckinUnsub){try{eventStudentQrCheckinUnsub()}catch{}eventStudentQrCheckinUnsub=null}if(eventStudentQrScanner){const q=eventStudentQrScanner;eventStudentQrScanner=null;try{if(q.getState?.()===2||q.getState?.()===3)await q.stop()}catch{}try{q.clear?.()}catch{}}if(eventStudentQrNativeRaf){cancelAnimationFrame(eventStudentQrNativeRaf);eventStudentQrNativeRaf=0}if(eventStudentQrNativeStream){try{eventStudentQrNativeStream.getTracks().forEach(t=>t.stop())}catch{}eventStudentQrNativeStream=null}const reader=$("#eventStudentQrReader");if(reader)reader.innerHTML=`<div class="event-student-qr-placeholder">Camera đang tắt.<br>Bấm <b>Bật camera</b> để tiếp tục quét.</div>`;const btn=$("#eventStudentQrStartBtn");if(btn){btn.disabled=false;btn.textContent="Bật camera"}if(!silent&&eventStudentQrEventId)eventStudentQrStatus("","Camera đã tắt","Không có hình ảnh hoặc video nào được lưu.");if(!keepWatch)eventStudentQrEventId=""}
@@ -7364,12 +7366,12 @@ async function openEventStudentQrCheckin(eventId){
   try{
     const canView=canViewModule("attendance")||canEditClub();
     const canScan=canEditModule("attendance");
-    if(!canView)return alert("Tài khoản chưa có quyền xem kết quả check-in.");
+    if(!canView)return oscAlert("Tài khoản chưa có quyền xem kết quả check-in.");
     const ev=eventFor(eventId);
-    if(!ev)return alert("Không tìm thấy sự kiện. Hãy đồng bộ dữ liệu rồi thử lại.");
-    if(ev.semester!==semester)return alert("Hãy chuyển sang đúng học kỳ của sự kiện trước khi xem check-in.");
-    if(ev.qrCheckinEnabled!==true)return alert("QR check-in đang tắt. Hãy mở Chỉnh sửa sự kiện và bật QR check-in sinh viên.");
-    if(semesterLocked(ev.semester))return alert("Học kỳ đang bị khóa nên không thể check-in.");
+    if(!ev)return oscAlert("Không tìm thấy sự kiện. Hãy đồng bộ dữ liệu rồi thử lại.");
+    if(ev.semester!==semester)return oscAlert("Hãy chuyển sang đúng học kỳ của sự kiện trước khi xem check-in.");
+    if(ev.qrCheckinEnabled!==true)return oscAlert("QR check-in đang tắt. Hãy mở Chỉnh sửa sự kiện và bật QR check-in sinh viên.");
+    if(semesterLocked(ev.semester))return oscAlert("Học kỳ đang bị khóa nên không thể check-in.");
 
     await stopEventStudentQrScanner({silent:true,keepWatch:false});
     eventStudentQrEventId=eventId;
@@ -7391,13 +7393,13 @@ async function openEventStudentQrCheckin(eventId){
   }catch(e){
     console.error("open QR check-in modal",e);
     try{await stopEventStudentQrScanner({silent:true,keepWatch:false})}catch{}
-    alert("Không mở được Quét / duyệt QR: "+(e?.message||e));
+    oscAlert("Không mở được Quét / duyệt QR: "+(e?.message||e));
   }
 }
 
-async function decideEventQrCheckin(checkinId,approve){const ev=eventFor(eventStudentQrEventId);if(!ev)return;try{await eventCheckinApi({action:"decision",eventId:ev.id,checkinId,approve:approve===true});await loadEventStudentQrCheckins(ev.id,{silent:true});refreshEventQrSummaryBadges({force:true}).catch(()=>{});toast(approve?"Đã duyệt check-in":"Đã từ chối check-in")}catch(e){alert("Không cập nhật được check-in: "+(e?.message||e))}}
-async function undoEventStudentQrCheckin(checkinId){const ev=eventFor(eventStudentQrEventId);if(!ev||!confirm("Hoàn tác lượt check-in này?"))return;try{await eventCheckinApi({action:"undo",eventId:ev.id,checkinId});await loadEventStudentQrCheckins(ev.id,{silent:true});refreshEventQrSummaryBadges({force:true}).catch(()=>{});await logAudit({action:"event-qr-checkin-undo",module:"attendance",entityType:"eventQrCheckin",entityId:checkinId,summary:`Hoàn tác QR check-in ${ev.title}`,semesterKey:ev.semester});toast("Đã hoàn tác check-in")}catch(e){alert("Không hoàn tác được check-in: "+(e?.message||e))}}
-function exportEventStudentQrCheckins(){const ev=eventFor(eventStudentQrEventId),rows=filteredEventQrRows();if(!ev||!rows.length)return alert("Không có dữ liệu theo bộ lọc để xuất.");const data=rows.map((r,i)=>({"STT":i+1,"Họ và tên":r.memberName||"","MSSV":r.mssv||"","Mã vé":r.ticketCode||"","Hạng vé":r.ticketType||"","Ghế":r.seat||"","Đối tượng":r.attendeeType==="ticket"?"Vé Ticket Studio":r.attendeeType==="external"?"Ngoài CLB":"Thành viên CLB","Đăng ký":r.registrationStatus==="ticket"?"Vé hợp lệ":r.registrationStatus==="registered"?"Có đăng ký":"Chưa đăng ký","Trạng thái":r.checkinStatus==="approved"?"Đã check-in":r.checkinStatus==="pending_admin"?"Chờ Admin":"Đã từ chối","Thời gian":eventQrCheckinTimeLabel(r.checkedInAt),"Phương thức":r.method==="ticket_qr"?"QR vé":r.method==="manual_mssv"?"Nhập MSSV":r.method==="public_scanner"?"Link ngoài BCN":"QR trường","Điểm quét":r.checkedInByName||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"QR CHECKIN");XLSX.writeFile(wb,`QR_Checkin_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`)}
+async function decideEventQrCheckin(checkinId,approve){const ev=eventFor(eventStudentQrEventId);if(!ev)return;try{await eventCheckinApi({action:"decision",eventId:ev.id,checkinId,approve:approve===true});await loadEventStudentQrCheckins(ev.id,{silent:true});refreshEventQrSummaryBadges({force:true}).catch(()=>{});toast(approve?"Đã duyệt check-in":"Đã từ chối check-in")}catch(e){oscAlert("Không cập nhật được check-in: "+(e?.message||e))}}
+async function undoEventStudentQrCheckin(checkinId){const ev=eventFor(eventStudentQrEventId);if(!ev||!await oscConfirm("Hoàn tác lượt check-in này?"))return;try{await eventCheckinApi({action:"undo",eventId:ev.id,checkinId});await loadEventStudentQrCheckins(ev.id,{silent:true});refreshEventQrSummaryBadges({force:true}).catch(()=>{});await logAudit({action:"event-qr-checkin-undo",module:"attendance",entityType:"eventQrCheckin",entityId:checkinId,summary:`Hoàn tác QR check-in ${ev.title}`,semesterKey:ev.semester});toast("Đã hoàn tác check-in")}catch(e){oscAlert("Không hoàn tác được check-in: "+(e?.message||e))}}
+function exportEventStudentQrCheckins(){const ev=eventFor(eventStudentQrEventId),rows=filteredEventQrRows();if(!ev||!rows.length)return oscAlert("Không có dữ liệu theo bộ lọc để xuất.");const data=rows.map((r,i)=>({"STT":i+1,"Họ và tên":r.memberName||"","MSSV":r.mssv||"","Mã vé":r.ticketCode||"","Hạng vé":r.ticketType||"","Ghế":r.seat||"","Đối tượng":r.attendeeType==="ticket"?"Vé Ticket Studio":r.attendeeType==="external"?"Ngoài CLB":"Thành viên CLB","Đăng ký":r.registrationStatus==="ticket"?"Vé hợp lệ":r.registrationStatus==="registered"?"Có đăng ký":"Chưa đăng ký","Trạng thái":r.checkinStatus==="approved"?"Đã check-in":r.checkinStatus==="pending_admin"?"Chờ Admin":"Đã từ chối","Thời gian":eventQrCheckinTimeLabel(r.checkedInAt),"Phương thức":r.method==="ticket_qr"?"QR vé":r.method==="manual_mssv"?"Nhập MSSV":r.method==="public_scanner"?"Link ngoài BCN":"QR trường","Điểm quét":r.checkedInByName||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"QR CHECKIN");XLSX.writeFile(wb,`QR_Checkin_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`)}
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&eventStudentQrEventId&&(eventStudentQrScanner||eventStudentQrNativeStream))stopEventStudentQrScanner({silent:true,keepWatch:true}).catch(()=>{})});
 
 // ===== V78 — Member QR portal & delegated event scanner links =====
@@ -7406,8 +7408,8 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden&&eventStude
 function memberQrPortalUrl(semKey=semester){try{const u=new URL("/ma-thanh-vien",location.origin);u.searchParams.set("semester",semKey);return u.href}catch{return `ma-thanh-vien.html?semester=${encodeURIComponent(semKey)}`}}
 async function memberQrAdminApi(body){const token=await currentFirebaseUser.getIdToken();const res=await fetchAccountApi("/api/member-qr",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)},15000);const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||`API QR thành viên trả về lỗi ${res.status}`);e.code=data.code||"";e.status=res.status;throw e}return data}
 async function renderMemberQrAdmin(){if(!canEditClub())return;const link=$("#memberQrPortalLink");if(link)link.value=memberQrPortalUrl(semester);try{const d=await memberQrAdminApi({action:"admin-state",semester});const open=d.open===true,locked=d.locked===true,rows=Array.isArray(d.cards)?d.cards:[];const st=$("#memberQrPortalState");if(st)st.innerHTML=`Cổng: <b>${open?"Đang mở":"Đang đóng"}</b> • ${esc(d.semesterName||sem().name||semester)}${locked?" • Học kỳ đang khóa":""}`;if($("#memberQrOpenBtn"))$("#memberQrOpenBtn").disabled=open||locked;if($("#memberQrCloseBtn"))$("#memberQrCloseBtn").disabled=!d.portalOpenRaw;const active=rows.filter(r=>r.active!==false).length;const sum=$("#memberQrAdminSummary");if(sum)sum.innerHTML=`<span>${rows.length} mã liên quan học kỳ</span><span>${active} đang hoạt động</span><span>${rows.length-active} đã vô hiệu hóa</span>`;const root=$("#memberQrAdminList");if(root)root.innerHTML=rows.length?rows.map(r=>`<div class="member-qr-row"><div><b>${esc(r.mssv||r.id)}</b><small>${r.active===false?"QR đang bị vô hiệu hóa":"QR có thể dùng để check-in"}${r.issuedSemester?` • cấp gần nhất ${esc(r.issuedSemester)}`:""}</small></div><div style="display:flex;gap:7px;align-items:center"><span class="member-qr-state ${r.active===false?"off":""}">${r.active===false?"Đã khóa":"Hoạt động"}</span><button class="${r.active===false?"primary":"danger"}" onclick="setMemberQrCardActive('${esc(r.id)}',${r.active===false?"true":"false"})">${r.active===false?"Kích hoạt lại":"Vô hiệu hóa"}</button></div></div>`).join(""):`<div class="empty">Chưa có thành viên nào nhận QR trong phạm vi học kỳ này.</div>`}catch(e){console.error("member QR admin",e);const st=$("#memberQrPortalState");if(st)st.innerHTML=`<b style="color:#9b2d44">API QR chưa sẵn sàng</b> • ${esc(e.message||e)}`;const root=$("#memberQrAdminList");if(root)root.innerHTML=`<div class="empty">Không tải được hệ thống QR. Hãy bảo đảm file <b>/api/member-qr.js</b> đã được deploy trên Vercel.</div>`}}
-async function setMemberQrPortalOpen(open){if(!canEditClub())return;try{await memberQrAdminApi({action:"admin-set-open",semester,open:open===true});toast(open?"Đã mở cổng cấp QR thành viên":"Đã đóng cổng cấp QR thành viên");await renderMemberQrAdmin()}catch(e){alert("Không cập nhật được cổng QR: "+(e.message||e))}}
-async function setMemberQrCardActive(cardId,active){if(!canEditClub())return;if(!confirm(active?"Kích hoạt lại QR MSSV này?":"Vô hiệu hóa QR MSSV này? Mọi QR chứa cùng MSSV sẽ bị từ chối khi check-in cho đến khi kích hoạt lại."))return;try{await memberQrAdminApi({action:"admin-set-card-active",cardId,active:active===true});toast(active?"Đã kích hoạt lại QR":"Đã vô hiệu hóa QR");await renderMemberQrAdmin()}catch(e){alert("Không cập nhật được QR: "+(e.message||e))}}
+async function setMemberQrPortalOpen(open){if(!canEditClub())return;try{await memberQrAdminApi({action:"admin-set-open",semester,open:open===true});toast(open?"Đã mở cổng cấp QR thành viên":"Đã đóng cổng cấp QR thành viên");await renderMemberQrAdmin()}catch(e){oscAlert("Không cập nhật được cổng QR: "+(e.message||e))}}
+async function setMemberQrCardActive(cardId,active){if(!canEditClub())return;if(!await oscConfirm(active?"Kích hoạt lại QR MSSV này?":"Vô hiệu hóa QR MSSV này? Mọi QR chứa cùng MSSV sẽ bị từ chối khi check-in cho đến khi kích hoạt lại."))return;try{await memberQrAdminApi({action:"admin-set-card-active",cardId,active:active===true});toast(active?"Đã kích hoạt lại QR":"Đã vô hiệu hóa QR");await renderMemberQrAdmin()}catch(e){oscAlert("Không cập nhật được QR: "+(e.message||e))}}
 function eventScannerPublicUrl(token){try{const u=new URL("/check-in-su-kien",location.origin);u.hash=`token=${encodeURIComponent(token)}`;return u.href}catch{return `check-in-su-kien.html#token=${encodeURIComponent(token)}`}}
 async function loadEventScannerLinks(eventId){const d=await eventCheckinApi({action:"admin-links",eventId});return Array.isArray(d.rows)?d.rows:[]}
 function eventStaffPublicUrl(token){try{const u=new URL("/staff-checkin",location.origin);u.hash=`token=${encodeURIComponent(token)}`;return u.href}catch{return `staff-checkin.html#token=${encodeURIComponent(token)}`}}
@@ -7415,15 +7417,15 @@ async function loadEventStaffLinks(eventId){const d=await eventCheckinApi({actio
 const EVENT_STAFF_FIELD_OPTIONS=[["mssv","MSSV"],["ticketCode","Mã vé"],["ticketType","Hạng vé"],["seat","Ghế"],["registrationStatus","Trạng thái đăng ký"]];
 function eventStaffFieldsHtml(selected=[]){const set=new Set(selected||[]);return EVENT_STAFF_FIELD_OPTIONS.map(([v,l])=>`<label style="display:flex;align-items:center;gap:6px;font-size:9px"><input type="checkbox" name="eventStaffField" value="${v}" ${set.has(v)?"checked":""} style="width:15px;height:15px;min-height:0"> ${l}</label>`).join("")}
 function readEventStaffFields(){return [...document.querySelectorAll('input[name="eventStaffField"]:checked')].map(x=>x.value)}
-async function openEventStaffLinkManager(eventId){if(!canEditClub())return alert("Chỉ Admin/Super Admin được quản lý link tra cứu Staff.");const ev=eventFor(eventId);if(!ev)return;try{const rows=await loadEventStaffLinks(eventId),active=rows.find(x=>x.active===true)||null,current=active||rows[0]||null,url=current?eventStaffPublicUrl(current.id):"",fields=current?.fields||["name","mssv","ticketCode"];$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Link tra cứu & check-in cho Staff</h2><div class="small-help">${esc(ev.title)} • Dùng khi QR không quét được.</div></div><button onclick="closeModal()">×</button></div><div class="v76-privacy-note"><b>Nguyên tắc riêng tư:</b> Staff không được xem danh sách người tham dự. Mỗi lần phải nhập chính xác mã vé hoặc MSSV. <b>Họ tên luôn hiển thị</b>; các trường khác do Admin chọn bên dưới. Email và SĐT không được phép công khai qua link này.</div><div class="scanner-link-box" style="margin-top:12px">${current?`<div class="scanner-link-current"><b>${current.active===true?"Link Staff đang mở":"Link Staff đang đóng"}</b><small>${esc(url)}</small><div style="display:grid;gap:9px;margin-top:11px"><label style="display:grid;gap:5px;font-size:9px;font-weight:800">Tên link<input id="eventStaffLabelInput" maxlength="80" value="${esc(current.label||"Tra cứu Staff")}" placeholder="Ví dụ: Staff Cổng A"></label><div><b style="font-size:9px">Thông tin Staff được xem</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:7px"><label style="display:flex;align-items:center;gap:6px;font-size:9px"><input type="checkbox" checked disabled style="width:15px;height:15px;min-height:0"> Họ tên</label>${eventStaffFieldsHtml(fields)}</div></div></div></div><div class="scanner-link-actions"><button class="secondary" onclick="copyText('${esc(url)}')">Sao chép link</button><button class="secondary" onclick="window.open('${esc(url)}','_blank','noopener,noreferrer')">Mở trang Staff</button><button class="secondary" onclick="saveEventStaffLink('${esc(current.id)}','${esc(eventId)}')">Lưu cài đặt</button>${current.active===true?`<button class="danger" onclick="setEventStaffLinkActive('${esc(current.id)}','${esc(eventId)}',false)">Đóng link</button>`:`<button class="primary" onclick="setEventStaffLinkActive('${esc(current.id)}','${esc(eventId)}',true)">Mở lại link</button>`}<button class="secondary" onclick="createEventStaffLink('${esc(eventId)}')">Tạo link mới</button></div>`:`<div class="scanner-link-current"><b>Chưa có link tra cứu Staff</b><small>Tạo link dự phòng để Staff nhập mã vé/MSSV rồi xác nhận check-in.</small><div style="margin-top:10px"><b style="font-size:9px">Thông tin mặc định:</b> Họ tên + MSSV + Mã vé</div></div><div class="scanner-link-actions"><button class="primary" onclick="createEventStaffLink('${esc(eventId)}')">Tạo link Staff</button></div>`}</div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState()}catch(e){alert("Không tải được link Staff: "+(e.message||e))}}
-async function createEventStaffLink(eventId){if(!canEditClub())return;const label=(prompt("Đặt tên link Staff:","Staff Cổng A")||"").trim();if(!label)return;try{await eventCheckinApi({action:"admin-create-staff-link",eventId,label,fields:["mssv","ticketCode"]});toast("Đã tạo link tra cứu Staff");await openEventStaffLinkManager(eventId)}catch(e){alert("Không tạo được link Staff: "+(e.message||e))}}
-async function saveEventStaffLink(token,eventId){if(!canEditClub())return;const label=($("#eventStaffLabelInput")?.value||"").trim();if(!label)return alert("Hãy nhập tên link Staff.");try{await eventCheckinApi({action:"admin-update-staff-link",token,label,fields:readEventStaffFields()});toast("Đã lưu cài đặt link Staff");await openEventStaffLinkManager(eventId)}catch(e){alert("Không lưu được link Staff: "+(e.message||e))}}
-async function setEventStaffLinkActive(token,eventId,active){if(!canEditClub())return;if(!confirm(`${active?"Mở lại":"Đóng"} link Staff này?`))return;try{await eventCheckinApi({action:"admin-update-staff-link",token,active:active===true});toast(active?"Đã mở link Staff":"Đã đóng link Staff");await openEventStaffLinkManager(eventId)}catch(e){alert("Không cập nhật được link Staff: "+(e.message||e))}}
+async function openEventStaffLinkManager(eventId){if(!canEditClub())return oscAlert("Chỉ Admin/Super Admin được quản lý link tra cứu Staff.");const ev=eventFor(eventId);if(!ev)return;try{const rows=await loadEventStaffLinks(eventId),active=rows.find(x=>x.active===true)||null,current=active||rows[0]||null,url=current?eventStaffPublicUrl(current.id):"",fields=current?.fields||["name","mssv","ticketCode"];$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(820px,100%)"><div class="modal-head"><div><h2>Link tra cứu & check-in cho Staff</h2><div class="small-help">${esc(ev.title)} • Dùng khi QR không quét được.</div></div><button onclick="closeModal()">×</button></div><div class="v76-privacy-note"><b>Nguyên tắc riêng tư:</b> Staff không được xem danh sách người tham dự. Mỗi lần phải nhập chính xác mã vé hoặc MSSV. <b>Họ tên luôn hiển thị</b>; các trường khác do Admin chọn bên dưới. Email và SĐT không được phép công khai qua link này.</div><div class="scanner-link-box" style="margin-top:12px">${current?`<div class="scanner-link-current"><b>${current.active===true?"Link Staff đang mở":"Link Staff đang đóng"}</b><small>${esc(url)}</small><div style="display:grid;gap:9px;margin-top:11px"><label style="display:grid;gap:5px;font-size:9px;font-weight:800">Tên link<input id="eventStaffLabelInput" maxlength="80" value="${esc(current.label||"Tra cứu Staff")}" placeholder="Ví dụ: Staff Cổng A"></label><div><b style="font-size:9px">Thông tin Staff được xem</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:7px"><label style="display:flex;align-items:center;gap:6px;font-size:9px"><input type="checkbox" checked disabled style="width:15px;height:15px;min-height:0"> Họ tên</label>${eventStaffFieldsHtml(fields)}</div></div></div></div><div class="scanner-link-actions"><button class="secondary" onclick="copyText('${esc(url)}')">Sao chép link</button><button class="secondary" onclick="window.open('${esc(url)}','_blank','noopener,noreferrer')">Mở trang Staff</button><button class="secondary" onclick="saveEventStaffLink('${esc(current.id)}','${esc(eventId)}')">Lưu cài đặt</button>${current.active===true?`<button class="danger" onclick="setEventStaffLinkActive('${esc(current.id)}','${esc(eventId)}',false)">Đóng link</button>`:`<button class="primary" onclick="setEventStaffLinkActive('${esc(current.id)}','${esc(eventId)}',true)">Mở lại link</button>`}<button class="secondary" onclick="createEventStaffLink('${esc(eventId)}')">Tạo link mới</button></div>`:`<div class="scanner-link-current"><b>Chưa có link tra cứu Staff</b><small>Tạo link dự phòng để Staff nhập mã vé/MSSV rồi xác nhận check-in.</small><div style="margin-top:10px"><b style="font-size:9px">Thông tin mặc định:</b> Họ tên + MSSV + Mã vé</div></div><div class="scanner-link-actions"><button class="primary" onclick="createEventStaffLink('${esc(eventId)}')">Tạo link Staff</button></div>`}</div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState()}catch(e){oscAlert("Không tải được link Staff: "+(e.message||e))}}
+async function createEventStaffLink(eventId){if(!canEditClub())return;const label=(await oscPrompt("Đặt tên link Staff:","Staff Cổng A")||"").trim();if(!label)return;try{await eventCheckinApi({action:"admin-create-staff-link",eventId,label,fields:["mssv","ticketCode"]});toast("Đã tạo link tra cứu Staff");await openEventStaffLinkManager(eventId)}catch(e){oscAlert("Không tạo được link Staff: "+(e.message||e))}}
+async function saveEventStaffLink(token,eventId){if(!canEditClub())return;const label=($("#eventStaffLabelInput")?.value||"").trim();if(!label)return oscAlert("Hãy nhập tên link Staff.");try{await eventCheckinApi({action:"admin-update-staff-link",token,label,fields:readEventStaffFields()});toast("Đã lưu cài đặt link Staff");await openEventStaffLinkManager(eventId)}catch(e){oscAlert("Không lưu được link Staff: "+(e.message||e))}}
+async function setEventStaffLinkActive(token,eventId,active){if(!canEditClub())return;if(!await oscConfirm(`${active?"Mở lại":"Đóng"} link Staff này?`))return;try{await eventCheckinApi({action:"admin-update-staff-link",token,active:active===true});toast(active?"Đã mở link Staff":"Đã đóng link Staff");await openEventStaffLinkManager(eventId)}catch(e){oscAlert("Không cập nhật được link Staff: "+(e.message||e))}}
 
-async function openEventScannerLinkManager(eventId){if(!canEditClub())return alert("Chỉ Admin/Super Admin được quản lý link check-in ngoài BCN.");const ev=eventFor(eventId);if(!ev)return;try{const rows=await loadEventScannerLinks(eventId),active=rows.find(x=>x.active===true)||null,current=active||rows[0]||null,url=current?eventScannerPublicUrl(current.id):"",registrationState=ev.isOpen!==false?"Cổng đăng ký đang mở":"Cổng đăng ký đang đóng";$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(860px,100%)"><div class="modal-head"><div><h2>Link check-in ngoài BCN</h2><div class="small-help">${esc(ev.title)} • ${registrationState}. Link quét và cổng đăng ký hoạt động độc lập.</div></div><button onclick="closeModal()">×</button></div><div class="v76-privacy-note"><b>Máy quét dùng chung:</b> link này nhận cả QR thành viên và QR vé Ticket Studio của đúng sự kiện. Người quét chỉ thấy <b>họ tên + MSSV hoặc mã vé</b> của mã vừa quét; không hiển thị hạng vé, ghế, email, SĐT, danh sách đăng ký hoặc toàn bộ danh sách thành viên.</div><div class="scanner-link-box" style="margin-top:12px">${current?`<div class="scanner-link-current"><b>${current.active===true?"Link check-in đang mở":"Link check-in đang tạm đóng"}</b><small>${esc(url)}</small><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"><input id="eventScannerLabelInput" maxlength="80" value="${esc(current.label||"Cổng check-in")}" style="flex:1;min-width:220px" placeholder="Ví dụ: Cổng A / Bàn check-in 1"><button class="secondary" onclick="renameEventScannerLink('${esc(current.id)}','${esc(eventId)}')">Lưu tên điểm quét</button></div></div><div class="scanner-link-actions"><button class="secondary" onclick="copyText('${esc(url)}')">Sao chép link</button><button class="secondary" onclick="window.open('${esc(url)}','_blank','noopener,noreferrer')">Mở trang quét</button>${current.active===true?`<button class="danger" onclick="setEventScannerLinkActive('${esc(current.id)}','${esc(eventId)}',false)">Tạm đóng link</button>`:`<button class="primary" onclick="setEventScannerLinkActive('${esc(current.id)}','${esc(eventId)}',true)">Mở lại link</button>`}<button class="secondary" onclick="createEventScannerLink('${esc(eventId)}',true)">Tạo link mới</button></div>`:`<div class="scanner-link-current"><b>Chưa có link check-in</b><small>Tạo link riêng cho người hỗ trợ quét QR tại cổng. Có thể đặt tên như Cổng A, Cổng B hoặc Bàn 1.</small></div><div class="scanner-link-actions"><button class="primary" onclick="createEventScannerLink('${esc(eventId)}',false)">Tạo link check-in</button></div>`}</div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState()}catch(e){alert("Không tải được link check-in: "+(e.message||e)+"\n\nKiểm tra /api/event-checkin.js đã được deploy trên Vercel.")}}
-async function createEventScannerLink(eventId,replaceOld=false){if(!canEditClub())return;const label=(prompt("Đặt tên điểm quét (ví dụ: Cổng A, Bàn check-in 1):","Cổng check-in")||"").trim();if(!label)return;try{await eventCheckinApi({action:"admin-create-link",eventId,replaceOld:replaceOld===true,label});toast("Đã tạo link check-in ngoài BCN");await openEventScannerLinkManager(eventId)}catch(e){alert("Không tạo được link: "+(e.message||e))}}
-async function renameEventScannerLink(token,eventId){if(!canEditClub())return;const input=$("#eventScannerLabelInput"),label=(input?.value||"").trim();if(!label)return alert("Hãy nhập tên điểm quét.");try{await eventCheckinApi({action:"admin-set-link-label",token,label});toast("Đã lưu tên điểm quét");await openEventScannerLinkManager(eventId)}catch(e){alert("Không đổi được tên điểm quét: "+(e.message||e))}}
-async function setEventScannerLinkActive(token,eventId,active){if(!canEditClub())return;const verb=active?"mở lại":"tạm đóng";if(!confirm(`${active?"Mở lại":"Tạm đóng"} link check-in này?`))return;try{await eventCheckinApi({action:"admin-set-link-active",token,active:active===true});toast(`Đã ${verb} link check-in`);await openEventScannerLinkManager(eventId)}catch(e){alert(`Không ${verb} được link: `+(e.message||e))}}
+async function openEventScannerLinkManager(eventId){if(!canEditClub())return oscAlert("Chỉ Admin/Super Admin được quản lý link check-in ngoài BCN.");const ev=eventFor(eventId);if(!ev)return;try{const rows=await loadEventScannerLinks(eventId),active=rows.find(x=>x.active===true)||null,current=active||rows[0]||null,url=current?eventScannerPublicUrl(current.id):"",registrationState=ev.isOpen!==false?"Cổng đăng ký đang mở":"Cổng đăng ký đang đóng";$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(860px,100%)"><div class="modal-head"><div><h2>Link check-in ngoài BCN</h2><div class="small-help">${esc(ev.title)} • ${registrationState}. Link quét và cổng đăng ký hoạt động độc lập.</div></div><button onclick="closeModal()">×</button></div><div class="v76-privacy-note"><b>Máy quét dùng chung:</b> link này nhận cả QR thành viên và QR vé Ticket Studio của đúng sự kiện. Người quét chỉ thấy <b>họ tên + MSSV hoặc mã vé</b> của mã vừa quét; không hiển thị hạng vé, ghế, email, SĐT, danh sách đăng ký hoặc toàn bộ danh sách thành viên.</div><div class="scanner-link-box" style="margin-top:12px">${current?`<div class="scanner-link-current"><b>${current.active===true?"Link check-in đang mở":"Link check-in đang tạm đóng"}</b><small>${esc(url)}</small><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"><input id="eventScannerLabelInput" maxlength="80" value="${esc(current.label||"Cổng check-in")}" style="flex:1;min-width:220px" placeholder="Ví dụ: Cổng A / Bàn check-in 1"><button class="secondary" onclick="renameEventScannerLink('${esc(current.id)}','${esc(eventId)}')">Lưu tên điểm quét</button></div></div><div class="scanner-link-actions"><button class="secondary" onclick="copyText('${esc(url)}')">Sao chép link</button><button class="secondary" onclick="window.open('${esc(url)}','_blank','noopener,noreferrer')">Mở trang quét</button>${current.active===true?`<button class="danger" onclick="setEventScannerLinkActive('${esc(current.id)}','${esc(eventId)}',false)">Tạm đóng link</button>`:`<button class="primary" onclick="setEventScannerLinkActive('${esc(current.id)}','${esc(eventId)}',true)">Mở lại link</button>`}<button class="secondary" onclick="createEventScannerLink('${esc(eventId)}',true)">Tạo link mới</button></div>`:`<div class="scanner-link-current"><b>Chưa có link check-in</b><small>Tạo link riêng cho người hỗ trợ quét QR tại cổng. Có thể đặt tên như Cổng A, Cổng B hoặc Bàn 1.</small></div><div class="scanner-link-actions"><button class="primary" onclick="createEventScannerLink('${esc(eventId)}',false)">Tạo link check-in</button></div>`}</div></div></div>`;$("#modalWrap").classList.remove("hidden");syncModalBodyState()}catch(e){oscAlert("Không tải được link check-in: "+(e.message||e)+"\n\nKiểm tra /api/event-checkin.js đã được deploy trên Vercel.")}}
+async function createEventScannerLink(eventId,replaceOld=false){if(!canEditClub())return;const label=(await oscPrompt("Đặt tên điểm quét (ví dụ: Cổng A, Bàn check-in 1):","Cổng check-in")||"").trim();if(!label)return;try{await eventCheckinApi({action:"admin-create-link",eventId,replaceOld:replaceOld===true,label});toast("Đã tạo link check-in ngoài BCN");await openEventScannerLinkManager(eventId)}catch(e){oscAlert("Không tạo được link: "+(e.message||e))}}
+async function renameEventScannerLink(token,eventId){if(!canEditClub())return;const input=$("#eventScannerLabelInput"),label=(input?.value||"").trim();if(!label)return oscAlert("Hãy nhập tên điểm quét.");try{await eventCheckinApi({action:"admin-set-link-label",token,label});toast("Đã lưu tên điểm quét");await openEventScannerLinkManager(eventId)}catch(e){oscAlert("Không đổi được tên điểm quét: "+(e.message||e))}}
+async function setEventScannerLinkActive(token,eventId,active){if(!canEditClub())return;const verb=active?"mở lại":"tạm đóng";if(!await oscConfirm(`${active?"Mở lại":"Tạm đóng"} link check-in này?`))return;try{await eventCheckinApi({action:"admin-set-link-active",token,active:active===true});toast(`Đã ${verb} link check-in`);await openEventScannerLinkManager(eventId)}catch(e){oscAlert(`Không ${verb} được link: `+(e.message||e))}}
 async function revokeEventScannerLink(token,eventId){return setEventScannerLinkActive(token,eventId,false)}
 
 $("#eventSearch").oninput=renderEvents;
@@ -7545,11 +7547,11 @@ async function downloadEventQr(eventId){
   try{
     const ev=eventFor(eventId);if(!ev)return;const png=await qrCanvasForDownload(eventLink(ev),900),a=document.createElement("a");
     a.href=png;a.download=`QR_Su_kien_${pdfSafeFileName(ev.title)}_${ev.semester}.png`;document.body.appendChild(a);a.click();a.remove();toast("Đã tải QR sự kiện");
-  }catch(e){console.error("downloadEventQr",e);alert("Không tải được QR sự kiện: "+(e.message||e))}
+  }catch(e){console.error("downloadEventQr",e);oscAlert("Không tải được QR sự kiện: "+(e.message||e))}
 }
 
 async function copyText(text){
-  try{await navigator.clipboard.writeText(text);toast("Đã sao chép")}catch{prompt("Sao chép:",text)}
+  try{await navigator.clipboard.writeText(text);toast("Đã sao chép")}catch{await oscPrompt("Sao chép:",text)}
 }
 
 
@@ -7673,7 +7675,7 @@ async function repairEventFields(eventId,{silent=false,force=false}={}){
     return true;
   }catch(e){
     console.error("repairEventFields",e);
-    if(!silent)alert("Không đồng bộ được trường sự kiện: "+(e.message||e));
+    if(!silent)oscAlert("Không đồng bộ được trường sự kiện: "+(e.message||e));
     return false;
   }
 }
@@ -7712,15 +7714,15 @@ function buildContinuationEventTemplate(){
 function continuationTargetReady({alertIfMissing=false}={}){
   const target=nextMainSemesterCode(semester);
   if(!target){
-    if(alertIfMissing)alert("Mã học kỳ hiện tại không theo định dạng SP/SU/FA.");
+    if(alertIfMissing)oscAlert("Mã học kỳ hiện tại không theo định dạng SP/SU/FA.");
     return false;
   }
   if(!state.semesters?.[target]){
-    if(alertIfMissing)alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi mở form đồng hành.`);
+    if(alertIfMissing)oscAlert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi mở form đồng hành.`);
     return false;
   }
   if(semesterLocked(target)){
-    if(alertIfMissing)alert(`${state.semesters[target].name||target} đang bị khóa. Hãy mở khóa kỳ tiếp theo trước.`);
+    if(alertIfMissing)oscAlert(`${state.semesters[target].name||target} đang bị khóa. Hãy mở khóa kỳ tiếp theo trước.`);
     return false;
   }
   return true;
@@ -7753,7 +7755,7 @@ async function openEventBuilder(eventId=""){
   eventBuilderId=eventId;
   let ev=eventId?eventFor(eventId):null;
   if(eventId&&ev&&ev.semester!==semester){
-    alert("Sự kiện này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước khi chỉnh sửa.");
+    oscAlert("Sự kiện này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước khi chỉnh sửa.");
     return;
   }
   if(eventId){
@@ -7854,7 +7856,7 @@ async function chooseEventQuestionImage(index,input){
     const data=await compressEventImage(file);
     eventBuilderFields[index].imageData=data;
     renderEventFieldEditor();
-  }catch(e){alert(e.message||e)}
+  }catch(e){oscAlert(e.message||e)}
 }
 function removeEventQuestionImage(index){
   eventBuilderFields[index].imageData="";
@@ -8118,8 +8120,8 @@ function addEventField(){
   eventBuilderFields.push(normalizeEventField({label:"Câu hỏi mới",type:"text",required:false,options:[]}));
   renderEventFieldEditor();
 }
-function restoreEventBuilderDefaultFields(){
-  if(eventBuilderFields.length&&!confirm("Thay các trường hiện tại bằng bộ trường mặc định?"))return;
+async function restoreEventBuilderDefaultFields(){
+  if(eventBuilderFields.length&&!await oscConfirm("Thay các trường hiện tại bằng bộ trường mặc định?"))return;
   const action=$("#eventResultAction")?.value||"none";
   eventBuilderFields=normalizeEventFields([],{
     title:$("#eventTitle")?.value||"",
@@ -8347,52 +8349,52 @@ async function saveEventBuilder(){
   if(!canEditModule("events"))return;
   syncEventBuilderEditorFromDom();
   const title=$("#eventTitle").value.trim();
-  if(!title)return alert("Vui lòng nhập tiêu đề sự kiện.");
+  if(!title)return oscAlert("Vui lòng nhập tiêu đề sự kiện.");
 
   eventBuilderFields=normalizeEventFields(eventBuilderFields,{
     title,
     resultAction:$("#eventResultAction")?.value||"none"
   });
-  if(!eventBuilderFields.length)return alert("Cần ít nhất một trường.");
-  if(!eventBuilderFields.some(f=>!["image","content","section"].includes(f.type)))return alert("Form cần ít nhất một câu hỏi nhận câu trả lời.");
-  if(eventBuilderFields.some(f=>!["image","content","section"].includes(f.type)&&!String(f.label||"").trim()))return alert("Có câu hỏi chưa có nội dung.");
-  if(eventBuilderFields.some(f=>optionType(f.type)&&(f.options||[]).length<2))return alert("Câu trắc nghiệm / hộp kiểm / danh sách chọn cần ít nhất 2 lựa chọn.");
-  if(eventBuilderFields.some(f=>f.type==="content"&&!String(f.content||"").trim()))return alert("Có khối văn bản / ghi chú đang trống.");
-  if(eventBuilderFields.some(f=>f.type==="image"&&!f.imageData))return alert("Có khối hình ảnh chưa được upload ảnh.");
+  if(!eventBuilderFields.length)return oscAlert("Cần ít nhất một trường.");
+  if(!eventBuilderFields.some(f=>!["image","content","section"].includes(f.type)))return oscAlert("Form cần ít nhất một câu hỏi nhận câu trả lời.");
+  if(eventBuilderFields.some(f=>!["image","content","section"].includes(f.type)&&!String(f.label||"").trim()))return oscAlert("Có câu hỏi chưa có nội dung.");
+  if(eventBuilderFields.some(f=>optionType(f.type)&&(f.options||[]).length<2))return oscAlert("Câu trắc nghiệm / hộp kiểm / danh sách chọn cần ít nhất 2 lựa chọn.");
+  if(eventBuilderFields.some(f=>f.type==="content"&&!String(f.content||"").trim()))return oscAlert("Có khối văn bản / ghi chú đang trống.");
+  if(eventBuilderFields.some(f=>f.type==="image"&&!f.imageData))return oscAlert("Có khối hình ảnh chưa được upload ảnh.");
   const approximateSize=JSON.stringify(eventBuilderFields).length;
-  if(approximateSize>850000)return alert("Form có quá nhiều/ảnh quá lớn. Hãy giảm số ảnh hoặc dùng ảnh nhỏ hơn.");
+  if(approximateSize>850000)return oscAlert("Form có quá nhiều/ảnh quá lớn. Hãy giảm số ảnh hoặc dùng ảnh nhỏ hơn.");
 
   const action=$("#eventResultAction").value;
   const capacityRaw=String($("#eventCapacity")?.value||"").trim(),capacity=capacityRaw===""?0:Number(capacityRaw);
-  if(!Number.isInteger(capacity)||capacity<0||capacity>100000)return alert("Giới hạn đăng ký phải là số nguyên từ 0 đến 100.000.");
+  if(!Number.isInteger(capacity)||capacity<0||capacity>100000)return oscAlert("Giới hạn đăng ký phải là số nguyên từ 0 đến 100.000.");
   const eventPointsRaw=String($("#eventPoints")?.value||"").trim();
   const eventPoints=eventPointsRaw===""?0:Number(eventPointsRaw);
-  if(!Number.isFinite(eventPoints)||eventPoints<0||eventPoints>1000)return alert("Điểm sự kiện phải từ 0 đến 1000.");
+  if(!Number.isFinite(eventPoints)||eventPoints<0||eventPoints>1000)return oscAlert("Điểm sự kiện phải từ 0 đến 1000.");
   if(action.startsWith("fundPaid")&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
+    return oscAlert("Để xử lý đóng quỹ, form cần có một trường loại MSSV.");
   }
   if(eventPoints>0&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Muốn cộng điểm từ sự kiện, form cần có một trường loại MSSV.");
+    return oscAlert("Muốn cộng điểm từ sự kiện, form cần có một trường loại MSSV.");
   }
   if($("#eventQrCheckinEnabled")?.value==="1"&&!eventBuilderFields.some(f=>f.type==="mssv")){
-    return alert("Bật QR check-in cần có một trường loại MSSV để hệ thống đối chiếu người đã đăng ký trên sự kiện.");
+    return oscAlert("Bật QR check-in cần có một trường loại MSSV để hệ thống đối chiếu người đã đăng ký trên sự kiện.");
   }
   if(eventBuilderSpecialType==="continuation"){
     if(!eventBuilderTargetSemester||!state.semesters?.[eventBuilderTargetSemester]){
-      return alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi lưu form đồng hành.`);
+      return oscAlert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(semester)}) trước khi lưu form đồng hành.`);
     }
-    if(semesterLocked(eventBuilderTargetSemester))return alert("Học kỳ tiếp theo đang bị khóa.");
-    if(!eventBuilderFields.some(f=>f.type==="mssv"))return alert("Form đồng hành bắt buộc phải có trường MSSV.");
+    if(semesterLocked(eventBuilderTargetSemester))return oscAlert("Học kỳ tiếp theo đang bị khóa.");
+    if(!eventBuilderFields.some(f=>f.type==="mssv"))return oscAlert("Form đồng hành bắt buộc phải có trường MSSV.");
     if(!eventBuilderFields.some(f=>f.systemKey==="continueNextSemester")){
-      return alert("Form đồng hành đang thiếu câu hỏi xác nhận tiếp tục đồng hành.");
+      return oscAlert("Form đồng hành đang thiếu câu hỏi xác nhận tiếp tục đồng hành.");
     }
   }
 
   const openAtRaw=$("#eventOpenAt")?.value||"",closeAtRaw=$("#eventCloseAt")?.value||"";
   const openAt=openAtRaw?new Date(openAtRaw):null,closeAt=closeAtRaw?new Date(closeAtRaw):null;
-  if(openAt&&Number.isNaN(openAt.getTime()))return alert("Thời gian mở không hợp lệ.");
-  if(closeAt&&Number.isNaN(closeAt.getTime()))return alert("Thời gian đóng không hợp lệ.");
-  if(openAt&&closeAt&&closeAt<=openAt)return alert("Thời gian đóng phải sau thời gian mở.");
+  if(openAt&&Number.isNaN(openAt.getTime()))return oscAlert("Thời gian mở không hợp lệ.");
+  if(closeAt&&Number.isNaN(closeAt.getTime()))return oscAlert("Thời gian đóng không hợp lệ.");
+  if(openAt&&closeAt&&closeAt<=openAt)return oscAlert("Thời gian đóng phải sau thời gian mở.");
   const eventId=eventBuilderId||( "event_"+uid() );
   const lockedSemester=eventBuilderId?(eventFor(eventBuilderId)?.semester||semester):semester;
   const fullFields=structuredClone(eventBuilderFields);
@@ -8402,17 +8404,17 @@ async function saveEventBuilder(){
     return x;
   });
   const seating=window.seatStudioRead?seatStudioRead():{enabled:false,title:"Chọn ghế",stageLabel:"SÂN KHẤU",canvasHeight:640,sections:[]};
-  if(seating.enabled&&!Array.isArray(seating.sections))return alert("Cấu hình sơ đồ ghế không hợp lệ.");
-  if(seating.enabled&&!seating.sections.length)return alert("Đã bật chọn ghế nhưng chưa có khu ghế nào.");
+  if(seating.enabled&&!Array.isArray(seating.sections))return oscAlert("Cấu hình sơ đồ ghế không hợp lệ.");
+  if(seating.enabled&&!seating.sections.length)return oscAlert("Đã bật chọn ghế nhưng chưa có khu ghế nào.");
   const seatCount=(seating.sections||[]).reduce((n,x)=>n+(Array.isArray(x.rowSpecs)&&x.rowSpecs.length?x.rowSpecs.reduce((a,r)=>a+Number(r.seats||0),0):(Array.isArray(x.rows)?x.rows.length:0)*Number(x.seatsPerRow||0)),0);
-  if(seating.enabled&&seatCount>2500)return alert("Sơ đồ ghế tối đa 2.500 ghế.");
+  if(seating.enabled&&seatCount>2500)return oscAlert("Sơ đồ ghế tối đa 2.500 ghế.");
   if(eventBuilderId){
     const oldSeating=eventFor(eventBuilderId)?.seating||{enabled:false,title:"Chọn ghế",stageLabel:"SÂN KHẤU",canvasHeight:640,sections:[]};
     if(JSON.stringify(oldSeating)!==JSON.stringify(seating)){
       try{
         const seatState=await eventSeatingAdminApi({action:"admin-state",eventId:eventBuilderId});
-        if(Number(seatState.claimed||0)>0)return alert(`Sơ đồ đang có ${seatState.claimed} ghế đã được chọn. Để tránh trùng/mất ghế, hệ thống khóa thay đổi sơ đồ sau khi đã có người chọn. Hãy xử lý/giải phóng các ghế trước.`);
-      }catch(e){return alert("Không kiểm tra được trạng thái ghế nên chưa thể thay đổi sơ đồ: "+(e.message||e))}
+        if(Number(seatState.claimed||0)>0)return oscAlert(`Sơ đồ đang có ${seatState.claimed} ghế đã được chọn. Để tránh trùng/mất ghế, hệ thống khóa thay đổi sơ đồ sau khi đã có người chọn. Hãy xử lý/giải phóng các ghế trước.`);
+      }catch(e){return oscAlert("Không kiểm tra được trạng thái ghế nên chưa thể thay đổi sơ đồ: "+(e.message||e))}
     }
   }
   const linkedActivityId=String($("#eventLinkedActivity")?.value||"");
@@ -8479,7 +8481,7 @@ async function saveEventBuilder(){
     const msg=e?.code==="permission-denied"
       ?"Firestore từ chối quyền chỉnh sửa sự kiện. Hãy kiểm tra quyền Events của tài khoản và học kỳ có đang bị khóa hay không."
       :(e?.message||e);
-    alert("Không lưu được các trường sự kiện: "+msg);
+    oscAlert("Không lưu được các trường sự kiện: "+msg);
   }finally{
     if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=oldSaveText||"Lưu sự kiện"}
   }
@@ -8490,8 +8492,8 @@ async function toggleEventOpen(id){
   const opening=!ev.isOpen;
   if(opening&&ev.specialType==="continuation"){
     const target=ev.targetSemester||nextMainSemesterCode(ev.semester);
-    if(!target||!state.semesters?.[target])return alert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(ev.semester)}) trước khi mở form đồng hành.`);
-    if(semesterLocked(target))return alert(`${state.semesters[target].name||target} đang bị khóa.`);
+    if(!target||!state.semesters?.[target])return oscAlert(`Hãy tạo học kỳ tiếp theo (${nextMainSemesterName(ev.semester)}) trước khi mở form đồng hành.`);
+    if(semesterLocked(target))return oscAlert(`${state.semesters[target].name||target} đang bị khóa.`);
     ev.targetSemester=target;
     await ensureContinuationActivity(ev);
   }
@@ -8507,8 +8509,8 @@ async function toggleEventOpen(id){
 async function deleteEventPortal(id){
   if(!canEditModule("events"))return;
   const ev=eventFor(id);if(!ev)return;
-  if(ev.semester!==semester)return alert("Sự kiện này không thuộc học kỳ đang chọn.");
-  if(!confirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;
+  if(ev.semester!==semester)return oscAlert("Sự kiện này không thuộc học kỳ đang chọn.");
+  if(!await oscConfirm(`Chuyển sự kiện "${ev.title}" và toàn bộ phản hồi/check-in vào Thùng rác?`))return;
   try{
     const result=await eventCheckinApi({action:"admin-delete-event",eventId:id},30000);
     state.events=(state.events||[]).filter(e=>e.id!==id);
@@ -8521,7 +8523,7 @@ async function deleteEventPortal(id){
   }catch(e){
     console.error("deleteEventPortal",e);
     const msg=e?.code==="osc/semester-locked"?"Học kỳ đang bị khóa nên không thể xóa sự kiện.":e?.status===404?"API xóa sự kiện chưa được deploy đúng trên Vercel. Hãy cập nhật file api/event-checkin.js rồi redeploy.":(e?.message||e);
-    alert("Không xóa được sự kiện: "+msg);
+    oscAlert("Không xóa được sự kiện: "+msg);
   }
 }
 
@@ -8541,7 +8543,7 @@ async function openEventSubmissions(eventId){
       <div class="event-result-filters"><input id="eventResultSearch" placeholder="Tìm tên, MSSV, email, câu trả lời…" oninput="eventResultFilter.q=this.value;renderFilteredEventSubmissions('${ev.id}')"><select onchange="eventResultFilter.status=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi trạng thái</option><option value="pending">Chưa xử lý</option><option value="applied">Đã xử lý</option></select><select onchange="eventResultFilter.points=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi trạng thái điểm</option><option value="pending">Chưa cộng điểm</option><option value="applied">Đã cộng điểm</option></select>${ev.specialType==="continuation"?`<select onchange="eventResultFilter.continuation=this.value;renderFilteredEventSubmissions('${ev.id}')"><option value="all">Mọi phản hồi đồng hành</option><option value="yes">Tiếp tục</option><option value="no">Không tiếp tục</option></select>`:`<button class="secondary" onclick="renderFilteredEventSubmissions('${ev.id}')">Lọc</button>`}</div>
       <div class="event-result-toolbar"><div class="left">${canEditModule("events")&&rows.length?`<label><input id="eventResultSelectAll" class="submission-select" type="checkbox" onchange="toggleAllEventSubmissions(this.checked)"> Chọn tất cả đang hiển thị</label><span id="eventResultSelectedCount" class="event-export-count">Đã chọn 0</span>`:`<span id="eventVisibleCount" class="event-export-count"></span>`}</div><div class="right"><button class="secondary" ${rows.length?"":"disabled"} onclick="exportEventSubmissions('${ev.id}')">Xuất tất cả</button><button class="secondary" ${rows.length?"":"disabled"} onclick="openCustomEventExport('${ev.id}')">Xuất tùy chọn</button>${ev.specialType==="continuation"?`<button class="secondary" onclick="exportNonContinuingMembers('${ev.id}')">DS không đồng hành</button>`:""}${canEditModule("events")&&rows.length?`<button id="deleteSelectedEventResultsBtn" class="danger" disabled onclick="deleteSelectedEventSubmissions('${ev.id}')">Xóa đã chọn</button>`:""}</div></div>
       <div id="eventSubmissionList"></div></div></div>`;$("#modalWrap").classList.remove("hidden");renderFilteredEventSubmissions(eventId);
-  }catch(e){console.error(e);alert("Không tải được kết quả: "+(e.message||e))}
+  }catch(e){console.error(e);oscAlert("Không tải được kết quả: "+(e.message||e))}
 }
 function filteredEventSubmissionRows(ev){
   const q=normalizeText(eventResultFilter.q||"");return (currentEventSubmissionRows||[]).filter(s=>{const text=normalizeText([s.submitterLabel,s.id,s.seatLabel,s.seatSectionName,...Object.values(s.answers||{}).flat()].join(" "));if(q&&!text.includes(q))return false;if(eventResultFilter.status==="pending"&&s.actionApplied)return false;if(eventResultFilter.status==="applied"&&!s.actionApplied)return false;if(eventResultFilter.points==="pending"&&s.pointsApplied)return false;if(eventResultFilter.points==="applied"&&!s.pointsApplied)return false;if(ev.specialType==="continuation"&&eventResultFilter.continuation!=="all"){const yes=s.continuationDecision==="yes"||continuationDecision(ev,s);if(eventResultFilter.continuation==="yes"&&!yes)return false;if(eventResultFilter.continuation==="no"&&yes)return false}return true});
@@ -8606,33 +8608,33 @@ async function openEditContinuationSubmission(eventId,submissionId){
   const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;
   try{
     let sub=(currentEventSubmissionRows||[]).find(x=>x.id===submissionId);
-    if(!sub){const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).get();if(!snap.exists)return alert("Phản hồi không còn tồn tại.");sub={id:snap.id,...snap.data()}}
+    if(!sub){const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId).get();if(!snap.exists)return oscAlert("Phản hồi không còn tồn tại.");sub={id:snap.id,...snap.data()}}
     const fields=(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type));
     const htmlFields=fields.map(f=>continuationEditFieldHtml(f,sub.answers?.[f.id])).join("");
     const latest=latestContinuationSubmissionMap(ev,currentEventSubmissionRows).get(continuationSubmissionMssv(ev,sub));
     $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="editContinuationOverlay" class="overlay"><div class="modal" style="width:min(820px,calc(100vw - 24px))"><div class="modal-head"><div><h2>Chỉnh sửa kết quả đồng hành</h2><div class="small-help">${esc(sub.submitterLabel||"Phản hồi")} • ${latest?.id===sub.id?"Đây là kết quả mới nhất":"Kết quả cũ — chỉnh sửa không thay đổi thứ tự gửi"}</div></div><button onclick="document.getElementById('editContinuationOverlay')?.remove()">×</button></div><div class="continuation-edit-note"><b>Quy tắc đồng bộ:</b> Điểm danh luôn lấy <b>phản hồi được gửi sau cùng</b> theo thời gian gửi. Nếu Admin chỉnh sửa phản hồi mới nhất, điểm danh cập nhật theo nội dung vừa sửa. Nếu chỉnh phản hồi cũ, phản hồi mới hơn vẫn được ưu tiên.</div><div class="continuation-edit-grid">${htmlFields}</div><div class="modal-actions"><button class="ghost" onclick="document.getElementById('editContinuationOverlay')?.remove()">Hủy</button><button class="primary" onclick="saveEditContinuationSubmission('${eventId}','${submissionId}')">Lưu & đồng bộ điểm danh</button></div></div></div>`);
     syncModalBodyState();
-  }catch(e){console.error(e);alert("Không mở được phần chỉnh sửa: "+(e.message||e))}
+  }catch(e){console.error(e);oscAlert("Không mở được phần chỉnh sửa: "+(e.message||e))}
 }
 async function saveEditContinuationSubmission(eventId,submissionId){
   if(!canEditModule("events"))return;
   const ev=eventFor(eventId);if(!ev||ev.specialType!=="continuation")return;
   try{
     const ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),snap=await ref.get();
-    if(!snap.exists)return alert("Phản hồi không còn tồn tại.");
+    if(!snap.exists)return oscAlert("Phản hồi không còn tồn tại.");
     const before={id:snap.id,...snap.data()},oldMssv=continuationSubmissionMssv(ev,before),answers={...(before.answers||{})};
     const fields=(ev.fields||[]).filter(f=>!["image","content","section"].includes(f.type));
     for(const f of fields){
       const id=`editCont_${f.id}`;let value;
       if(f.type==="checkboxes")value=[...document.querySelectorAll(`#${CSS.escape(id)} input[type=checkbox]:checked`)].map(x=>x.value);
       else value=document.getElementById(id)?.value??"";
-      if(f.required&&((Array.isArray(value)&&!value.length)||(!Array.isArray(value)&&!String(value).trim())))return alert(`Vui lòng nhập: ${f.label}`);
+      if(f.required&&((Array.isArray(value)&&!value.length)||(!Array.isArray(value)&&!String(value).trim())))return oscAlert(`Vui lòng nhập: ${f.label}`);
       answers[f.id]=value;
     }
     const mssvField=fields.find(f=>f.systemKey==="mssv")||fields.find(f=>f.type==="mssv");
     const nameField=fields.find(f=>f.systemKey==="memberName")||fields.find(f=>normalizeText(f.label).includes("ho va ten"));
     const newMssv=normalizeMssvKey(mssvField?answers[mssvField.id]:"");
-    if(!newMssv)return alert("Phản hồi đồng hành cần có MSSV hợp lệ.");
+    if(!newMssv)return oscAlert("Phản hồi đồng hành cần có MSSV hợp lệ.");
     await ref.update({
       answers,submitterLabel:(nameField?answers[nameField.id]:"")||(mssvField?answers[mssvField.id]:"")||before.submitterLabel||"Phản hồi",
       editedAt:firebase.firestore.FieldValue.serverTimestamp(),editedBy:currentFirebaseUser?.uid||"",editedByName:currentUserLabel(),
@@ -8644,7 +8646,7 @@ async function saveEditContinuationSubmission(eventId,submissionId){
     await logAudit({action:"edit-continuation-result",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:`Chỉnh sửa phản hồi đồng hành • ${before.submitterLabel||newMssv}`,semesterKey:ev.semester});
     toast("Đã lưu và đồng bộ kết quả mới nhất");
     await openEventSubmissions(eventId);
-  }catch(e){console.error(e);alert("Không lưu được kết quả: "+(e.message||e))}
+  }catch(e){console.error(e);oscAlert("Không lưu được kết quả: "+(e.message||e))}
 }
 
 function selectedEventSubmissionIds(){
@@ -8690,7 +8692,7 @@ function openCustomEventExport(eventId){
   $("#modalWrap").insertAdjacentHTML("beforeend",`<div id="customExportOverlay" class="overlay" style="z-index:9999"><div class="modal" style="width:min(720px,100%)"><div class="modal-head"><div><h2>Xuất Excel tùy chọn</h2><div class="small-help">Chọn các cột muốn xuất. Bộ lọc hiện tại cũng được áp dụng.</div></div><button onclick="document.getElementById('customExportOverlay')?.remove()">×</button></div><div class="toggle-grid"><label><input class="custom-export-field" type="checkbox" value="__time" checked> Thời gian gửi</label><label><input class="custom-export-field" type="checkbox" value="__submitter" checked> Người gửi</label><label><input class="custom-export-field" type="checkbox" value="__status" checked> Trạng thái xử lý</label>${ev.seating?.enabled===true?`<label><input class="custom-export-field" type="checkbox" value="__seat" checked> Ghế đã chọn</label>`:""}${fields.map(f=>`<label><input class="custom-export-field" type="checkbox" value="${esc(f.id)}" checked> ${esc(f.label)}</label>`).join("")}</div><div class="modal-actions"><button class="primary" onclick="exportEventSubmissionsCustom('${eventId}')">Xuất Excel</button></div></div></div>`);
 }
 function exportEventSubmissionsCustom(eventId){
-  const ev=eventFor(eventId);if(!ev)return;const selected=new Set($$('.custom-export-field:checked').map(x=>x.value));const rows=filteredEventSubmissionRows(ev);if(!rows.length)return alert("Không có dữ liệu phù hợp bộ lọc.");
+  const ev=eventFor(eventId);if(!ev)return;const selected=new Set($$('.custom-export-field:checked').map(x=>x.value));const rows=filteredEventSubmissionRows(ev);if(!rows.length)return oscAlert("Không có dữ liệu phù hợp bộ lọc.");
   const fields=(ev.fields||[]).filter(f=>selected.has(f.id));const data=rows.map((s,i)=>{const o={STT:i+1};if(selected.has("__time"))o["Thời gian gửi"]=s.createdAt?.toDate?s.createdAt.toDate().toLocaleString("vi-VN"):"";if(selected.has("__submitter"))o["Người gửi"]=s.submitterLabel||"";for(const f of fields){const v=s.answers?.[f.id];o[f.label||f.id]=Array.isArray(v)?v.join(" | "):(v??"")}if(selected.has("__seat")){o["Khu ghế"]=s.seatSectionName||"";o["Ghế"]=s.seatLabel||""}if(selected.has("__status"))o["Trạng thái xử lý"]=s.actionApplied?"Đã áp dụng":(s.actionStatus||"Chưa xử lý");return o});
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);ws["!autofilter"]={ref:ws["!ref"]};XLSX.utils.book_append_sheet(wb,ws,"KET QUA");XLSX.writeFile(wb,`Ket_qua_tuy_chon_${pdfSafeFileName(ev.title)}_${ev.semester}.xlsx`);document.getElementById('customExportOverlay')?.remove();toast("Đã xuất Excel tùy chọn");
 }
@@ -8713,7 +8715,7 @@ async function exportEventSubmissions(eventId){
       const snap=await fbDb.collection("eventPortals").doc(eventId).collection("submissions").get();
       rows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     }
-    if(!rows.length)return alert("Sự kiện chưa có phản hồi để xuất.");
+    if(!rows.length)return oscAlert("Sự kiện chưa có phản hồi để xuất.");
 
     const data=eventSubmissionExportRows(ev,rows);
     const ws=XLSX.utils.json_to_sheet(data);
@@ -8736,12 +8738,12 @@ async function exportEventSubmissions(eventId){
     toast("Đã xuất kết quả sự kiện");
   }catch(e){
     console.error("exportEventSubmissions",e);
-    alert("Không xuất được kết quả: "+(e.message||e));
+    oscAlert("Không xuất được kết quả: "+(e.message||e));
   }
 }
 async function deleteSingleEventSubmission(eventId,submissionId){
   if(!canEditModule("events"))return;
-  if(!confirm("Chuyển phản hồi này vào Thùng rác?"))return;
+  if(!await oscConfirm("Chuyển phản hồi này vào Thùng rác?"))return;
   try{
     const ev=eventFor(eventId),ref=fbDb.collection("eventPortals").doc(eventId).collection("submissions").doc(submissionId),s=await ref.get();
     if(!s.exists)return;
@@ -8754,13 +8756,13 @@ async function deleteSingleEventSubmission(eventId,submissionId){
     await logAudit({action:"delete",module:"events",entityType:"eventSubmission",entityId:submissionId,summary:ev?.specialType==="continuation"?"Xóa phản hồi đồng hành và đồng bộ điểm danh":"Xóa phản hồi sự kiện",semesterKey:ev?.semester||semester});
     toast(ev?.specialType==="continuation"?"Đã xóa phản hồi và cập nhật điểm danh":"Đã chuyển phản hồi vào Thùng rác");
     await openEventSubmissions(eventId);
-  }catch(e){alert("Không xóa được phản hồi: "+(e.message||e))}
+  }catch(e){oscAlert("Không xóa được phản hồi: "+(e.message||e))}
 }
 
 async function deleteSelectedEventSubmissions(eventId){
   if(!canEditModule("events"))return;
   const ids=selectedEventSubmissionIds();if(!ids.length)return;
-  if(!confirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nCác phản hồi đồng hành sẽ tự đồng bộ lại Điểm danh theo kết quả còn lại mới nhất.`))return;
+  if(!await oscConfirm(`Xóa ${ids.length} phản hồi đã chọn?\n\nCác phản hồi đồng hành sẽ tự đồng bộ lại Điểm danh theo kết quả còn lại mới nhất.`))return;
   try{
     const ev=eventFor(eventId),affected=new Set();
     if((currentEventSubmissionRows||[]).some(x=>ids.includes(x.id)&&x.seatId))await eventSeatingAdminApi({action:"admin-release-submission-seats",eventId,submissionIds:ids},30000);
@@ -8778,7 +8780,7 @@ async function deleteSelectedEventSubmissions(eventId){
     await logAudit({action:"delete-bulk",module:"events",entityType:"eventSubmission",summary:`Xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" đồng hành và đồng bộ điểm danh":""}`,semesterKey:ev?.semester||semester});
     toast(`Đã xóa ${ids.length} phản hồi${ev?.specialType==="continuation"?" và cập nhật điểm danh":""}`);
     await openEventSubmissions(eventId);
-  }catch(e){console.error(e);alert("Không xóa được các phản hồi đã chọn: "+(e.message||e))}
+  }catch(e){console.error(e);oscAlert("Không xóa được các phản hồi đã chọn: "+(e.message||e))}
 }
 
 function submissionMssv(ev,sub){
@@ -8796,7 +8798,7 @@ async function approveEventFundPaid(eventId,submissionId,{silent=false}={}){
   const target=state.members.find(m=>m.semester===ev.semester&&normalizeMssvKey(m.mssv)===mssv);
   if(!target){
     await ref.set({actionStatus:"Không tìm thấy MSSV trong học kỳ",actionCheckedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(!silent)alert("Không tìm thấy thành viên có MSSV này trong học kỳ của sự kiện.");
+    if(!silent)oscAlert("Không tìm thấy thành viên có MSSV này trong học kỳ của sự kiện.");
     return false;
   }
   target.fundPaid=true;
@@ -8947,7 +8949,7 @@ $("#saveLookupSettingsBtn").onclick=()=>{if(!canEditModule("lookup"))return ensu
 };
 $("#copyPortalLinkBtn").onclick=async()=>{
   renderPortalLink();const link=$("#portalLink").value;
-  try{await navigator.clipboard.writeText(link);toast("Đã sao chép link của học kỳ")}catch{prompt("Sao chép link này:",link)}
+  try{await navigator.clipboard.writeText(link);toast("Đã sao chép link của học kỳ")}catch{await oscPrompt("Sao chép link này:",link)}
 };
 $("#openPortalBtn").onclick=()=>{
   renderPortalLink();
@@ -9076,14 +9078,14 @@ async function migratePublicFinanceProofV59(){
 }
 
 async function syncLookupSemester({silent=false}={}){
-  if(semesterLocked()){if(!silent)alert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi đồng bộ cổng tra cứu.");return false}
+  if(semesterLocked()){if(!silent)oscAlert("Học kỳ đang bị khóa. Hãy mở khóa trong Thiết lập trước khi đồng bộ cổng tra cứu.");return false}
   const cfg=lookupConfig();
   if(!cfg.enabled)return false;
   if(!currentProfile||!["admin","superadmin"].includes(currentProfile.role))return false;
 
   const {duplicateKeys,valid,missing}=lookupReadyState();
   if(duplicateKeys.length){
-    if(!silent)alert("Không thể đồng bộ vì có MSSV bị trùng:\n"+duplicateKeys.join(", "));
+    if(!silent)oscAlert("Không thể đồng bộ vì có MSSV bị trùng:\n"+duplicateKeys.join(", "));
     return false;
   }
 
@@ -9167,7 +9169,7 @@ async function syncLookupSemester({silent=false}={}){
       $("#lookupPublishStatus").className="portal-status warn";
       $("#lookupPublishStatus").textContent="Không thể đồng bộ: "+(e.code||e.message||e);
     }
-    if(!silent)alert("Không thể đồng bộ cổng tra cứu: "+(e.code||e.message||e));
+    if(!silent)oscAlert("Không thể đồng bộ cổng tra cứu: "+(e.code||e.message||e));
     return false;
   }
 }
@@ -9212,9 +9214,9 @@ $("#createPortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensur
   const cfg=lookupConfig();
   const {duplicateKeys,valid}=lookupReadyState();
   if(duplicateKeys.length){
-    return alert("Chưa thể tạo cổng vì có MSSV bị trùng:\n"+duplicateKeys.join(", "));
+    return oscAlert("Chưa thể tạo cổng vì có MSSV bị trùng:\n"+duplicateKeys.join(", "));
   }
-  if(!valid.length)return alert("Học kỳ này chưa có thành viên có MSSV hợp lệ.");
+  if(!valid.length)return oscAlert("Học kỳ này chưa có thành viên có MSSV hợp lệ.");
 
   cfg.enabled=true;
   cfg.open=true;
@@ -9223,14 +9225,14 @@ $("#createPortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensur
   const ok=await syncLookupSemester({silent:false});
   if(ok){
     renderPortalLink();
-    alert("Đã tạo cổng tra cứu riêng cho "+(sem().name||semester)+".\nTừ bây giờ điểm và điểm danh sẽ tự động đồng bộ.");
+    oscAlert("Đã tạo cổng tra cứu riêng cho "+(sem().name||semester)+".\nTừ bây giờ điểm và điểm danh sẽ tự động đồng bộ.");
   }
 };
 $("#syncPortalNowBtn").onclick=()=>syncLookupSemester({silent:false});
 $("#closePortalBtn").onclick=async()=>{if(!canEditModule("lookup"))return ensureSemesterEditable();
   const cfg=lookupConfig();
   if(!cfg.enabled)return;
-  if(!confirm("Đóng cổng tra cứu của học kỳ này? Thành viên sẽ tạm thời không tra cứu được."))return;
+  if(!await oscConfirm("Đóng cổng tra cứu của học kỳ này? Thành viên sẽ tạm thời không tra cứu được."))return;
   cfg.open=false;
   persistStateOnly();
   await syncLookupSemester({silent:true});
@@ -9322,13 +9324,13 @@ function openOwnPasswordModal(){
   setTimeout(()=>$("#ownCurrentPass")?.focus(),0);
 }
 async function changeOwnPassword(){
-  const user=fbAuth.currentUser;if(!user||!user.email)return alert("Không xác định được tài khoản đang đăng nhập.");
+  const user=fbAuth.currentUser;if(!user||!user.email)return oscAlert("Không xác định được tài khoản đang đăng nhập.");
   const current=$("#ownCurrentPass").value,next=$("#ownNewPass").value,confirmPass=$("#ownConfirmPass").value;
-  if(!current)return alert("Vui lòng nhập mật khẩu hiện tại.");
-  if(next.length<8)return alert("Mật khẩu mới cần ít nhất 8 ký tự.");
-  if(next.length>128)return alert("Mật khẩu mới quá dài.");
-  if(next!==confirmPass)return alert("Hai lần nhập mật khẩu mới không trùng nhau.");
-  if(current===next)return alert("Mật khẩu mới phải khác mật khẩu hiện tại.");
+  if(!current)return oscAlert("Vui lòng nhập mật khẩu hiện tại.");
+  if(next.length<8)return oscAlert("Mật khẩu mới cần ít nhất 8 ký tự.");
+  if(next.length>128)return oscAlert("Mật khẩu mới quá dài.");
+  if(next!==confirmPass)return oscAlert("Hai lần nhập mật khẩu mới không trùng nhau.");
+  if(current===next)return oscAlert("Mật khẩu mới phải khác mật khẩu hiện tại.");
   const btn=$("#confirmOwnPasswordBtn");
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang đổi…"}
@@ -9343,7 +9345,7 @@ async function changeOwnPassword(){
       e?.code==="auth/weak-password"?"Mật khẩu mới chưa đủ mạnh.":
       e?.code==="auth/too-many-requests"?"Bạn thao tác quá nhiều lần. Vui lòng thử lại sau.":
       e?.code==="auth/requires-recent-login"?"Phiên đăng nhập đã quá cũ. Hãy đăng xuất, đăng nhập lại rồi thử lại.":
-      "Không đổi được mật khẩu: "+(e?.message||e);alert(msg);
+      "Không đổi được mật khẩu: "+(e?.message||e);oscAlert(msg);
   }finally{if(btn){btn.disabled=false;btn.textContent="Đổi mật khẩu"}}
 }
 async function fetchAccountApi(path,options={},timeoutMs=12000){
@@ -9380,7 +9382,7 @@ async function renderAccounts(){
     }).join("");
     $("#accountEmpty").classList.toggle("hidden",list.length>0);
   }catch(e){
-    console.error(e);alert("Không tải được danh sách tài khoản: "+(e.message||e));
+    console.error(e);oscAlert("Không tải được danh sách tài khoản: "+(e.message||e));
   }
 }
 $("#accountSearch").oninput=renderAccounts;
@@ -9453,11 +9455,11 @@ async function createAccount(){
   if(!canEditClub())return;
   const email=$("#accEmail").value.trim().toLowerCase(),password=$("#accPass").value,displayName=$("#accName").value.trim(),wantedRole=$("#accRole").value;
   const newRole=(role()==="superadmin"&&wantedRole==="admin")?"admin":"bcn";
-  if(!displayName||!email)return alert("Vui lòng nhập tên và email.");
-  if(password.length<8||password.length>128)return alert("Mật khẩu phải từ 8 đến 128 ký tự.");
-  if((currentFirebaseUser?.email||"").toLowerCase()===email)return alert("Email này là tài khoản đang đăng nhập.");
+  if(!displayName||!email)return oscAlert("Vui lòng nhập tên và email.");
+  if(password.length<8||password.length>128)return oscAlert("Mật khẩu phải từ 8 đến 128 ký tự.");
+  if((currentFirebaseUser?.email||"").toLowerCase()===email)return oscAlert("Email này là tài khoản đang đăng nhập.");
   const existingProfile=accountRows.find(u=>String(u.email||"").toLowerCase()===email);
-  if(existingProfile){alert("Email này đã có trong danh sách tài khoản. Hệ thống sẽ mở phần chỉnh sửa.");return editAccountProfile(existingProfile.id)}
+  if(existingProfile){oscAlert("Email này đã có trong danh sách tài khoản. Hệ thống sẽ mở phần chỉnh sửa.");return editAccountProfile(existingProfile.id)}
   const permissions=newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("acc");
   const btn=$("#createAccountSubmitBtn");
   try{
@@ -9472,14 +9474,14 @@ async function createAccount(){
     }
     closeModal();toast(data.linkedExisting?"Đã liên kết tài khoản hiện có":"Đã tạo tài khoản");await renderAccounts();
   }catch(e){
-    console.error("createAccount",e);alert("Không tạo được tài khoản.\n\n"+(e?.message||e));
+    console.error("createAccount",e);oscAlert("Không tạo được tài khoản.\n\n"+(e?.message||e));
   }finally{if(btn){btn.disabled=false;btn.textContent="Tạo / liên kết tài khoản"}}
 }
 async function editAccountProfile(uid){
   const u=accountRows.find(x=>x.id===uid);if(!u)return;
   const p=u.permissions||{};
   const canEditRole=role()==="superadmin";
-  if(u.role==="superadmin"&&uid!==currentFirebaseUser?.uid)return alert("Không thể chỉnh Super Admin khác.");
+  if(u.role==="superadmin"&&uid!==currentFirebaseUser?.uid)return oscAlert("Không thể chỉnh Super Admin khác.");
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal">
     <div class="modal-head"><h2>Chỉnh sửa tài khoản & phân quyền</h2><button onclick="closeModal()">×</button></div>
     <div class="form-grid">
@@ -9503,12 +9505,12 @@ async function saveAccountProfile(uid){
   if(!canEditClub())return;
   const old=accountRows.find(x=>x.id===uid);if(!old)return;
   let newRole=old.role||"bcn";
-  if(role()==="superadmin")newRole=$("#editAccRole").value;else if(newRole!=="bcn")return alert("Admin chỉ được chỉnh tài khoản BCN.");
-  if(old.role==="superadmin")return alert("Không thể thay đổi Super Admin ở đây.");
+  if(role()==="superadmin")newRole=$("#editAccRole").value;else if(newRole!=="bcn")return oscAlert("Admin chỉ được chỉnh tài khoản BCN.");
+  if(old.role==="superadmin")return oscAlert("Không thể thay đổi Super Admin ở đây.");
   const displayName=$("#editAccName").value.trim();
   const newEmail=$("#editAccEmail").value.trim().toLowerCase();
-  if(!displayName)return alert("Vui lòng nhập tên hiển thị.");
-  if(!newEmail)return alert("Vui lòng nhập email đăng nhập.");
+  if(!displayName)return oscAlert("Vui lòng nhập tên hiển thị.");
+  if(!newEmail)return oscAlert("Vui lòng nhập email đăng nhập.");
   const payload={uid,displayName,email:newEmail,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
   const btn=$("#saveAccountProfileBtn");
   try{
@@ -9522,15 +9524,15 @@ async function saveAccountProfile(uid){
       throw new Error(detail);
     }
     closeModal();toast(data.emailChanged?"Đã cập nhật tài khoản và email đăng nhập":"Đã cập nhật tài khoản");
-    if(data.warning)alert(data.warning);
+    if(data.warning)oscAlert(data.warning);
     await renderAccounts();
   }catch(e){
-    console.error("saveAccountProfile",e);alert("Không cập nhật được tài khoản.\n\n"+(e?.message||e));
+    console.error("saveAccountProfile",e);oscAlert("Không cập nhật được tài khoản.\n\n"+(e?.message||e));
   }finally{if(btn){btn.disabled=false;btn.textContent="Lưu thay đổi"}}
 }
 function openResetAccountPassword(uid){
   const u=accountRows.find(x=>x.id===uid);if(!u)return;
-  if(u.role==="superadmin")return alert("Không thể đặt lại mật khẩu Super Admin tại đây.");
+  if(u.role==="superadmin")return oscAlert("Không thể đặt lại mật khẩu Super Admin tại đây.");
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal">
     <div class="modal-head"><div><h2>Đặt lại mật khẩu</h2><div class="small-help">${esc(u.displayName||u.email||"")} • ${esc(u.email||"")}</div></div><button onclick="closeModal()">×</button></div>
     <div class="password-grid">
@@ -9545,8 +9547,8 @@ function openResetAccountPassword(uid){
 async function resetAccountPassword(uid){
   if(!canEditClub())return;
   const pass=$("#resetAccPass")?.value||"",confirmPass=$("#resetAccPass2")?.value||"";
-  if(pass.length<8||pass.length>128)return alert("Mật khẩu mới phải từ 8 đến 128 ký tự.");
-  if(pass!==confirmPass)return alert("Hai lần nhập mật khẩu mới không trùng nhau.");
+  if(pass.length<8||pass.length>128)return oscAlert("Mật khẩu mới phải từ 8 đến 128 ký tự.");
+  if(pass!==confirmPass)return oscAlert("Hai lần nhập mật khẩu mới không trùng nhau.");
   const btn=$("#resetAccPasswordBtn");
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang cập nhật…"}
@@ -9558,15 +9560,15 @@ async function resetAccountPassword(uid){
       if(res.status===404)detail="Không tìm thấy /api/account-password trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
       throw new Error(detail);
     }
-    closeModal();toast("Đã đặt lại mật khẩu");alert("Đã đổi mật khẩu thành công. Các phiên đăng nhập cũ của tài khoản này đã được thu hồi.");
-  }catch(e){console.error("resetAccountPassword",e);alert("Không đặt lại được mật khẩu.\n\n"+(e?.message||e))}
+    closeModal();toast("Đã đặt lại mật khẩu");oscAlert("Đã đổi mật khẩu thành công. Các phiên đăng nhập cũ của tài khoản này đã được thu hồi.");
+  }catch(e){console.error("resetAccountPassword",e);oscAlert("Không đặt lại được mật khẩu.\n\n"+(e?.message||e))}
   finally{if(btn){btn.disabled=false;btn.textContent="Đặt lại mật khẩu"}}
 }
 async function deleteAccountProfile(uid){
   if(!canEditClub())return;const u=accountRows.find(x=>x.id===uid);if(!u)return;
-  if(uid===currentFirebaseUser?.uid)return alert("Không thể tự xóa tài khoản đang đăng nhập.");
-  if(u.role==="superadmin")return alert("Không thể xóa Super Admin.");
-  if(!confirm(`Xóa tài khoản "${u.displayName||u.email}"?\n\nHệ thống sẽ xóa cả hồ sơ quyền Firestore và tài khoản Firebase Authentication.`))return;
+  if(uid===currentFirebaseUser?.uid)return oscAlert("Không thể tự xóa tài khoản đang đăng nhập.");
+  if(u.role==="superadmin")return oscAlert("Không thể xóa Super Admin.");
+  if(!await oscConfirm(`Xóa tài khoản "${u.displayName||u.email}"?\n\nHệ thống sẽ xóa cả hồ sơ quyền Firestore và tài khoản Firebase Authentication.`))return;
   try{
     const token=await currentFirebaseUser.getIdToken();
     const res=await fetchAccountApi("/api/account-delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({uid})},15000);
@@ -9576,8 +9578,8 @@ async function deleteAccountProfile(uid){
       if(res.status===404)detail="Không tìm thấy /api/account-delete trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
       throw new Error(detail);
     }
-    toast("Đã xóa tài khoản");if(data.warning)alert(data.warning);await renderAccounts();
-  }catch(e){console.error("deleteAccountProfile",e);alert("Không xóa được tài khoản.\n\n"+(e?.message||e))}
+    toast("Đã xóa tài khoản");if(data.warning)oscAlert(data.warning);await renderAccounts();
+  }catch(e){console.error("deleteAccountProfile",e);oscAlert("Không xóa được tài khoản.\n\n"+(e?.message||e))}
 }
 
 
@@ -9587,7 +9589,7 @@ function renderAuditLogs(){const root=$("#auditList");if(!root)return;root.inner
 async function loadImportHistory(){try{const s=await fbDb.collection("importHistory").where("semester","==",semester).limit(160).get();importHistoryRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderImportHistory()}catch(e){console.warn(e)}}
 function renderImportHistory(){const root=$("#importHistoryList");if(!root)return;root.innerHTML=(importHistoryRows||[]).map(x=>`<div class="audit-item"><div><h4>${esc(x.type||"Import")} — ${esc(x.fileName||"Không rõ file")}</h4><p>${dateTime(x.createdAt)} • ${esc(x.actorName||"")} • Tổng ${x.total||0} • Thêm ${x.added||0} • Cập nhật ${x.updated||0} • Bỏ qua ${x.skipped||0}</p><p>${esc(x.details||"")}</p></div></div>`).join("")||`<div class="empty">Chưa có lịch sử import.</div>`}
 function showAuditTab(tab){$("#auditPanel").classList.toggle("hidden",tab!=="audit");$("#importHistoryPanel").classList.toggle("hidden",tab!=="imports");$("#auditTabBtn").classList.toggle("active",tab==="audit");$("#importTabBtn").classList.toggle("active",tab==="imports")}
-async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(!confirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore"){if(!ensureActivityColumnUnlocked(u.itemId,a.semester||semester))return;await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});}else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return alert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){alert("Không hoàn tác được: "+(e.message||e))}}
+async function undoAudit(id){const a=auditRows.find(x=>x.id===id);if(!a?.undo)return;if(!await oscConfirm("Hoàn tác thay đổi này về giá trị trước đó?"))return;try{const u=a.undo;if(u.type==="memberScore"){if(!ensureActivityColumnUnlocked(u.itemId,a.semester||semester))return;await fbDb.collection("members").doc(u.memberId).update({[`scores.${u.itemId}`]:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});}else if(u.type==="fund")await fbDb.collection("members").doc(u.memberId).update({fundPaid:u.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});else if(u.type==="finance")await fbDb.collection("financeTransactions").doc(u.id).set(u.data,{merge:false});else return oscAlert("Loại thay đổi này chưa hỗ trợ hoàn tác tự động.");await fbDb.collection("auditLogs").doc(id).update({undo:null,undoneAt:firebase.firestore.FieldValue.serverTimestamp(),undoneBy:currentFirebaseUser.uid});await logAudit({action:"undo",module:a.module,summary:`Hoàn tác: ${a.summary||a.action}`});toast("Đã hoàn tác")}catch(e){oscAlert("Không hoàn tác được: "+(e.message||e))}}
 async function loadTrashBin(){
   if(!canEditClub())return;
   try{
@@ -9640,8 +9642,8 @@ function renderTrashBin(){
 function trashTypeLabel(t){return ({member:"Thành viên",finance:"Giao dịch",event:"Sự kiện",eventSubmission:"Phản hồi sự kiện",eventQrCheckin:"QR check-in sự kiện"})[t]||t}
 async function restoreTrash(id){
   const t=trashRows.find(x=>x.id===id);if(!t)return;
-  if(t.semester!==semester)return alert("Dữ liệu này không thuộc học kỳ đang chọn.");
-  if(!confirm("Khôi phục dữ liệu này?"))return;
+  if(t.semester!==semester)return oscAlert("Dữ liệu này không thuộc học kỳ đang chọn.");
+  if(!await oscConfirm("Khôi phục dữ liệu này?"))return;
   try{
     if(t.type==="member")await fbDb.collection("members").doc(t.sourceId).set(t.data,{merge:false});
     else if(t.type==="finance")await fbDb.collection("financeTransactions").doc(t.sourceId).set(t.data,{merge:false});
@@ -9656,7 +9658,7 @@ async function restoreTrash(id){
       }
     }else if(t.type==="eventQrCheckin"){
       await fbDb.collection("eventPortals").doc(t.meta.eventId).collection("qrCheckins").doc(t.sourceId).set(t.data,{merge:false});
-    }else return alert("Loại dữ liệu chưa hỗ trợ khôi phục.");
+    }else return oscAlert("Loại dữ liệu chưa hỗ trợ khôi phục.");
 
     await fbDb.collection("trashBin").doc(id).delete();
     trashRows=trashRows.filter(x=>x.id!==id);
@@ -9665,23 +9667,23 @@ async function restoreTrash(id){
 
     await logAudit({action:"restore",module:"trash",summary:`Khôi phục ${trashTypeLabel(t.type)}`,entityId:t.sourceId});
     toast("Đã khôi phục");
-  }catch(e){alert("Không khôi phục được: "+(e.message||e))}
+  }catch(e){oscAlert("Không khôi phục được: "+(e.message||e))}
 }
 async function purgeTrash(id){
-  if(!confirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;
+  if(!await oscConfirm("Xóa vĩnh viễn khỏi Thùng rác? Không thể hoàn tác."))return;
   try{
     await fbDb.collection("trashBin").doc(id).delete();
     trashRows=trashRows.filter(x=>x.id!==id);
     selectedTrashIds.delete(id);
     renderTrashBin();
     toast("Đã xóa vĩnh viễn");
-  }catch(e){alert(e.message||e)}
+  }catch(e){oscAlert(e.message||e)}
 }
 async function purgeSelectedTrash(){
   if(!canEditClub())return;
   const ids=[...selectedTrashIds].filter(id=>trashRows.some(t=>t.id===id));
-  if(!ids.length)return alert("Hãy chọn ít nhất một mục trong Thùng rác.");
-  if(!confirm(`Xóa vĩnh viễn ${ids.length} mục đã chọn?\n\nThao tác này không thể hoàn tác.`))return;
+  if(!ids.length)return oscAlert("Hãy chọn ít nhất một mục trong Thùng rác.");
+  if(!await oscConfirm(`Xóa vĩnh viễn ${ids.length} mục đã chọn?\n\nThao tác này không thể hoàn tác.`))return;
 
   try{
     await commitInChunks(ids.map(id=>batch=>batch.delete(fbDb.collection("trashBin").doc(id))));
@@ -9702,12 +9704,12 @@ async function purgeSelectedTrash(){
     toast(`Đã xóa vĩnh viễn ${ids.length} mục`);
   }catch(e){
     console.error("purgeSelectedTrash",e);
-    alert("Không xóa được các mục đã chọn: "+(e.message||e));
+    oscAlert("Không xóa được các mục đã chọn: "+(e.message||e));
   }
 }
 async function loadApprovalRequests(){if(!canEditClub())return;try{const s=await fbDb.collection("approvalRequests").where("semester","==",semester).limit(180).get();approvalRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderApprovalRequests()}catch(e){console.warn(e)}}
 function renderApprovalRequests(){const root=$("#approvalList");if(!root)return;root.innerHTML=(approvalRows||[]).map(r=>`<div class="approval-item"><div class="approval-item-main"><h4>${esc(r.summary||r.kind)}</h4><p>${esc(r.requesterName||"")} • ${dateTime(r.createdAt)} • <b>${esc(r.status||"pending")}</b></p></div><div class="approval-actions">${r.status==="pending"?`<button class="primary" onclick="decideApproval('${r.id}',true)">Duyệt</button><button class="danger" onclick="decideApproval('${r.id}',false)">Từ chối</button>`:""}</div></div>`).join("")||`<div class="empty">Không có yêu cầu chờ duyệt.</div>`}
-async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return alert("Yêu cầu này không thuộc học kỳ đang chọn.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){alert("Không xử lý được: "+(e.message||e))}}
+async function decideApproval(id,approve){const r=approvalRows.find(x=>x.id===id);if(!r||r.status!=="pending")return;if(r.semester!==semester)return oscAlert("Yêu cầu này không thuộc học kỳ đang chọn.");try{if(approve)await executeApprovedAction(r);await fbDb.collection("approvalRequests").doc(id).update({status:approve?"approved":"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid,decidedByName:currentUserLabel()});await pushNotification({title:approve?"Yêu cầu đã được duyệt":"Yêu cầu bị từ chối",message:r.summary||r.kind,type:"approval",targetUid:r.requesterUid,linkTab:"attention"});toast(approve?"Đã duyệt":"Đã từ chối")}catch(e){oscAlert("Không xử lý được: "+(e.message||e))}}
 async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="deleteMember"){const m=(await fbDb.collection("members").doc(p.id).get()).data();if(m)await moveToTrash("member",p.id,m,{label:m.name,semester:m.semester});await fbDb.collection("members").doc(p.id).delete()}else if(r.kind==="deleteFinance"){const s=await fbDb.collection("financeTransactions").doc(p.id).get();if(s.exists)await moveToTrash("finance",p.id,s.data(),{label:s.data().description,semester:s.data().semester});await fbDb.collection("financeTransactions").doc(p.id).delete()}else if(r.kind==="bulkAttendance"){
     const semKey=p.semester||r.semester||semester;
     if(!ensureActivityColumnUnlocked(p.itemId,semKey))throw new Error("Cột điểm đã bị khóa sau khi yêu cầu được tạo.");
@@ -9724,7 +9726,7 @@ async function executeApprovedAction(r){const p=r.payload||{};if(r.kind==="delet
 
 function exportSelectedActivityReport(){
   const sel=$("#attendanceActivitySelect")?.value;
-  if(!sel)return alert("Hãy chọn hoạt động cần xuất.");
+  if(!sel)return oscAlert("Hãy chọn hoạt động cần xuất.");
   const [gi,ii]=sel.split(":").map(Number),g=sem().groups?.[gi],it=g?.items?.[ii];if(!it)return;
 
   const defaults=new Set(defaultExportFieldKeys());
@@ -9763,13 +9765,13 @@ function toggleActivityExportFields(checked){
 }
 function confirmExportSelectedActivityReport(sel){
   const [gi,ii]=String(sel||"").split(":").map(Number),g=sem().groups?.[gi],it=g?.items?.[ii];
-  if(!g||!it)return alert("Không tìm thấy hoạt động.");
+  if(!g||!it)return oscAlert("Không tìm thấy hoạt động.");
 
   const participation=document.querySelector('input[name="activityExportParticipation"]:checked')?.value||"all";
   const selectedKeys=$$(".activity-export-field:checked").map(x=>x.value);
-  if(!selectedKeys.length)return alert("Hãy chọn ít nhất một thông tin thành viên.");
+  if(!selectedKeys.length)return oscAlert("Hãy chọn ít nhất một thông tin thành viên.");
   const selectedUniversityIds=$$(".activity-export-university:checked").map(x=>x.value);
-  if(!selectedUniversityIds.length)return alert("Hãy chọn ít nhất một trường đại học.");
+  if(!selectedUniversityIds.length)return oscAlert("Hãy chọn ít nhất một trường đại học.");
 
   let source=members().filter(m=>selectedUniversityIds.includes(memberUniversityId(m))).map(m=>{
     const v=m.scores?.[it.id];
@@ -9860,7 +9862,7 @@ function renderAttendancePortalPanel(){
   if(!rows.length){root.innerHTML=`<div class="empty">Chưa có QR điểm danh nào trong học kỳ này.</div>`;return}
   root.innerHTML=rows.slice(0,10).map(p=>{const token=p.token||p.id,checkins=attendanceCheckinRowsByPortal[token]||[],pending=checkins.filter(x=>x.status==="pending").length,approved=checkins.filter(x=>x.status==="approved").length,rejected=checkins.filter(x=>x.status==="rejected").length,st=attendancePortalStatus(p),canEdit=canEditModule("attendance");return `<div class="qr-portal-row"><div class="qr-portal-main"><b>${esc(p.itemName||"Điểm danh")}</b><small>${esc(p.groupName||"")} • ${esc(p.semesterName||state.semesters?.[p.semester]?.name||p.semester||"")} • ${dateTime(p.startAt)} → ${dateTime(p.endAt)}</small></div><div class="qr-portal-counts"><span class="qr-mini-badge ${st.className}">${esc(st.label)}</span><span class="qr-mini-badge pending">${pending} chờ</span><span class="qr-mini-badge approved">${approved} duyệt</span>${rejected?`<span class="qr-mini-badge rejected">${rejected} từ chối</span>`:""}</div><div class="qr-portal-actions"><button class="secondary" onclick="showAttendancePortal('${esc(token)}')">Xem lượt gửi</button><button class="secondary" onclick="copyText('${esc(attendancePortalLink(token,p.semester||""))}')">Copy link</button><button class="secondary" onclick="downloadAttendanceQr('${esc(token)}')">Tải QR</button>${canEdit?`<button class="secondary" onclick="openAttendancePortalTimeEditor('${esc(token)}')">Sửa thời gian</button>`:""}${canEdit&&(p.open!==true||attendancePortalStatus(p).label==="Hết hạn")?`<button class="primary" onclick="openReopenAttendancePortal('${esc(token)}')">Mở lại QR</button>`:""}${canEdit&&p.open===true&&attendancePortalStatus(p).label!=="Hết hạn"?`<button class="danger" onclick="closeAttendancePortal('${esc(token)}',false)">Đóng QR</button>`:""}${canEdit?`<button class="danger" onclick="deleteAttendancePortal('${esc(token)}',false)">Xóa QR</button>`:""}</div></div>`}).join("");  if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboardCommandCenter();
 }
-function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return alert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;if(!ensureActivityColumnUnlocked(it.id))return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
+function openQRAttendance(){if(!canEditModule("attendance"))return ensureSemesterEditable();const sel=$("#attendanceActivitySelect").value;if(!sel)return oscAlert("Hãy chọn hoạt động trước.");const [gi,ii]=sel.split(":").map(Number),g=sem().groups[gi],it=g?.items[ii];if(!it)return;if(!ensureActivityColumnUnlocked(it.id))return;const now=new Date(),end=new Date(now.getTime()+2*60*60*1000),local=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#modalWrap").innerHTML=`<div class="overlay"><div class="modal"><div class="modal-head"><div><h2>QR điểm danh</h2><div class="small-help">${esc(it.name)} • ${esc(sem().name||semester)}</div></div><button onclick="closeModal()">×</button></div><div class="form-grid"><label>Bắt đầu<input id="qrStart" type="datetime-local" value="${local(now)}"></label><label>Kết thúc<input id="qrEnd" type="datetime-local" value="${local(end)}"></label><label class="full">Hướng dẫn<input id="qrInstruction" value="Nhập MSSV và họ tên. BTC sẽ duyệt trước khi tính điểm."></label></div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="createAttendancePortal(${gi},${ii})">Tạo QR</button></div></div></div>`;$("#modalWrap").classList.remove("hidden")}
 function showQrCreateProgress(itemName){
   $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(560px,100%)">
     <div class="modal-head"><div><h2>Đang tạo QR điểm danh…</h2><div class="small-help">${esc(itemName||"Hoạt động")}</div></div></div>
@@ -9885,7 +9887,7 @@ async function createAttendancePortal(gi,ii){
   if(!ensureActivityColumnUnlocked(it.id))return;
 
   const start=new Date($("#qrStart").value),end=new Date($("#qrEnd").value);
-  if(isNaN(start)||isNaN(end)||end<=start)return alert("Thời gian không hợp lệ.");
+  if(isNaN(start)||isNaN(end)||end<=start)return oscAlert("Thời gian không hợp lệ.");
 
   const instruction=$("#qrInstruction").value.trim();
   const token=crypto.randomUUID?crypto.randomUUID():uid()+uid();
@@ -9940,17 +9942,17 @@ async function createAttendancePortal(gi,ii){
   }catch(e){
     console.error("createAttendancePortal",e);
     closeModal();
-    alert("Không tạo được QR: "+(e.message||e));
+    oscAlert("Không tạo được QR: "+(e.message||e));
   }
 }
 async function openAttendancePortalTimeEditor(token){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
   try{
     const snap=await fbDb.collection("attendancePortals").doc(token).get();
-    if(!snap.exists)return alert("QR không còn tồn tại.");
+    if(!snap.exists)return oscAlert("QR không còn tồn tại.");
     const p={id:snap.id,...snap.data(),token};
-    if(p.semester!==semester)return alert("QR này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
-    if(semesterLocked(p.semester))return alert("Học kỳ đang bị khóa.");
+    if(p.semester!==semester)return oscAlert("QR này thuộc học kỳ khác. Hãy chuyển sang đúng học kỳ trước.");
+    if(semesterLocked(p.semester))return oscAlert("Học kỳ đang bị khóa.");
 
     $("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(650px,100%)">
       <div class="modal-head">
@@ -9972,21 +9974,21 @@ async function openAttendancePortalTimeEditor(token){
     </div></div>`;
     $("#modalWrap").classList.remove("hidden");
   }catch(e){
-    console.error(e);alert("Không mở được phần sửa thời gian: "+(e.message||e));
+    console.error(e);oscAlert("Không mở được phần sửa thời gian: "+(e.message||e));
   }
 }
 async function saveAttendancePortalTime(token){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
   const start=new Date($("#editQrStart")?.value||""),end=new Date($("#editQrEnd")?.value||"");
-  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return alert("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.");
-  if(end<=start)return alert("Thời gian kết thúc phải sau thời gian bắt đầu.");
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return oscAlert("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.");
+  if(end<=start)return oscAlert("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
   try{
     const ref=fbDb.collection("attendancePortals").doc(token);
-    const beforeSnap=await ref.get();if(!beforeSnap.exists)return alert("QR không còn tồn tại.");
+    const beforeSnap=await ref.get();if(!beforeSnap.exists)return oscAlert("QR không còn tồn tại.");
     const before=beforeSnap.data();
-    if(before.semester!==semester)return alert("QR này không thuộc học kỳ đang chọn.");
-    if(semesterLocked(before.semester))return alert("Học kỳ đang bị khóa.");
+    if(before.semester!==semester)return oscAlert("QR này không thuộc học kỳ đang chọn.");
+    if(semesterLocked(before.semester))return oscAlert("Học kỳ đang bị khóa.");
 
     await ref.update({
       startAt:firebase.firestore.Timestamp.fromDate(start),
@@ -10010,7 +10012,7 @@ async function saveAttendancePortalTime(token){
     watchAttendancePortals(true);
     setTimeout(()=>showAttendancePortal(token),80);
   }catch(e){
-    console.error(e);alert("Không lưu được thời gian QR: "+(e.message||e));
+    console.error(e);oscAlert("Không lưu được thời gian QR: "+(e.message||e));
   }
 }
 
@@ -10020,8 +10022,8 @@ function renderAttendanceCheckinList(token){
 }
 function toggleAllPendingCheckins(token,checked){$$('.pending-checkin-select').forEach(x=>x.checked=checked)}
 async function bulkDecideCheckins(token,approve){
-  if(!canEditModule("attendance"))return;const ids=$$('.pending-checkin-select:checked').map(x=>x.value);if(!ids.length)return alert("Hãy chọn ít nhất một lượt chờ duyệt.");
-  const ps=await fbDb.collection("attendancePortals").doc(token).get();if(!ps.exists)return alert("QR không tồn tại.");const portal=ps.data();if(semesterLocked(portal.semester))return alert("Học kỳ đang bị khóa.");if(approve&&!ensureActivityColumnUnlocked(portal.itemId,portal.semester))return;
+  if(!canEditModule("attendance"))return;const ids=$$('.pending-checkin-select:checked').map(x=>x.value);if(!ids.length)return oscAlert("Hãy chọn ít nhất một lượt chờ duyệt.");
+  const ps=await fbDb.collection("attendancePortals").doc(token).get();if(!ps.exists)return oscAlert("QR không tồn tại.");const portal=ps.data();if(semesterLocked(portal.semester))return oscAlert("Học kỳ đang bị khóa.");if(approve&&!ensureActivityColumnUnlocked(portal.itemId,portal.semester))return;
   const rows=attendanceCheckinRowsByPortal[token]||[],ops=[];let ok=0,skipped=0;
   for(const id of ids){const r=rows.find(x=>x.id===id);if(!r||r.status!=="pending"){skipped++;continue}const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id);if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeMssvKey(x.mssv)===normalizeMssvKey(r.mssv));if(!m){skipped++;continue}const value=portal.mode==="checkbox"?true:Number(portal.points||0);ops.push(b=>b.update(fbDb.collection("members").doc(m.id),{[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid}));ops.push(b=>b.update(ref,{status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid}));ok++}else{ops.push(b=>b.update(ref,{status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid}));ok++}}
   if(ops.length)await commitInChunks(ops);await logAudit({action:approve?"bulk-qr-approve":"bulk-qr-reject",module:"attendance",summary:`${approve?"Duyệt":"Từ chối"} hàng loạt ${ok} lượt QR • ${portal.itemName}`,after:{count:ok,skipped}});toast(`${approve?"Đã duyệt":"Đã từ chối"} ${ok} lượt${skipped?` • bỏ qua ${skipped}`:""}`);
@@ -10119,7 +10121,7 @@ async function downloadAttendanceQr(token){
     let portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token);
     if(!portal){
       const snap=await fbDb.collection("attendancePortals").doc(token).get();
-      if(!snap.exists)return alert("QR không còn tồn tại.");
+      if(!snap.exists)return oscAlert("QR không còn tồn tại.");
       portal={id:snap.id,...snap.data()};
     }
 
@@ -10138,7 +10140,7 @@ async function downloadAttendanceQr(token){
     toast("Đã tải mã QR PNG");
   }catch(e){
     console.error("downloadAttendanceQr",e);
-    alert("Không tải được mã QR: "+(e.message||e));
+    oscAlert("Không tải được mã QR: "+(e.message||e));
   }
 }
 
@@ -10229,11 +10231,11 @@ async function showAttendancePortal(token){
     }
 
     const s=await fbDb.collection("attendancePortals").doc(token).get();
-    if(!s.exists)return alert("QR không còn tồn tại.");
+    if(!s.exists)return oscAlert("QR không còn tồn tại.");
     renderAttendancePortalModal({id:s.id,...s.data(),token});
   }catch(e){
     console.error(e);
-    alert("Không mở được QR: "+(e.message||e));
+    oscAlert("Không mở được QR: "+(e.message||e));
   }
 }
 function closeAttendancePortalModal(){
@@ -10246,7 +10248,7 @@ async function watchAttendanceCheckins(token){
   if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
   try{const s=await fbDb.collection("attendancePortals").doc(token).collection("checkins").get();attendanceCheckinRowsByPortal[token]=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));renderAttendanceCheckinList(token);renderAttendancePortalPanel()}catch(e){console.error("checkin once",e);const root=$("#checkinList");if(root)root.innerHTML=`<div class="empty">Không tải được lượt gửi: ${esc(e.message||e)}</div>`}
 }
-async function approveCheckin(token,id,approve){if(!canEditModule("attendance"))return ensureSemesterEditable();const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id),s=await ref.get();if(!s.exists)return;const r=s.data(),portalSnap=await fbDb.collection("attendancePortals").doc(token).get();if(!portalSnap.exists)return alert("QR không tồn tại.");const portal=portalSnap.data();if(semesterLocked(portal.semester))return alert("Học kỳ của QR này đang bị khóa. Hãy mở khóa trong Thiết lập trước.");if(approve&&!ensureActivityColumnUnlocked(portal.itemId,portal.semester))return;if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeText(x.mssv)===normalizeText(r.mssv));if(!m)return alert("Không tìm thấy MSSV trong học kỳ này.");const value=portal.mode==="checkbox"?true:Number(portal.points||0);await fbDb.collection("members").doc(m.id).update({[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});await ref.update({status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});await logAudit({action:"qr-attendance",module:"attendance",summary:`Duyệt QR điểm danh ${m.name} • ${portal.itemName}`,entityId:m.id});toast("Đã duyệt và cộng điểm")}else{await ref.update({status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});toast("Đã từ chối lượt điểm danh")}}
+async function approveCheckin(token,id,approve){if(!canEditModule("attendance"))return ensureSemesterEditable();const ref=fbDb.collection("attendancePortals").doc(token).collection("checkins").doc(id),s=await ref.get();if(!s.exists)return;const r=s.data(),portalSnap=await fbDb.collection("attendancePortals").doc(token).get();if(!portalSnap.exists)return oscAlert("QR không tồn tại.");const portal=portalSnap.data();if(semesterLocked(portal.semester))return oscAlert("Học kỳ của QR này đang bị khóa. Hãy mở khóa trong Thiết lập trước.");if(approve&&!ensureActivityColumnUnlocked(portal.itemId,portal.semester))return;if(approve){const m=state.members.find(x=>x.semester===portal.semester&&normalizeText(x.mssv)===normalizeText(r.mssv));if(!m)return oscAlert("Không tìm thấy MSSV trong học kỳ này.");const value=portal.mode==="checkbox"?true:Number(portal.points||0);await fbDb.collection("members").doc(m.id).update({[`scores.${portal.itemId}`]:value,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser.uid});await ref.update({status:"approved",memberId:m.id,decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});await logAudit({action:"qr-attendance",module:"attendance",summary:`Duyệt QR điểm danh ${m.name} • ${portal.itemName}`,entityId:m.id});toast("Đã duyệt và cộng điểm")}else{await ref.update({status:"rejected",decidedAt:firebase.firestore.FieldValue.serverTimestamp(),decidedBy:currentFirebaseUser.uid});toast("Đã từ chối lượt điểm danh")}}
 function localDateTimeInputValue(date){
   return dateTimeLocalValue(date);
 }
@@ -10259,15 +10261,15 @@ async function openReopenAttendancePortal(token){
   if(!portal){
     try{
       const snap=await fbDb.collection("attendancePortals").doc(token).get();
-      if(!snap.exists)return alert("QR không còn tồn tại.");
+      if(!snap.exists)return oscAlert("QR không còn tồn tại.");
       portal={id:snap.id,...snap.data(),token};
     }catch(e){
-      return alert("Không tải được QR: "+(e.message||e));
+      return oscAlert("Không tải được QR: "+(e.message||e));
     }
   }
 
-  if(portal.semester!==semester)return alert("QR này thuộc học kỳ khác.");
-  if(semesterLocked(portal.semester))return alert("Học kỳ đang bị khóa.");
+  if(portal.semester!==semester)return oscAlert("QR này thuộc học kỳ khác.");
+  if(semesterLocked(portal.semester))return oscAlert("Học kỳ đang bị khóa.");
 
   const now=new Date();
   const end=new Date(now.getTime()+2*60*60*1000);
@@ -10297,13 +10299,13 @@ async function reopenAttendancePortal(token){
 
   const start=new Date($("#reopenQrStart")?.value||"");
   const end=new Date($("#reopenQrEnd")?.value||"");
-  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return alert("Vui lòng nhập đầy đủ thời gian.");
-  if(end<=start)return alert("Thời gian kết thúc phải sau thời gian bắt đầu.");
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return oscAlert("Vui lòng nhập đầy đủ thời gian.");
+  if(end<=start)return oscAlert("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
   const portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token)
     || (qrCurrentPortal?.token===token?qrCurrentPortal:null);
-  if(portal?.semester&&portal.semester!==semester)return alert("QR này không thuộc học kỳ đang chọn.");
-  if(portal?.semester&&semesterLocked(portal.semester))return alert("Học kỳ đang bị khóa.");
+  if(portal?.semester&&portal.semester!==semester)return oscAlert("QR này không thuộc học kỳ đang chọn.");
+  if(portal?.semester&&semesterLocked(portal.semester))return oscAlert("Học kỳ đang bị khóa.");
 
   const ref=fbDb.collection("attendancePortals").doc(token);
   try{
@@ -10347,16 +10349,16 @@ async function reopenAttendancePortal(token){
   }catch(e){
     console.error("reopenAttendancePortal",e);
     if(e?.code==="permission-denied"){
-      alert("Không mở lại được QR vì Firestore Rules hiện tại chưa cho phép thao tác này. Hãy Publish file firestore_rules_v69.rules đi kèm V69.");
+      oscAlert("Không mở lại được QR vì Firestore Rules hiện tại chưa cho phép thao tác này. Hãy Publish file firestore_rules_v69.rules đi kèm V69.");
     }else{
-      alert("Không mở lại được QR: "+(e.message||e));
+      oscAlert("Không mở lại được QR: "+(e.message||e));
     }
   }
 }
 
 async function closeAttendancePortal(token,closeModalAfter=true){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
-  if(!confirm("Đóng QR điểm danh này? Link và mã QR sẽ mất hiệu lực ngay lập tức."))return;
+  if(!await oscConfirm("Đóng QR điểm danh này? Link và mã QR sẽ mất hiệu lực ngay lập tức."))return;
   try{
     await fbDb.collection("attendancePortals").doc(token).update({
       open:false,
@@ -10381,14 +10383,14 @@ async function closeAttendancePortal(token,closeModalAfter=true){
     })).catch(e=>console.warn("close QR audit",e));
   }catch(e){
     console.error(e);
-    alert("Không đóng được QR: "+(e.message||e));
+    oscAlert("Không đóng được QR: "+(e.message||e));
   }
 }
 async function deleteAttendancePortal(token,closeModalAfter=true){
   if(!canEditModule("attendance"))return ensureSemesterEditable();
   const portal=(attendancePortalRows||[]).find(p=>(p.token||p.id)===token) || (qrCurrentPortal?.token===token?qrCurrentPortal:null);
   const label=portal?.itemName||"QR điểm danh";
-  if(!confirm(`Xóa "${label}"?\n\nMã QR, link và toàn bộ lượt gửi của QR này sẽ bị xóa vĩnh viễn. Thao tác không thể hoàn tác.`))return;
+  if(!await oscConfirm(`Xóa "${label}"?\n\nMã QR, link và toàn bộ lượt gửi của QR này sẽ bị xóa vĩnh viễn. Thao tác không thể hoàn tác.`))return;
 
   try{
     // Delete all check-ins first because Firestore does not cascade-delete subcollections.
@@ -10419,7 +10421,7 @@ async function deleteAttendancePortal(token,closeModalAfter=true){
     watchAttendancePortals(true);
   }catch(e){
     console.error("deleteAttendancePortal",e);
-    alert("Không xóa được QR: "+(e.message||e));
+    oscAlert("Không xóa được QR: "+(e.message||e));
   }
 }
 $("#qrAttendanceBtn").onclick=openQRAttendance;
@@ -10448,7 +10450,7 @@ async function toggleActivityLookupVisibility(gi,ii){
   if(!ensureSemesterEditable())return;
   const item=sem().groups?.[gi]?.items?.[ii];
   if(!item)return;
-  if(item.specialType==="continuation")return alert("Hoạt động Đồng hành vốn không được công khai ở cổng tra cứu thành viên.");
+  if(item.specialType==="continuation")return oscAlert("Hoạt động Đồng hành vốn không được công khai ở cổng tra cứu thành viên.");
   const before=item.lookupVisible!==false,next=!before;
   item.lookupVisible=next;
   persistSafeLocalState();
@@ -10472,7 +10474,7 @@ async function toggleActivityLookupVisibility(gi,ii){
       if(lookupConfig().enabled)await syncLookupSemester({silent:true});
     }catch(rollbackError){console.error("lookup visibility rollback",rollbackError)}
     renderAll();
-    alert("Không đổi được trạng thái hiển thị hoạt động. Hệ thống đã hoàn tác để tránh dữ liệu cổng tra cứu bị lệch.\n\n"+(e?.message||e));
+    oscAlert("Không đổi được trạng thái hiển thị hoạt động. Hệ thống đã hoàn tác để tránh dữ liệu cổng tra cứu bị lệch.\n\n"+(e?.message||e));
   }
 }
 
@@ -10551,23 +10553,23 @@ function setHomeUniversity(id){
   state.universities.forEach(u=>u.isHome=u.id===id);
   renderUniversitySettings();
 }
-function addUniversitySetting(){
+async function addUniversitySetting(){
   if(!canEditClub())return;
-  const name=String(prompt("Tên trường đại học mới")||"").trim();
+  const name=String(await oscPrompt("Tên trường đại học mới")||"").trim();
   if(!name)return;
-  if(universities().some(u=>normalizeText(u.name)===normalizeText(name)))return alert("Tên trường này đã tồn tại.");
+  if(universities().some(u=>normalizeText(u.name)===normalizeText(name)))return oscAlert("Tên trường này đã tồn tại.");
   state.universities.push({id:universityIdFromName(name),name,markers:[],isHome:universities().length===0,createdAt:new Date().toISOString()});
   renderUniversitySettings();
 }
 async function removeUniversitySetting(id){
   if(!canEditClub())return;
   const u=universityById(id);if(!u)return;
-  if(universities().length<=1)return alert("Hệ thống cần ít nhất một trường trong cấu hình.");
+  if(universities().length<=1)return oscAlert("Hệ thống cần ít nhất một trường trong cấu hình.");
   const affected=members().filter(m=>memberUniversityId(m)===id);
   const msg=affected.length
     ? `Có ${affected.length} thành viên đang thuộc "${u.name}". Xóa trường này sẽ chuyển họ sang chế độ tự nhận diện theo MSSV. Tiếp tục?`
     : `Xóa trường "${u.name}" khỏi cấu hình?`;
-  if(!confirm(msg))return;
+  if(!await oscConfirm(msg))return;
 
   state.universities=state.universities.filter(x=>x.id!==id);
   if(!state.universities.some(x=>x.isHome)&&state.universities[0])state.universities[0].isHome=true;
@@ -10589,21 +10591,21 @@ async function removeUniversitySetting(id){
     persistStateOnly();renderAll();renderSettings();
     if(canEditClub())scheduleAutoLookupSync(true);
     toast("Đã xóa trường khỏi cấu hình");
-  }catch(e){alert("Không xóa được trường: "+(e.message||e))}
+  }catch(e){oscAlert("Không xóa được trường: "+(e.message||e))}
 }
 async function saveUniversitySettings(){
   if(!canEditClub())return;
   for(const u of universities()){
     u.name=String(u.name||"").trim();
     u.markers=parseUniversityMarkers(u.markers);
-    if(!u.name)return alert("Tên trường đại học không được để trống.");
+    if(!u.name)return oscAlert("Tên trường đại học không được để trống.");
   }
   const names=universities().map(u=>normalizeText(u.name));
-  if(new Set(names).size!==names.length)return alert("Tên trường đại học đang bị trùng.");
+  if(new Set(names).size!==names.length)return oscAlert("Tên trường đại học đang bị trùng.");
   if(!universities().some(u=>u.isHome))state.universities[0].isHome=true;
 
   const ok=await saveCloudStateNow();
-  if(!ok)return alert("Không lưu được cấu hình trường lên Firestore.");
+  if(!ok)return oscAlert("Không lưu được cấu hình trường lên Firestore.");
   persistStateOnly();renderAll();renderSettings();
   await logAudit({action:"update-university-settings",module:"settings",entityType:"config",entityId:"universities",summary:`Cập nhật cấu hình ${universities().length} trường đại học`,after:{count:universities().length}});
   toast("Đã lưu cấu hình trường");
@@ -10612,7 +10614,7 @@ async function reclassifyUniversitiesByMssv(){
   if(!canEditClub())return;
   const autoRows=members().filter(m=>memberUniversitySource(m)!=="manual");
   if(!autoRows.length)return toast("Không có thành viên tự nhận diện cần cập nhật");
-  if(!confirm(`Nhận diện lại ${autoRows.length} thành viên theo tiền tố MSSV hiện tại? Thành viên được chọn trường thủ công sẽ được giữ nguyên.`))return;
+  if(!await oscConfirm(`Nhận diện lại ${autoRows.length} thành viên theo tiền tố MSSV hiện tại? Thành viên được chọn trường thủ công sẽ được giữ nguyên.`))return;
 
   autoRows.forEach(m=>{
     m.universitySource="auto";
@@ -10629,7 +10631,7 @@ async function reclassifyUniversitiesByMssv(){
     if(canEditClub())scheduleAutoLookupSync(true);
     await logAudit({action:"reclassify-universities",module:"members",entityType:"member",entityId:"bulk",summary:`Nhận diện lại trường đại học theo MSSV (${autoRows.length} thành viên)`,after:{count:autoRows.length}});
     toast("Đã nhận diện lại trường theo MSSV");
-  }catch(e){alert("Không cập nhật được trường đại học: "+(e.message||e))}
+  }catch(e){oscAlert("Không cập nhật được trường đại học: "+(e.message||e))}
 }
 function updateMemberUniversityPreview(){
   const hint=$("#mf_university_hint");if(!hint)return;
@@ -10643,7 +10645,7 @@ $("#saveSemesterBtn").onclick=async()=>{
   sem().name=$("#setSemesterName").value.trim()||newCode;
   sem().startDate=$("#setSemesterStart").value||"";
   sem().endDate=$("#setSemesterEnd").value||"";
-  if(sem().startDate&&sem().endDate&&sem().endDate<sem().startDate)return alert("Ngày kết thúc không thể trước ngày bắt đầu.");
+  if(sem().startDate&&sem().endDate&&sem().endDate<sem().startDate)return oscAlert("Ngày kết thúc không thể trước ngày bắt đầu.");
   sem().fee=parseCurrency($("#setSemesterFee").value);
   sem().openingBalance=parseCurrency($("#setOpeningBalance").value);
   if(newCode!==old){
@@ -10660,11 +10662,11 @@ $("#saveSemesterBtn").onclick=async()=>{
   }
   save();toast("Đã lưu học kỳ");
 };
-$("#newSemesterBtn").onclick=()=>{
-  const code=String(prompt("Nhập mã học kỳ theo chuẩn SP / SU / FA, ví dụ SP27")||"").trim().toUpperCase();
+$("#newSemesterBtn").onclick=async()=>{
+  const code=String(await oscPrompt("Nhập mã học kỳ theo chuẩn SP / SU / FA, ví dụ SP27")||"").trim().toUpperCase();
   const parsed=parseMainSemester(code);
-  if(!parsed)return alert("Mã học kỳ chỉ được theo dạng SP27, SU27 hoặc FA27.");
-  if(state.semesters[code])return alert("Học kỳ này đã tồn tại.");
+  if(!parsed)return oscAlert("Mã học kỳ chỉ được theo dạng SP27, SU27 hoặc FA27.");
+  if(state.semesters[code])return oscAlert("Học kỳ này đã tồn tại.");
   state.semesters[code]={code,name:parsed.name,startDate:"",endDate:"",fee:0,openingBalance:0,groups:structuredClone(DEFAULT_STATE.semesters.FA26.groups).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:"",mode:activityMode(g,it),locked:false,lockedAt:"",lockedBy:"",lockedByName:""}))}))};
   state.lookupConfig[code]=defaultLookupConfig();
   semester=code;save();renderSettings();toast("Đã tạo "+parsed.name);
@@ -10682,9 +10684,9 @@ async function deleteLookupSemesterRemote(semCode){
 }
 $("#deleteSemesterBtn").onclick=async()=>{
   const keys=Object.keys(state.semesters);
-  if(keys.length<=1)return alert("Không thể xóa học kỳ cuối cùng. Hãy tạo học kỳ khác trước.");
-  const confirmCode=prompt(`Nhập chính xác mã học kỳ "${semester}" để xác nhận xóa dữ liệu học kỳ này.`);
-  if(confirmCode!==semester)return alert("Xác nhận không đúng, hệ thống chưa xóa dữ liệu.");
+  if(keys.length<=1)return oscAlert("Không thể xóa học kỳ cuối cùng. Hãy tạo học kỳ khác trước.");
+  const confirmCode=await oscPrompt(`Nhập chính xác mã học kỳ "${semester}" để xác nhận xóa dữ liệu học kỳ này.`);
+  if(confirmCode!==semester)return oscAlert("Xác nhận không đúng, hệ thống chưa xóa dữ liệu.");
   const semToDelete=semester;
   const removedMembers=state.members.filter(m=>m.semester===semToDelete).length;
   const removedTx=state.transactions.filter(t=>t.semester===semToDelete).length;
@@ -10698,10 +10700,10 @@ $("#deleteSemesterBtn").onclick=async()=>{
   save();
   const remoteDeleted=await deleteLookupSemesterRemote(semToDelete);
   toast("Đã xóa dữ liệu học kỳ");
-  alert(`Đã xóa học kỳ ${semToDelete}.\n- Thành viên đã xóa: ${removedMembers}\n- Giao dịch đã xóa: ${removedTx}\n- Cổng tra cứu Firebase: ${remoteDeleted?"Đã xóa":"Không xóa được, nếu cần hãy xóa lại trên Firebase"}`);
+  oscAlert(`Đã xóa học kỳ ${semToDelete}.\n- Thành viên đã xóa: ${removedMembers}\n- Giao dịch đã xóa: ${removedTx}\n- Cổng tra cứu Firebase: ${remoteDeleted?"Đã xóa":"Không xóa được, nếu cần hãy xóa lại trên Firebase"}`);
 };
 $("#addFieldBtn").onclick=()=>{const label=$("#newFieldLabel").value.trim();if(!label)return;const key="custom_"+uid();state.memberFields.push({key,label,type:$("#newFieldType").value,required:false});$("#newFieldLabel").value="";save();renderSettings()};
-function removeMemberField(i){if(confirm("Xóa trường này? Dữ liệu cũ của trường sẽ không còn hiển thị.")){state.memberFields.splice(i,1);save();renderSettings()}}
+async function removeMemberField(i){if(await oscConfirm("Xóa trường này? Dữ liệu cũ của trường sẽ không còn hiển thị.")){state.memberFields.splice(i,1);save();renderSettings()}}
 
 function setActivityGroupDefaultMode(gi,value){
   const g=sem().groups?.[gi];if(!g)return;
@@ -10711,7 +10713,7 @@ function setActivityGroupDefaultMode(gi,value){
 async function changeActivityItemMode(gi,ii,value){
   if(!canEditClub())return renderSettings();
   const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
-  if(it.locked)return alert("Cột đang khóa. Hãy mở khóa trước khi đổi hình thức.");
+  if(it.locked)return oscAlert("Cột đang khóa. Hãy mở khóa trước khi đổi hình thức.");
   const next=value==="number"?"number":"checkbox";
   const before=activityMode(g,it);
   if(next===before)return;
@@ -10752,21 +10754,21 @@ async function changeActivityItemMode(gi,ii,value){
   }catch(e){
     it.mode=before;
     renderSettings();renderQLTV();
-    alert("Không đổi được hình thức chấm điểm: "+(e.message||e));
+    oscAlert("Không đổi được hình thức chấm điểm: "+(e.message||e));
   }
 }
 function setActivityMaxPoints(gi,ii,value){
   const g=sem().groups?.[gi],it=g?.items?.[ii];if(!g||!it)return;
-  if(it.locked){renderSettings();return alert("Cột đang khóa. Hãy mở khóa trước khi đổi điểm tối đa.");}
+  if(it.locked){renderSettings();return oscAlert("Cột đang khóa. Hãy mở khóa trước khi đổi điểm tối đa.");}
   const next=Number(value||0);
   if(!Number.isFinite(next)||next<0){
-    renderSettings();return alert("Điểm tối đa phải từ 0 trở lên.");
+    renderSettings();return oscAlert("Điểm tối đa phải từ 0 trở lên.");
   }
   if(activityMode(g,it)==="number"){
     const highest=Math.max(0,...members().map(m=>Number(m.scores?.[it.id]||0)));
     if(next<highest){
       renderSettings();
-      return alert(`Không thể giảm điểm tối đa xuống ${next} vì đang có thành viên được ${highest} điểm. Hãy chỉnh điểm thành viên trước.`);
+      return oscAlert(`Không thể giảm điểm tối đa xuống ${next} vì đang có thành viên được ${highest} điểm. Hãy chỉnh điểm thành viên trước.`);
     }
   }
   it.points=next;
@@ -10774,8 +10776,8 @@ function setActivityMaxPoints(gi,ii,value){
 }
 
 async function toggleActivityColumnLock(gi,ii){
-  if(!canEditClub())return alert("Chỉ Admin/Super Admin mới có thể khóa hoặc mở khóa cột điểm.");
-  if(semesterLocked())return alert("Học kỳ đang bị khóa toàn bộ. Hãy mở khóa học kỳ trước.");
+  if(!canEditClub())return oscAlert("Chỉ Admin/Super Admin mới có thể khóa hoặc mở khóa cột điểm.");
+  if(semesterLocked())return oscAlert("Học kỳ đang bị khóa toàn bộ. Hãy mở khóa học kỳ trước.");
 
   const item=sem().groups?.[gi]?.items?.[ii];
   if(!item)return;
@@ -10785,7 +10787,7 @@ async function toggleActivityColumnLock(gi,ii){
     ? `Khóa cột "${item.name}"?\n\nSau khi khóa, hệ thống sẽ chặn nhập/sửa điểm bằng bảng điểm danh, Excel, QR và điểm sự kiện cho cột này. Bạn vẫn có thể mở khóa lại trong Thiết lập.`
     : `Mở khóa cột "${item.name}" để cho phép chỉnh sửa điểm trở lại?`;
 
-  if(!confirm(message))return;
+  if(!await oscConfirm(message))return;
 
   const before=!!item.locked;
   item.locked=next;
@@ -10806,7 +10808,7 @@ async function toggleActivityColumnLock(gi,ii){
     item.lockedByName="";
     persistStateOnly();
     renderSettings();renderQLTV();renderAttendanceSelector();
-    return alert("Không đồng bộ được trạng thái khóa cột lên Firestore. Hệ thống đã hoàn tác thay đổi.");
+    return oscAlert("Không đồng bộ được trạng thái khóa cột lên Firestore. Hệ thống đã hoàn tác thay đổi.");
   }
 
   await logAudit({
@@ -10838,14 +10840,14 @@ async function removeActivityItem(gi,ii){
   const message=linked.length
     ? `Hoạt động này đang liên kết với ${linked.length} sự kiện. Nếu xóa hoạt động, các cổng vẫn được giữ lại nhưng sẽ được gỡ liên kết để tránh lỗi.\n\nBạn có chắc muốn xóa?`
     : "Xóa cột hoạt động này?";
-  if(!confirm(message))return;
+  if(!await oscConfirm(message))return;
   try{
     if(linked.length){
       await Promise.all(linked.map(ev=>fbDb.collection("eventPortals").doc(ev.id).set({linkedActivityId:"",linkedActivityGroupId:"",linkedActivityName:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})));
       linked.forEach(ev=>{ev.linkedActivityId="";ev.linkedActivityGroupId="";ev.linkedActivityName=""});
     }
     sem().groups[gi].items.splice(ii,1);save();renderSettings();renderEvents();toast(linked.length?"Đã xóa hoạt động và gỡ liên kết sự kiện":"Đã xóa hoạt động");
-  }catch(e){console.error("removeActivityItem",e);alert("Không xóa được hoạt động vì chưa gỡ được liên kết sự kiện: "+(e.message||e))}
+  }catch(e){console.error("removeActivityItem",e);oscAlert("Không xóa được hoạt động vì chưa gỡ được liên kết sự kiện: "+(e.message||e))}
 }
 $("#saveActivitiesBtn").onclick=()=>{save();toast("Đã lưu hoạt động")};
 if($("#addUniversityBtn"))$("#addUniversityBtn").onclick=addUniversitySetting;
@@ -10879,8 +10881,8 @@ renderSettings=function(){__renderSettingsBase();if($("#semesterLockSetting"))$(
 $("#duplicateSemesterBtn").onclick=async()=>{
   if(!canEditClub())return;
   const code=nextMainSemesterCode(semester);
-  if(!code)return alert("Mã học kỳ hiện tại không đúng chuẩn SP/SU/FA.");
-  if(state.semesters[code])return alert(`${state.semesters[code].name||code} đã tồn tại.`);
+  if(!code)return oscAlert("Mã học kỳ hiện tại không đúng chuẩn SP/SU/FA.");
+  if(state.semesters[code])return oscAlert(`${state.semesters[code].name||code} đã tồn tại.`);
   const parsed=parseMainSemester(code),src=structuredClone(sem());
   state.semesters[code]={...src,code,name:parsed?.name||code,startDate:"",endDate:"",openingBalance:0,locked:false,groups:(src.groups||[]).map(g=>({...g,id:g.id+"_"+code,items:(g.items||[]).map(it=>({...it,id:"act_"+uid(),date:"",mode:activityMode(g,it),locked:false,lockedAt:"",lockedBy:"",lockedByName:""}))}))};
   state.lookupConfig[code]=defaultLookupConfig();
@@ -10888,7 +10890,7 @@ $("#duplicateSemesterBtn").onclick=async()=>{
   await logAudit({action:"clone-semester",module:"settings",summary:`Nhân bản cấu trúc ${semester} → ${code}`,semesterKey:code});
   toast("Đã nhân bản sang "+(parsed?.name||code));
 };
-$("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1",previous=!!sem().locked;if(want&&!confirm("Khóa toàn bộ dữ liệu học kỳ này? Sau khi khóa, Admin và BCN đều chỉ có thể xem. Muốn chỉnh sửa lại phải mở khóa tại Thiết lập.")){e.target.value="0";return}sem().locked=want;persistStateOnly();const ok=await saveCloudStateNow();if(!ok){sem().locked=previous;persistStateOnly();e.target.value=previous?"1":"0";renderAll();return alert("Không đồng bộ được trạng thái khóa lên Firestore. Hệ thống đã giữ trạng thái cũ để tránh xung đột.")}await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa toàn bộ dữ liệu học kỳ":"Đã mở khóa học kỳ")};
+$("#semesterLockSetting").onchange=async e=>{if(!canEditClub())return;const want=e.target.value==="1",previous=!!sem().locked;if(want&&!await oscConfirm("Khóa toàn bộ dữ liệu học kỳ này? Sau khi khóa, Admin và BCN đều chỉ có thể xem. Muốn chỉnh sửa lại phải mở khóa tại Thiết lập.")){e.target.value="0";return}sem().locked=want;persistStateOnly();const ok=await saveCloudStateNow();if(!ok){sem().locked=previous;persistStateOnly();e.target.value=previous?"1":"0";renderAll();return oscAlert("Không đồng bộ được trạng thái khóa lên Firestore. Hệ thống đã giữ trạng thái cũ để tránh xung đột.")}await logAudit({action:want?"lock-semester":"unlock-semester",module:"settings",summary:`${want?"Khóa":"Mở khóa"} học kỳ ${semester}`});renderAll();toast(want?"Đã khóa toàn bộ dữ liệu học kỳ":"Đã mở khóa học kỳ")};
 for(const id of ["approvalDeleteMember","approvalDeleteFinance","approvalBulkAttendance"]){const el=$("#"+id);if(el)el.onchange=()=>{state.approvalConfig={deleteMember:$("#approvalDeleteMember").checked,deleteFinance:$("#approvalDeleteFinance").checked,bulkAttendance:$("#approvalBulkAttendance").checked};save();toast("Đã lưu chế độ duyệt")}}
 function renderAll(){
   renderSemesterSelect();
