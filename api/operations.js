@@ -26,43 +26,138 @@ function status(code){
   return 400;
 }
 
-/* ===== Room Booking Board ===== */
+/* ===== Room booking: weekly availability + automatic history (Asia/Ho_Chi_Minh) ===== */
+const ROOM_MAX_MS=24*60*60*1000;
 function roomPublic(doc){
   const d=doc.data?doc.data()||{}:doc||{};
-  return{id:String(doc.id||d.id||""),semester:String(d.semester||""),roomName:String(d.roomName||""),purpose:String(d.purpose||""),
-    eventId:String(d.eventId||""),startAt:millis(d.startAt),endAt:millis(d.endAt),status:d.status==="cancelled"?"cancelled":"active",
-    createdByName:String(d.createdByName||"")};
+  return{
+    id:String(doc.id||d.id||""),semester:String(d.semester||""),roomName:String(d.roomName||""),
+    purpose:String(d.purpose||""),eventId:String(d.eventId||""),
+    startAt:millis(d.startAt),endAt:millis(d.endAt),
+    status:d.status==="cancelled"?"cancelled":"active",
+    createdByName:String(d.createdByName||""),updatedByName:String(d.updatedByName||"")
+  };
+}
+function vnDateParts(ms){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"
+  }).formatToParts(new Date(ms));
+  const val=key=>Number(parts.find(x=>x.type===key)?.value||0);
+  return{y:val("year"),m:val("month"),d:val("day")};
+}
+function vnMidnight(ms){
+  const p=vnDateParts(ms);
+  return Date.UTC(p.y,p.m-1,p.d)-7*60*60*1000;
+}
+function roomWindow(body){
+  const weekStart=dateValue(body.weekStart,"Đầu tuần").getTime();
+  if(!Number.isFinite(weekStart)||weekStart!==vnMidnight(weekStart))throw bad("Ngày đầu tuần phải ở 00:00 giờ Việt Nam.");
+  if(new Date(weekStart+7*60*60*1000).getUTCDay()!==1)throw bad("Đầu tuần phải là thứ Hai.");
+  if(Math.abs(weekStart-Date.now())>2*366*86400000)throw bad("Chỉ xem lịch phòng trong phạm vi hai năm.");
+  return{start:weekStart,end:weekStart+7*86400000};
+}
+function normalizeRoomBooking(body){
+  const roomName=clean(body.roomName,100),purpose=clean(body.purpose,240),eventId=clean(body.eventId,180);
+  if(!roomName||!purpose)throw bad("Vui lòng nhập phòng và mục đích sử dụng.");
+  const roomKey=roomName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
+  const start=dateValue(body.startAt,"Giờ bắt đầu"),end=dateValue(body.endAt,"Giờ kết thúc");
+  if(end<=start)throw bad("Giờ kết thúc phải sau giờ bắt đầu.");
+  if(end.getTime()-start.getTime()>ROOM_MAX_MS)throw bad("Một lượt sử dụng phòng tối đa 24 giờ.");
+  return{roomName,roomKey,purpose,eventId,start,end};
+}
+function ensureRoomManager(actor){
+  if(!isManager(actor))throw bad("Chỉ Admin hoặc Super Admin được tạo, sửa và hủy lịch phòng.","osc/forbidden");
+}
+async function assertNoRoomOverlap(tx,db,data,exceptId=""){
+  // Look back 24h because any booking is limited to 24 hours.
+  // Filter the room and status in JS so Firestore needs only the startAt single-field index.
+  const q=db.collection("roomBookings").where("startAt",">=",admin.firestore.Timestamp.fromMillis(data.start.getTime()-ROOM_MAX_MS))
+    .where("startAt","<",admin.firestore.Timestamp.fromDate(data.end));
+  const snap=await tx.get(q);
+  for(const doc of snap.docs){
+    if(doc.id===exceptId)continue;
+    const d=doc.data()||{};
+    if(d.status==="cancelled")continue;
+    const key=String(d.roomKey||d.roomName||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
+    if(key!==data.roomKey)continue;
+    if(data.start.getTime()<millis(d.endAt)&&data.end.getTime()>millis(d.startAt))
+      throw bad("Phòng "+data.roomName+" đã có lịch trùng thời gian.","osc/room-conflict");
+  }
 }
 async function roomsList(req,body){
   const actor=await requireUser(req),db=getDb(),semester=normalizeSemester(body.semester);
   const snap=await db.collection("roomBookings").where("semester","==",semester).get();
   const rows=snap.docs.map(roomPublic).filter(x=>x.status==="active").sort((a,b)=>a.startAt-b.startAt);
-  return{ok:true,version:95,rows,canEdit:canEditEvents(actor)}
+  return{ok:true,version:98,rows,canEdit:isManager(actor)};
+}
+async function roomBoard(req,body){
+  const actor=await requireUser(req),db=getDb(),win=roomWindow(body);
+  const snap=await db.collection("roomBookings")
+    .where("startAt",">=",admin.firestore.Timestamp.fromMillis(win.start-ROOM_MAX_MS))
+    .where("startAt","<",admin.firestore.Timestamp.fromMillis(win.end)).get();
+  const rows=snap.docs.map(roomPublic)
+    .filter(x=>x.status==="active"&&x.endAt>win.start&&x.startAt<win.end)
+    .sort((a,b)=>a.startAt-b.startAt||a.roomName.localeCompare(b.roomName,"vi"));
+  return{ok:true,version:98,rows,canEdit:isManager(actor),serverNow:Date.now(),weekStart:win.start};
+}
+async function roomHistory(req,body){
+  const actor=await requireUser(req),db=getDb(),now=Date.now();
+  const todayStart=vnMidnight(now),before=body.before==null?todayStart:Number(body.before);
+  if(!Number.isFinite(before)||before<=0)throw bad("Mốc lịch sử không hợp lệ.");
+  const until=Math.min(todayStart,before),limit=60;
+  const snap=await db.collection("roomBookings")
+    .where("endAt","<",admin.firestore.Timestamp.fromMillis(until))
+    .orderBy("endAt","desc").limit(limit+1).get();
+  const page=snap.docs.slice(0,limit),last=page[page.length-1];
+  const rows=page.map(roomPublic).filter(x=>x.status==="active");
+  return{ok:true,version:98,rows,hasMore:snap.size>limit,nextBefore:last?millis(last.data().endAt):null,canEdit:isManager(actor),serverNow:now};
 }
 async function roomCreate(req,body){
-  const actor=await requireUser(req);if(!canEditEvents(actor))throw bad("Bạn chưa có quyền tạo lịch phòng.","osc/forbidden");
-  const db=getDb(),state=await loadState(db),semester=normalizeSemester(body.semester);if(semesterLocked(state,semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  const roomName=clean(body.roomName,100),purpose=clean(body.purpose,240),eventId=clean(body.eventId,180);
-  if(!roomName||!purpose)throw bad("Vui lòng nhập phòng và mục đích sử dụng.");
-  const roomKey=roomName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  const start=dateValue(body.startAt,"Giờ bắt đầu"),end=dateValue(body.endAt,"Giờ kết thúc");
-  if(end<=start)throw bad("Giờ kết thúc phải sau giờ bắt đầu.");
-  if(end.getTime()-start.getTime()>24*60*60*1000)throw bad("Một lượt đặt phòng tối đa 24 giờ.");
-  const ref=db.collection("roomBookings").doc(),query=db.collection("roomBookings").where("semester","==",semester);
+  const actor=await requireUser(req);ensureRoomManager(actor);
+  const db=getDb(),state=await loadState(db),semester=normalizeSemester(body.semester);
+  if(semesterLocked(state,semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  const data=normalizeRoomBooking(body),ref=db.collection("roomBookings").doc();
   await db.runTransaction(async tx=>{
-    const snap=await tx.get(query);
-    for(const doc of snap.docs){const d=doc.data()||{};if(d.status==="cancelled"||String(d.roomKey||"")!==roomKey)continue;const a=millis(d.startAt),b=millis(d.endAt);if(start.getTime()<b&&end.getTime()>a)throw bad(`Phòng ${roomName} đã được đặt trong khung giờ này.`,"osc/room-conflict")}
-    tx.set(ref,{semester,roomName,roomKey,purpose,eventId,status:"active",startAt:admin.firestore.Timestamp.fromDate(start),endAt:admin.firestore.Timestamp.fromDate(end),
-      createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid,createdByName:clean(actor.profile.displayName||actor.decoded.email||"BCN",120)},{merge:false});
+    await assertNoRoomOverlap(tx,db,data);
+    tx.set(ref,{
+      semester,roomName:data.roomName,roomKey:data.roomKey,purpose:data.purpose,eventId:data.eventId,
+      status:"active",startAt:admin.firestore.Timestamp.fromDate(data.start),endAt:admin.firestore.Timestamp.fromDate(data.end),
+      createdAt:admin.firestore.FieldValue.serverTimestamp(),createdBy:actor.decoded.uid,
+      createdByName:clean(actor.profile.displayName||actor.decoded.email||"Admin",120)
+    },{merge:false});
   });
-  return{ok:true,version:95,bookingId:ref.id}
+  return{ok:true,version:98,bookingId:ref.id};
+}
+async function roomUpdate(req,body){
+  const actor=await requireUser(req);ensureRoomManager(actor);
+  const db=getDb(),id=cleanId(body.bookingId,"Lịch phòng"),ref=db.collection("roomBookings").doc(id);
+  const data=normalizeRoomBooking(body),state=await loadState(db);
+  await db.runTransaction(async tx=>{
+    const existing=await tx.get(ref);
+    if(!existing.exists||existing.data()?.status==="cancelled")throw bad("Lịch phòng không tồn tại hoặc đã hủy.","osc/not-found");
+    if(semesterLocked(state,existing.data().semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+    await assertNoRoomOverlap(tx,db,data,id);
+    tx.update(ref,{
+      roomName:data.roomName,roomKey:data.roomKey,purpose:data.purpose,eventId:data.eventId,
+      startAt:admin.firestore.Timestamp.fromDate(data.start),endAt:admin.firestore.Timestamp.fromDate(data.end),
+      updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.decoded.uid,
+      updatedByName:clean(actor.profile.displayName||actor.decoded.email||"Admin",120)
+    });
+  });
+  return{ok:true,version:98,bookingId:id,updated:true};
 }
 async function roomCancel(req,body){
-  const actor=await requireUser(req);if(!canEditEvents(actor))throw bad("Bạn chưa có quyền hủy lịch phòng.","osc/forbidden");
-  const db=getDb(),id=cleanId(body.bookingId,"Lịch phòng"),ref=db.collection("roomBookings").doc(id),snap=await ref.get();if(!snap.exists)throw bad("Lịch phòng không tồn tại.","osc/not-found");
-  const d=snap.data()||{},state=await loadState(db);if(semesterLocked(state,d.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
-  await ref.set({status:"cancelled",cancelledAt:admin.firestore.FieldValue.serverTimestamp(),cancelledBy:actor.decoded.uid},{merge:true});
-  return{ok:true,version:95,cancelled:true}
+  const actor=await requireUser(req);ensureRoomManager(actor);
+  const db=getDb(),id=cleanId(body.bookingId,"Lịch phòng"),ref=db.collection("roomBookings").doc(id),state=await loadState(db);
+  await db.runTransaction(async tx=>{
+    const snap=await tx.get(ref);
+    if(!snap.exists)throw bad("Lịch phòng không tồn tại.","osc/not-found");
+    const d=snap.data()||{};
+    if(d.status==="cancelled")throw bad("Lịch phòng đã bị hủy.");
+    if(semesterLocked(state,d.semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+    tx.update(ref,{status:"cancelled",cancelledAt:admin.firestore.FieldValue.serverTimestamp(),cancelledBy:actor.decoded.uid});
+  });
+  return{ok:true,version:98,cancelled:true};
 }
 
 /* ===== Temporary Permissions ===== */
@@ -102,6 +197,9 @@ module.exports=async function handler(req,res){
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
     if(action==="rooms-list")out=await roomsList(req,body);
+    else if(action==="room-board")out=await roomBoard(req,body);
+    else if(action==="room-history")out=await roomHistory(req,body);
+    else if(action==="room-update")out=await roomUpdate(req,body);
     else if(action==="room-create")out=await roomCreate(req,body);
     else if(action==="room-cancel")out=await roomCancel(req,body);
     else if(action==="temp-list")out=await tempList(req,body);
