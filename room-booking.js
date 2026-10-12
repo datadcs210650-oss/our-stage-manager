@@ -37,6 +37,7 @@ function shell(){
     if(act==="new")openForm(null);
     if(act==="slots"&&manager())switchTab("slots");
     if(act==="slot-add")addSlotRow();
+    if(act==="slot-sample")useSampleSlots();
     if(act==="slot-delete")removeSlotRow(button.dataset.id);
     if(act==="slot-save")saveSlots();
     if(act==="reload"){if(data.tab==="week")getWeek();else if(data.tab==="history")getHistory(true);else loadSlots(true)}
@@ -110,99 +111,188 @@ async function loadSlots(force){
   }catch(e){data.slotReady=false;notice("Không tải được cấu hình slot: "+(e.message||String(e)))}
   finally{data.slotBusy=false}
 }
-function slotRange(first,last){
-  var start=data.slots.findIndex(function(x){return x.id===first});
-  var end=data.slots.findIndex(function(x){return x.id===last});
-  if(start<0||end<start)throw Error("Chọn slot bắt đầu và slot kết thúc hợp lệ.");
-  var selected=data.slots.slice(start,end+1);
-  // All slot indexes between the first and last are included; breaks are reserved too.
+
+function slotLabel(x){return x.label+" ("+x.start+"–"+x.end+")"}
+function sortedSelected(ids){
+  const choices=new Set(ids||[]);
+  return data.slots.filter(x=>choices.has(x.id));
+}
+function slotError(msg){var node=el("#rbSlotError");if(node)node.textContent=msg||""}
+function slotRange(ids){
+  const selected=sortedSelected(ids);
+  if(!selected.length)throw Error("Hãy chọn ít nhất một slot.");
+  if(selected.length!==new Set(ids||[]).size)throw Error("Có slot không còn tồn tại. Hãy tải lại danh sách slot.");
   return selected;
 }
-function slotLabel(x){return x.label+" ("+x.start+"–"+x.end+")"}
-function slotError(msg){var node=el("#rbSlotError");if(node)node.textContent=msg||""}
 function renderSlots(){
-  var root=el("#rbContent");if(!root||data.tab!=="slots"||!manager())return;
-  var html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO ADMIN</span><h3>Danh sách slot sử dụng phòng</h3><p>Cài giờ từng slot một lần. Khi nhập lịch, Admin chọn một hoặc nhiều slot liên tiếp trong danh sách; khoảng nghỉ giữa các slot cũng được giữ phòng.</p></div><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div>';
+  const root=el("#rbContent");if(!root||data.tab!=="slots"||!manager())return;
+  let html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO ADMIN</span><h3>Danh sách slot sử dụng phòng</h3><p>Thiết lập giờ mỗi slot. Khi tạo booking, có thể chọn nhiều slot bất kỳ từ danh sách tìm kiếm. Chỉ những slot đã chọn mới được giữ phòng.</p></div><div class="rb-slot-top-actions"><button class="rb-button rb-outline" type="button" data-action="slot-sample">8 slot theo mẫu</button><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div></div>';
   html+='<div class="rb-slot-heading"><b>Tên slot</b><b>Giờ bắt đầu</b><b>Giờ kết thúc</b><span></span></div><div class="rb-slot-rows">';
-  data.slots.forEach(function(slot){
-    html+='<div class="rb-slot-row" data-slot-id="'+safe(slot.id)+'"><input type="text" data-slot-field="label" maxlength="60" value="'+safe(slot.label)+'" aria-label="Tên slot" required><input type="time" data-slot-field="start" value="'+safe(slot.start)+'" required aria-label="Giờ bắt đầu"><input type="time" data-slot-field="end" value="'+safe(slot.end)+'" required aria-label="Giờ kết thúc"><button type="button" class="rb-button rb-danger" data-action="slot-delete" data-id="'+safe(slot.id)+'">Xóa</button></div>';
+  data.slots.forEach(function(x){
+    html+='<div class="rb-slot-row" data-slot-id="'+safe(x.id)+'"><input type="text" data-slot-field="label" maxlength="60" value="'+safe(x.label)+'" aria-label="Tên slot" required><input type="time" data-slot-field="start" value="'+safe(x.start)+'" required aria-label="Bắt đầu"><input type="time" data-slot-field="end" value="'+safe(x.end)+'" required aria-label="Kết thúc"><button type="button" class="rb-button rb-danger" data-action="slot-delete" data-id="'+safe(x.id)+'">Xóa</button></div>';
   });
-  html+='</div><p class="rb-form-error" id="rbSlotError" role="alert"></p><div class="rb-slot-footer"><span>Giới hạn 48 slot · Không trùng giờ · Mốc giờ 24 tiếng (GMT+7). Lịch cũ không đổi khi sửa danh sách slot.</span><button type="button" class="rb-button rb-primary" data-action="slot-save" id="rbSlotSave">Lưu danh sách slot</button></div></div>';
+  html+='</div><p class="rb-form-error" id="rbSlotError" role="alert"></p><div class="rb-slot-footer"><span>Tối đa 48 slot, không chồng giờ. Lịch đã lưu giữ nguyên giờ slot tại thời điểm đặt. BCN chỉ được xem lịch.</span><button type="button" class="rb-button rb-primary" data-action="slot-save" id="rbSlotSave">Lưu danh sách slot</button></div></div>';
   root.innerHTML=html;
 }
 function syncDraftSlots(){
-  var rows=Array.from(document.querySelectorAll("#roomBookingRoot .rb-slot-row"));
-  data.slots=rows.map(function(row){
-    var get=function(name){return row.querySelector('[data-slot-field="'+name+'"]').value.trim()};
-    return{id:row.dataset.slotId,label:get("label"),start:get("start"),end:get("end")};
+  data.slots=Array.from(document.querySelectorAll("#roomBookingRoot .rb-slot-row")).map(function(row){
+    const value=k=>row.querySelector('[data-slot-field="'+k+'"]').value.trim();
+    return {id:row.dataset.slotId,label:value("label"),start:value("start"),end:value("end")};
   });
 }
 function newSlotId(){
-  var bytes=new Uint8Array(8);crypto.getRandomValues(bytes);
-  return "slot_"+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,"0")}).join("");
+  const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);
+  return "slot_"+Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 function addSlotRow(){
-  if(!manager())return;
-  syncDraftSlots();
-  if(data.slots.length>=48){slotError("Chỉ được tạo tối đa 48 slot.");return}
-  var end=data.slots.length?data.slots[data.slots.length-1].end:"07:00";
-  if(end==="24:00"||end==="23:59"){slotError("Không còn thời gian trống để thêm slot ở cuối ngày.");return}
-  var start=end;
-  var n=Number(start.slice(0,2))*60+Number(start.slice(3));
-  var stop=Math.min(n+50,1439);
-  var endStr=String(Math.floor(stop/60)).padStart(2,"0")+":"+String(stop%60).padStart(2,"0");
-  if(start==="24:00"||Number(start.slice(0,2))*60+Number(start.slice(3))>=1440){slotError("Đã hết khung giờ trong ngày. Hãy chỉnh sửa một slot cũ.");return}
-  data.slots.push({id:newSlotId(),label:"Slot "+(data.slots.length+1),start:start,end:endStr});
+  if(!manager())return;syncDraftSlots();
+  if(data.slots.length>=48)return slotError("Chỉ được tạo tối đa 48 slot.");
+  const end=data.slots.length?data.slots[data.slots.length-1].end:"07:00";
+  if(end==="24:00"||end==="23:59")return slotError("Không còn thời gian trống để thêm slot.");
+  const min=Number(end.slice(0,2))*60+Number(end.slice(3));
+  const finish=Math.min(min+50,1439);
+  const label=String(Math.floor(finish/60)).padStart(2,"0")+":"+String(finish%60).padStart(2,"0");
+  data.slots.push({id:newSlotId(),label:"Slot "+(data.slots.length+1),start:end,end:label});
   renderSlots();
-  var last=el("#rbContent .rb-slot-row:last-child [data-slot-field=label]");if(last)last.focus();
 }
 function removeSlotRow(id){
-  if(!manager())return;syncDraftSlots();
-  data.slots=data.slots.filter(function(x){return x.id!==id});
-  renderSlots();
+  if(!manager())return;syncDraftSlots();data.slots=data.slots.filter(x=>x.id!==id);renderSlots();
+}
+async function useSampleSlots(){
+  if(!manager())return;
+  syncDraftSlots();
+  if(data.slots.length&&typeof oscConfirm==="function"&&!await oscConfirm("Thay danh sách slot đang nhập bằng 8 slot mẫu?\n\nLịch đã đặt sẽ không bị thay đổi."))return;
+  const values=[["07:00","08:30"],["08:45","10:15"],["10:30","12:00"],["12:45","14:15"],
+    ["14:30","16:00"],["16:15","17:45"],["18:00","19:30"],["19:45","21:15"]];
+  data.slots=values.map((pair,i)=>({id:newSlotId(),label:"Slot "+(i+1),start:pair[0],end:pair[1]}));
+  renderSlots();message("Đã nhập 8 slot mẫu. Nhấn Lưu danh sách slot để áp dụng.");
 }
 async function saveSlots(){
-  if(!manager())return;
-  syncDraftSlots();slotError("");
-  var submit=el("#rbSlotSave");if(submit)submit.disabled=true;
+  if(!manager())return;syncDraftSlots();slotError("");
+  const button=el("#rbSlotSave");if(button)button.disabled=true;
   try{
-    var result=await request("room-slot-save",{slots:data.slots});
+    const result=await request("room-slot-save",{slots:data.slots});
     data.slots=(result.slots||[]).slice();data.slotReady=true;
-    renderSlots();message("Đã lưu danh sách slot cho Room Booking");
+    renderSlots();message("Đã lưu danh sách slot");
   }catch(e){slotError(e.message||String(e))}
-  finally{if(submit&&submit.isConnected)submit.disabled=false}
+  finally{if(button&&button.isConnected)button.disabled=false}
 }
 function modalClose(){
-  var m=el("#rbModal");if(m)m.remove();
+  const m=el("#rbModal");if(m)m.remove();
   document.removeEventListener("keydown",modalKey,true);
+  document.removeEventListener("pointerdown",slotOutside,true);
 }
-function modalKey(e){if(e.key==="Escape"){e.preventDefault();modalClose()}}
-function previewSlots(form){
-  var note=form.querySelector("#rbSelectedSlots");if(!note)return;
-  try{
-    var chosen=slotRange(form.querySelector("#rbFirstSlot").value,form.querySelector("#rbLastSlot").value);
-    note.textContent=chosen.length+" slot · Giữ phòng "+chosen[0].start+" – "+chosen[chosen.length-1].end+" (kể cả khoảng nghỉ)";
-    note.classList.remove("rb-preview-error");
-  }catch(e){note.textContent=e.message||String(e);note.classList.add("rb-preview-error")}
+function modalKey(e){
+  if(e.key==="Escape"){
+    const list=el("#rbSlotDropdown");
+    if(list&&!list.hidden){e.preventDefault();closeSlotDropdown();return}
+    e.preventDefault();modalClose();
+  }
+}
+function slotOutside(e){
+  const wrap=el("#rbSlotWidget");
+  if(wrap&&!wrap.contains(e.target))closeSlotDropdown();
+}
+function closeSlotDropdown(){
+  const pop=el("#rbSlotDropdown"),toggle=el("#rbSlotToggle");
+  if(pop)pop.hidden=true;
+  if(toggle)toggle.setAttribute("aria-expanded","false");
+}
+function renderSlotSelection(form,ids){
+  const selected=sortedSelected(ids);
+  form.dataset.selectedSlots=JSON.stringify(selected.map(x=>x.id));
+  const chipArea=form.querySelector("#rbSlotChips");
+  const toggle=form.querySelector("#rbSlotToggle");
+  const summary=form.querySelector("#rbSelectedSlots");
+  if(!selected.length){
+    chipArea.innerHTML='<span class="rb-placeholder">Chưa chọn slot</span>';
+    toggle.querySelector(".rb-slot-toggle-count").textContent="Chọn slot";
+    summary.textContent="Chọn một hoặc nhiều slot trong danh sách.";
+  }else{
+    chipArea.innerHTML=selected.map(x=>'<span class="rb-selected-chip">'+safe(x.label)+'<button type="button" data-remove-slot="'+safe(x.id)+'" aria-label="Bỏ '+safe(x.label)+'">×</button></span>').join("");
+    toggle.querySelector(".rb-slot-toggle-count").textContent=selected.length+" slot đã chọn";
+    summary.textContent="Giữ phòng: "+selected.map(x=>slotLabel(x)).join(" · ");
+  }
+  drawSlotOptions(form);
+}
+function drawSlotOptions(form){
+  const list=form.querySelector("#rbSlotOptions");
+  const search=form.querySelector("#rbSlotSearch");
+  const term=(search.value||"").trim().toLocaleLowerCase("vi");
+  const selected=new Set(JSON.parse(form.dataset.selectedSlots||"[]"));
+  const visible=data.slots.filter(x=>slotLabel(x).toLocaleLowerCase("vi").includes(term));
+  list.innerHTML=visible.map(x=>'<label class="rb-slot-option"><input type="checkbox" value="'+safe(x.id)+'" '+(selected.has(x.id)?"checked":"")+'><span>'+safe(slotLabel(x))+'</span></label>').join("")||'<div class="rb-slot-no-results">Không tìm thấy slot phù hợp.</div>';
+}
+function openSlotDropdown(form){
+  const pop=form.querySelector("#rbSlotDropdown"),button=form.querySelector("#rbSlotToggle");
+  pop.hidden=false;button.setAttribute("aria-expanded","true");
+  const search=form.querySelector("#rbSlotSearch");
+  search.value="";drawSlotOptions(form);search.focus();
+}
+function setupSlotWidget(form,initial){
+  renderSlotSelection(form,initial);
+  const pop=form.querySelector("#rbSlotDropdown"),toggle=form.querySelector("#rbSlotToggle");
+  toggle.onclick=function(){if(pop.hidden)openSlotDropdown(form);else closeSlotDropdown()};
+  form.querySelector("#rbSlotSearch").oninput=function(){drawSlotOptions(form)};
+  form.querySelector("#rbSlotOptions").onchange=function(e){
+    if(e.target.type!=="checkbox")return;
+    const selected=new Set(JSON.parse(form.dataset.selectedSlots||"[]"));
+    if(e.target.checked)selected.add(e.target.value);else selected.delete(e.target.value);
+    renderSlotSelection(form,[...selected]);
+  };
+  form.querySelector("#rbSlotChips").onclick=function(e){
+    const button=e.target.closest("[data-remove-slot]");if(!button)return;
+    const old=JSON.parse(form.dataset.selectedSlots||"[]").filter(x=>x!==button.dataset.removeSlot);
+    renderSlotSelection(form,old);
+  };
+  document.addEventListener("pointerdown",slotOutside,true);
+}
+function bookingEventDate(ev){
+  const value=String(ev.eventDate||"");
+  if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;
+  const sem=state.semesters?.[ev.semester];
+  for(const group of sem?.groups||[])for(const activity of group.items||[]){
+    if(activity.id!==ev.linkedActivityId)continue;
+    const raw=String(activity.date||"");
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+    const d=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(d)return d[3]+"-"+pad(d[2])+"-"+pad(d[1]);
+  }
+  return "";
+}
+function eventMillis(value){
+  if(!value)return 0;
+  if(typeof value.toMillis==="function")return value.toMillis();
+  if(typeof value.toDate==="function")return value.toDate().getTime();
+  if(typeof value.seconds==="number")return value.seconds*1000;
+  if(typeof value==="number")return value;
+  return new Date(value).getTime()||0;
+}
+function bookableEvent(ev){
+  if(!ev||ev.isOpen!==true||ev.semester!==semester)return false;
+  if(eventMillis(ev.closeAt)>0&&eventMillis(ev.closeAt)<=Date.now())return false;
+  const when=bookingEventDate(ev);
+  if(when&&when<vnKey(Date.now()))return false;
+  return true;
 }
 async function submitForm(booking,form,button){
   if(!manager()||button.disabled)return;
-  var error=form.querySelector("#rbFormError");error.textContent="";button.disabled=true;
+  const error=form.querySelector("#rbFormError");error.textContent="";button.disabled=true;
   try{
-    var roomName=form.querySelector("#rbName").value.trim(),purpose=form.querySelector("#rbPurpose").value.trim();
-    var date=form.querySelector("#rbDate").value,eventId=form.querySelector("#rbEvent").value;
-    var selected=slotRange(form.querySelector("#rbFirstSlot").value,form.querySelector("#rbLastSlot").value);
+    const roomName=form.querySelector("#rbName").value.trim(),purpose=form.querySelector("#rbPurpose").value.trim();
+    const date=form.querySelector("#rbDate").value,eventId=form.querySelector("#rbEvent").value;
+    const selected=slotRange(JSON.parse(form.dataset.selectedSlots||"[]"));
     if(!roomName||!purpose)throw Error("Hãy nhập đủ tên phòng và mục đích sử dụng.");
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error("Hãy chọn ngày sử dụng hợp lệ.");
-    await request(booking?"room-update":"room-create",Object.assign(booking?{bookingId:booking.id}:{},{
-      semester:booking?booking.semester:semester,roomName:roomName,purpose:purpose,
-      date:date,slotIds:selected.map(function(x){return x.id}),eventId:eventId
-    }));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error("Ngày sử dụng không hợp lệ.");
+    await request(booking?"room-update":"room-create",{
+      ...(booking?{bookingId:booking.id}:{}),
+      semester:booking?booking.semester:semester,roomName,purpose,date,
+      slotIds:selected.map(x=>x.id),eventId
+    });
     modalClose();message(booking?"Đã cập nhật lịch phòng":"Đã thêm lịch phòng");
-    var start=new Date(date+"T"+selected[0].start+":00+07:00").getTime();
-    var last=selected[selected.length-1].end;
-    var end=new Date(date+"T00:00:00+07:00").getTime()+
-      (last==="24:00"?1440:Number(last.slice(0,2))*60+Number(last.slice(3)))*60000;
+    const start=new Date(date+"T"+selected[0].start+":00+07:00").getTime();
+    const end=new Date(date+"T00:00:00+07:00").getTime()+
+      (selected[selected.length-1].end==="24:00"?1440:Number(selected[selected.length-1].end.slice(0,2))*60+Number(selected[selected.length-1].end.slice(3)))*60000;
     if(startDay(end)<startDay(Date.now())){
       data.tab="history";paintTabs();data.loadedHistory=false;await getHistory(true);
     }else{
@@ -213,43 +303,40 @@ async function submitForm(booking,form,button){
 }
 async function cancelBooking(booking,form){
   if(!booking||!manager())return;
-  if(typeof oscConfirm==="function"&&!await oscConfirm('Hủy lịch phòng "'+booking.roomName+'"?\n\nLịch đã hủy sẽ không xuất hiện trong lịch sử sử dụng phòng.'))return;
+  if(typeof oscConfirm==="function"&&!await oscConfirm('Hủy lịch phòng "'+booking.roomName+'"?\n\nLịch đã hủy sẽ không xuất hiện trong lịch sử.'))return;
   try{await request("room-cancel",{bookingId:booking.id});modalClose();message("Đã hủy lịch phòng");getWeek()}
   catch(e){form.querySelector("#rbFormError").textContent=e.message||String(e)}
 }
 async function openForm(booking){
   if(!manager())return message("Chỉ Admin hoặc Super Admin được thay đổi lịch phòng.");
   if(!data.slotReady)await loadSlots(true);
-  if(!data.slotReady)return message("Không tải được danh sách slot. Hãy thử lại.");
-  if(!data.slots.length){switchTab("slots");return message("Hãy cài đặt ít nhất một slot trước khi thêm lịch phòng.")}
+  if(!data.slotReady)return message("Không thể tải danh sách slot. Hãy thử lại.");
+  if(!data.slots.length){switchTab("slots");return message("Hãy tạo slot trước khi nhập lịch phòng.")}
   modalClose();
-  var start=booking?booking.startAt:data.week>monday(Date.now())?data.week+18*HOUR:Date.now()+HOUR;
-  var date=booking&&booking.date?booking.date:vnKey(start);
-  var semesterKey=booking?booking.semester:semester;
-  var events=(state.events||[]).filter(function(e){return e.semester===semesterKey});
-  var options=events.map(function(e){return '<option value="'+safe(e.id)+'" '+(booking&&booking.eventId===e.id?'selected':'')+'>'+safe(e.title)+'</option>'}).join("");
-  var present=data.slots,previous=booking&&Array.isArray(booking.slotIds)?booking.slotIds:[];
-  var selected=previous.filter(function(id){return present.some(function(x){return x.id===id})});
-  var first=selected.length===previous.length&&selected.length?selected[0]:present[0].id;
-  var last=selected.length===previous.length&&selected.length?selected[selected.length-1]:present[0].id;
-  // Existing free-time bookings or bookings with removed slots can still be edited after selecting fresh slots.
-  var moved=booking&&selected.length&&selected.length===previous.length&&(
-    present.find(function(x){return x.id===first}).start!==inputDate(booking.startAt).slice(11)||
-    present.find(function(x){return x.id===last}).end!==inputDate(booking.endAt).slice(11));
-  var priorWarning=booking&&(!selected.length||selected.length!==previous.length||moved)?
-    '<div class="rb-form-tip">Lịch này được tạo trước khi có danh sách slot (hoặc slot cũ đã đổi). Hãy chọn lại slot hiện tại trước khi lưu.</div>':"";
-  var slotOptions=present.map(function(x){return '<option value="'+safe(x.id)+'">'+safe(slotLabel(x))+'</option>'}).join("");
-  var overlay=document.createElement("div");overlay.id="rbModal";overlay.className="rb-modal-shade";
-  overlay.innerHTML='<div class="rb-modal" role="dialog" aria-modal="true" aria-labelledby="rbModalTitle"><div class="rb-modal-head"><div><span class="rb-kicker">ROOM BOOKING</span><h3 id="rbModalTitle">'+(booking?'Chỉnh sửa lịch phòng':'Thêm lịch sử dụng phòng')+'</h3></div><button type="button" class="rb-x" data-close aria-label="Đóng">×</button></div><form id="rbForm"><label>Tên phòng<input id="rbName" maxlength="100" required placeholder="Ví dụ: G405" value="'+safe(booking?booking.roomName:"")+'"></label><label>Mục đích sử dụng<input id="rbPurpose" maxlength="240" required placeholder="Ví dụ: Tập kịch, họp CLB" value="'+safe(booking?booking.purpose:"")+'"></label><label>Ngày sử dụng<input id="rbDate" type="date" required value="'+safe(date)+'"></label><div class="rb-form-grid"><label>Từ slot<select id="rbFirstSlot">'+slotOptions+'</select></label><label>Đến hết slot<select id="rbLastSlot">'+slotOptions+'</select></label></div><div class="rb-slot-preview" id="rbSelectedSlots" aria-live="polite"></div>'+priorWarning+'<label>Gắn với sự kiện (không bắt buộc)<select id="rbEvent"><option value="">Không gắn sự kiện</option>'+options+'</select></label><div class="rb-form-tip">Có thể nhập nhiều phòng trong một ngày. Một phòng có thể dùng nhiều lần nhưng tuyệt đối không được trùng giờ.</div><p class="rb-form-error" id="rbFormError" role="alert"></p><div class="rb-form-buttons">'+(booking?'<button type="button" class="rb-button rb-danger" id="rbCancel">Hủy lịch</button>':"")+'<button type="button" class="rb-button rb-outline" data-close>Đóng</button><button type="submit" class="rb-button rb-primary" id="rbSave">'+(booking?"Lưu thay đổi":"Thêm lịch phòng")+'</button></div></form></div>';
-  overlay.addEventListener("click",function(e){if(e.target===overlay||e.target.closest("[data-close]"))modalClose()});
-  document.body.appendChild(overlay);document.addEventListener("keydown",modalKey,true);
-  var form=overlay.querySelector("form"),fslot=form.querySelector("#rbFirstSlot"),lslot=form.querySelector("#rbLastSlot");
-  fslot.value=first;lslot.value=last;
-  fslot.onchange=function(){previewSlots(form)};lslot.onchange=function(){previewSlots(form)};
-  previewSlots(form);
-  form.onsubmit=function(e){e.preventDefault();submitForm(booking,form,form.querySelector("#rbSave"))};
-  if(booking)overlay.querySelector("#rbCancel").onclick=function(){cancelBooking(booking,form)};
-  overlay.querySelector("#rbName").focus();
+  const now=Date.now();
+  const date=booking&&booking.date?booking.date:vnKey(booking?booking.startAt:data.week>monday(now)?data.week+18*HOUR:now+HOUR);
+  const events=(state.events||[]).filter(ev=>bookableEvent(ev));
+  const options=events.map(ev=>'<option value="'+safe(ev.id)+'">'+safe(ev.title||"Sự kiện")+'</option>').join("");
+  const initial=booking&&Array.isArray(booking.slotIds)?booking.slotIds.filter(id=>data.slots.some(x=>x.id===id)):[];
+  const fallback=booking?data.slots.filter(x=>{
+    const day=date+"T00:00:00+07:00",base=new Date(day).getTime();
+    const from=base+(Number(x.start.slice(0,2))*60+Number(x.start.slice(3)))*60000;
+    const finish=base+(Number(x.end.slice(0,2))*60+Number(x.end.slice(3)))*60000;
+    return from>=booking.startAt&&finish<=booking.endAt;
+  }).map(x=>x.id):[];
+  const chosen=initial.length?initial:fallback;
+  const priorNotice=booking&&!chosen.length?'<div class="rb-form-tip">Lịch trước đây chưa gắn slot hiện hành. Vui lòng chọn lại các slot để lưu thay đổi.</div>':"";
+  const overlay=document.createElement("div");overlay.id="rbModal";overlay.className="rb-modal-shade";
+  overlay.innerHTML='<div class="rb-modal" role="dialog" aria-modal="true" aria-labelledby="rbModalTitle"><div class="rb-modal-head"><div><span class="rb-kicker">ROOM BOOKING</span><h3 id="rbModalTitle">'+(booking?"Chỉnh sửa lịch phòng":"Thêm lịch sử dụng phòng")+'</h3></div><button type="button" class="rb-x" data-close aria-label="Đóng">×</button></div><form id="rbForm"><label>Tên phòng<input id="rbName" maxlength="100" required value="'+safe(booking?.roomName||"")+'" placeholder="Ví dụ: G405"></label><label>Mục đích sử dụng<input id="rbPurpose" maxlength="240" required value="'+safe(booking?.purpose||"")+'" placeholder="Ví dụ: Tập kịch, họp CLB"></label><label>Ngày sử dụng<input id="rbDate" type="date" required value="'+safe(date)+'"></label><div id="rbSlotWidget" class="rb-slot-widget"><label class="rb-field-label">Chọn các slot sử dụng</label><button type="button" class="rb-multi-toggle" id="rbSlotToggle" aria-haspopup="listbox" aria-expanded="false" aria-controls="rbSlotDropdown"><span class="rb-slot-toggle-count">Chọn slot</span><span aria-hidden="true">▾</span></button><div id="rbSlotChips" class="rb-slot-chips"></div><div id="rbSlotDropdown" class="rb-slot-dropdown" hidden><input type="search" id="rbSlotSearch" placeholder="Tìm slot…" aria-label="Tìm kiếm slot" autocomplete="off"><div id="rbSlotOptions" class="rb-slot-options" role="group" aria-label="Danh sách chọn slot"></div></div></div><div id="rbSelectedSlots" class="rb-slot-preview" aria-live="polite"></div>'+priorNotice+'<label>Gắn với sự kiện (không bắt buộc)<select id="rbEvent"><option value="">Không gắn sự kiện</option>'+options+'</select></label><div class="rb-form-tip">Có thể chọn nhiều slot không liền nhau. Mỗi slot được kiểm tra trùng giờ riêng theo mã phòng.</div><p class="rb-form-error" id="rbFormError" role="alert"></p><div class="rb-form-buttons">'+(booking?'<button type="button" class="rb-button rb-danger" id="rbCancel">Hủy lịch</button>':"")+'<button type="button" class="rb-button rb-outline" data-close>Đóng</button><button type="submit" class="rb-button rb-primary" id="rbSave">'+(booking?"Lưu thay đổi":"Thêm lịch phòng")+'</button></div></form></div>';
+  overlay.addEventListener("click",e=>{if(e.target===overlay||e.target.closest("[data-close]"))modalClose()});
+  document.body.appendChild(overlay);
+  document.addEventListener("keydown",modalKey,true);
+  const form=overlay.querySelector("#rbForm");
+  setupSlotWidget(form,chosen);
+  if(booking?.eventId&&events.some(ev=>ev.id===booking.eventId))form.querySelector("#rbEvent").value=booking.eventId;
+  form.onsubmit=e=>{e.preventDefault();submitForm(booking,form,form.querySelector("#rbSave"))};
+  if(booking)overlay.querySelector("#rbCancel").onclick=()=>cancelBooking(booking,form);
+  form.querySelector("#rbName").focus();
 }
 function renderRoomBooking(){if(!data.week)data.week=monday(Date.now());data.day=vnKey(Date.now());if(data.tab==="slots"&&!manager())data.tab="week";shell();loadSlots(true);if(data.tab==="history"){renderHistory();getHistory(true)}else if(data.tab==="slots"){renderSlots()}else{renderWeek();getWeek()}}
 window.renderRoomBooking=renderRoomBooking;
