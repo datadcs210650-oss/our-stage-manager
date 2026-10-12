@@ -100,3 +100,30 @@
   .rb-slot-footer{flex-direction:column;align-items:stretch}
 }
 @media(max-width:420px){.rb-slot-row{gap:7px;padding:9px}.rb-slot-footer .rb-button{width:100%}}
+
+
+/* V100 — Searchable multiselect like a compact choices dropdown */
+.rb-slot-top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rb-slot-widget{position:relative;display:grid;gap:9px}
+.rb-field-label{display:block;color:#54454e;font-size:12px;font-weight:800}
+.rb-multi-toggle{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-height:47px!important;padding:12px 15px!important;background:#f9fafb!important;color:#3e4147!important;border:1px solid #d5dce2!important;border-radius:12px!important;font-size:14px!important;font-weight:700!important;cursor:pointer!important;box-shadow:none!important}
+.rb-multi-toggle:hover{border-color:#bd8da0!important;background:#fff!important}
+.rb-multi-toggle[aria-expanded="true"]{border-color:#a84769!important;box-shadow:0 0 0 3px rgba(120,29,59,.11)!important}
+.rb-multi-toggle>span:last-child{font-size:16px;color:#70676b}
+.rb-slot-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:16px}
+.rb-selected-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 8px 5px 11px;background:#fbeff4;color:#792445;border:1px solid #efd7e0;border-radius:999px;font-size:12px;font-weight:750;overflow-wrap:anywhere}
+.rb-selected-chip button{background:transparent;border:0;padding:0 2px;margin:0;min-height:20px;font-size:16px;line-height:1;color:#9d5170;cursor:pointer}
+.rb-placeholder{font-size:12px;color:#a19aa0}
+.rb-slot-dropdown{position:relative;z-index:15;padding:10px;background:#fff;border:1px solid #e3d9de;border-radius:13px;box-shadow:0 12px 35px rgba(39,20,29,.10)}
+.rb-slot-dropdown[hidden]{display:none!important}
+#rbSlotSearch{width:100%!important;min-height:41px!important;margin:0 0 7px!important;padding:9px 12px!important;border:1px solid #cbd7e4!important;border-radius:8px!important;background:#fff!important}
+#rbSlotSearch:focus{border-color:#6aa3f0!important;outline:3px solid rgba(87,155,244,.28)!important}
+.rb-slot-options{max-height:245px;overflow:auto;overscroll-behavior:contain;display:grid;gap:2px}
+.rb-slot-option{display:flex!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;border-radius:8px!important;cursor:pointer!important;font-size:14px!important;font-weight:550!important;color:#30333a!important}
+.rb-slot-option:hover,.rb-slot-option:focus-within{background:#f7eff2!important}
+.rb-slot-option input[type="checkbox"]{appearance:auto!important;-webkit-appearance:checkbox!important;min-width:16px!important;max-width:16px!important;width:16px!important;height:16px!important;min-height:16px!important;margin:0!important;accent-color:#781d3b!important}
+.rb-slot-option span{font-size:14px;line-height:1.4;font-weight:550}
+.rb-slot-no-results{padding:12px;font-size:13px;color:#847880}
+#rbSlotChips .rb-selected-chip{min-height:27px}
+.rb-slot-preview{overflow-wrap:anywhere}
+@media(max-width:540px){.rb-slot-top-actions .rb-button{flex:1}.rb-slot-dropdown{padding:7px}.rb-slot-option{padding:11px 9px!important}}
