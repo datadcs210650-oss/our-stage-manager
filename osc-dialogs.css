@@ -1,0 +1,122 @@
+/* OSC — native-browser-dialog replacement (V98). Scoped to in-app dialogs. */
+.osc-dialog-backdrop{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483646!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:20px!important;
+  background:rgba(20,12,17,.58)!important;
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  animation:osc-dialog-fade .16s ease-out both;
+  box-sizing:border-box!important;
+}
+.osc-dialog-backdrop *,
+.osc-dialog-backdrop *::before,
+.osc-dialog-backdrop *::after{box-sizing:border-box!important}
+.osc-dialog-panel{
+  width:min(100%,488px)!important;
+  max-height:min(86vh,760px)!important;
+  max-height:min(86dvh,760px)!important;
+  margin:0!important;
+  padding:clamp(22px,4vw,32px)!important;
+  overflow:auto!important;
+  color:#282025!important;
+  border:1px solid rgba(119,73,83,.15)!important;
+  border-radius:22px!important;
+  background:linear-gradient(155deg,#fff 0%,#fdf9f8 100%)!important;
+  box-shadow:0 32px 100px rgba(20,8,13,.30),0 2px 10px rgba(20,8,13,.07)!important;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;
+  line-height:1.55!important;
+  animation:osc-dialog-rise .22s cubic-bezier(.2,.8,.2,1) both;
+}
+.osc-dialog-heading{display:flex;align-items:center;gap:15px;margin:0 0 20px!important}
+.osc-dialog-symbol{
+  display:grid;place-items:center;flex:none;
+  width:48px;height:48px;
+  border:1px solid #f0dce2;border-radius:15px;
+  background:linear-gradient(135deg,#fcf0f3,#f9e5e9);
+  color:#822b48;font-size:24px;font-weight:800;
+}
+.osc-dialog-eyebrow{
+  display:block!important;
+  margin:0 0 3px!important;
+  color:#9c6a78!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.15em!important;
+}
+.osc-dialog-title{
+  margin:0!important;padding:0!important;
+  color:#2f1c25!important;
+  font-family:inherit!important;
+  font-size:clamp(19px,3vw,23px)!important;
+  font-weight:800!important;
+  line-height:1.3!important;
+  letter-spacing:-.02em!important;
+}
+.osc-dialog-message{
+  margin:0 0 24px!important;padding:0!important;
+  font-family:inherit!important;
+  font-size:14px!important;
+  line-height:1.75!important;
+  font-weight:450!important;
+  color:#4f4148!important;
+  white-space:pre-line!important;
+  overflow-wrap:anywhere!important;
+}
+.osc-dialog-input{
+  display:block!important;
+  width:100%!important;
+  min-height:46px!important;
+  margin:-4px 0 22px!important;
+  padding:10px 14px!important;
+  border:1px solid #d8c8cd!important;
+  border-radius:11px!important;
+  outline:none!important;
+  background:#fff!important;
+  color:#292025!important;
+  font-family:inherit!important;
+  font-size:14px!important;
+  box-shadow:none!important;
+}
+.osc-dialog-input:focus-visible{border-color:#822b48!important;box-shadow:0 0 0 3px rgba(130,43,72,.12)!important}
+.osc-dialog-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:10px!important}
+.osc-dialog-btn{
+  min-width:108px!important;
+  min-height:43px!important;
+  margin:0!important;
+  padding:10px 19px!important;
+  border:1px solid transparent!important;
+  border-radius:11px!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+  font-family:inherit!important;
+  font-size:13px!important;
+  font-weight:750!important;
+  line-height:1.35!important;
+  transition:background .16s ease,transform .16s ease,box-shadow .16s ease!important;
+}
+.osc-dialog-btn:hover{transform:translateY(-1px)!important}
+.osc-dialog-btn:focus-visible{outline:3px solid rgba(130,43,72,.27)!important;outline-offset:3px!important}
+.osc-dialog-btn-cancel{background:#f4f0f0!important;border-color:#e7dedf!important;color:#4e4147!important}
+.osc-dialog-btn-cancel:hover{background:#ebe5e6!important}
+.osc-dialog-btn-accept{background:#781d3b!important;color:#fff!important}
+.osc-dialog-btn-accept:hover{background:#95294d!important;box-shadow:0 6px 18px rgba(120,29,59,.19)!important}
+@keyframes osc-dialog-fade{from{opacity:0}to{opacity:1}}
+@keyframes osc-dialog-rise{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:480px){
+  .osc-dialog-backdrop{padding:14px!important;align-items:center!important}
+  .osc-dialog-panel{padding:23px 20px!important;border-radius:18px!important}
+  .osc-dialog-heading{margin-bottom:16px!important}
+  .osc-dialog-message{font-size:13px!important}
+  .osc-dialog-actions{display:grid!important;grid-template-columns:1fr 1fr!important}
+  .osc-dialog-actions:has(.osc-dialog-btn:only-child){grid-template-columns:1fr!important}
+  .osc-dialog-btn{min-width:0!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .osc-dialog-backdrop,.osc-dialog-panel{animation:none!important}
+  .osc-dialog-btn{transition:none!important}
+}
