@@ -21,23 +21,10 @@ function selectedEventOptions(){
   return (state?.events||[]).filter(e=>e.semester===semester).map(e=>`<option value="${esc95(e.id)}">${esc95(e.title||"Sự kiện")}</option>`).join("");
 }
 function operationsShell(){
-  const canManage=typeof canEditClub==="function"&&canEditClub(),canRoom=canManage||(typeof canEditModule==="function"&&canEditModule("events"));
-  return `<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER • V95</div><h2>Điều hành nâng cao</h2><p>Đặt phòng, quyền tạm thời và theo dõi quota Firebase trong một nơi.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>
-  <div class="v95-grid">
-    <section class="v95-card v95-span-2"><div class="v95-card-head"><div><h3>Room Booking Board</h3><p>Chặn trùng phòng theo thời gian ngay tại server.</p></div></div>
-      ${canRoom?`<div class="v95-room-form">
-        <label>Phòng<input id="v95RoomName" maxlength="100" placeholder="VD: G405"></label>
-        <label>Mục đích<input id="v95RoomPurpose" maxlength="240" placeholder="Tập kịch / họp BCN"></label>
-        <label>Bắt đầu<input id="v95RoomStart" type="datetime-local"></label>
-        <label>Kết thúc<input id="v95RoomEnd" type="datetime-local"></label>
-        <label>Sự kiện liên quan<select id="v95RoomEvent"><option value="">Không gắn sự kiện</option>${selectedEventOptions()}</select></label>
-        <button class="primary" onclick="v95CreateRoom()">Đặt phòng</button>
-      </div>`:""}
-      <div id="v95RoomList" class="v95-list"></div>
-    </section>
-    ${canManage?`<section class="v95-card"><div class="v95-card-head"><div><h3>Temporary Permissions</h3><p>Cấp quyền BCN tự hết hạn theo giờ kết thúc sự kiện.</p></div><button class="primary" onclick="v95OpenTempGrant()">+ Cấp quyền</button></div><div id="v95TempList" class="v95-list compact"></div></section>
-    <section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Đọc số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section>`:""}
-  </div>`;
+  if(!canEditClub())return '<div class="empty">Chỉ Admin hoặc Super Admin có quyền truy cập Điều hành nâng cao.</div>';
+  return '<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER</div><h2>Điều hành nâng cao</h2><p>Quản lý quyền tạm thời và theo dõi quota Firebase. Lịch phòng được chuyển sang menu Room Booking.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>'+
+    '<div class="v95-grid"><section class="v95-card"><div class="v95-card-head"><div><h3>Temporary Permissions</h3><p>Cấp quyền BCN tự hết hạn theo giờ kết thúc sự kiện.</p></div><button class="primary" onclick="v95OpenTempGrant()">+ Cấp quyền</button></div><div id="v95TempList" class="v95-list compact"></div></section>'+
+    '<section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section></div>';
 }
 async function renderV95Operations(){
   const root=q("#v95OperationsRoot");if(!root)return;
@@ -47,35 +34,18 @@ async function renderV95Operations(){
 window.renderV95Operations=renderV95Operations;
 
 async function v95RefreshOperations(show=true){
-  if(opLoading)return;opLoading=true;
+  if(!canEditClub()||opLoading)return;
+  opLoading=true;
   try{
-    const calls=[api("/api/operations",{action:"rooms-list",semester})];
-    if(canEditClub())calls.push(api("/api/operations",{action:"temp-list"}));
-    const r=await Promise.all(calls);opRooms=r[0].rows||[];if(canEditClub())opTemp=r[1].rows||[];
-    renderRooms();if(canEditClub()){renderTemp();await v95LoadQuota(false)}
+    const r=await api("/api/operations",{action:"temp-list"});
+    opTemp=r.rows||[];
+    renderTemp();
+    await v95LoadQuota(false);
     if(show&&typeof toast==="function")toast("Đã cập nhật Điều hành nâng cao");
   }catch(e){console.error("v95 operations",e);if(show)oscAlert("Không tải được Điều hành nâng cao: "+(e.message||e))}
   finally{opLoading=false}
 }
 window.v95RefreshOperations=v95RefreshOperations;
-
-function renderRooms(){
-  const root=q("#v95RoomList");if(!root)return;
-  const rows=opRooms.filter(x=>x.endAt>Date.now()-12*60*60*1000);
-  root.innerHTML=rows.length?rows.map(x=>`<div class="v95-list-row"><div><b>${esc95(x.roomName)}</b><span>${esc95(x.purpose)}</span><small>${fmt(x.startAt)} → ${fmt(x.endAt)}${x.createdByName?" • "+esc95(x.createdByName):""}</small></div>${(canEditClub()||canEditModule("events"))?`<button class="danger" onclick="v95CancelRoom('${esc95(x.id)}')">Hủy</button>`:""}</div>`).join(""):'<div class="empty">Chưa có lịch phòng sắp tới.</div>';
-}
-async function v95CreateRoom(){
-  try{
-    const roomName=q("#v95RoomName")?.value.trim(),purpose=q("#v95RoomPurpose")?.value.trim(),startAt=q("#v95RoomStart")?.value,endAt=q("#v95RoomEnd")?.value,eventId=q("#v95RoomEvent")?.value||"";
-    if(!roomName||!purpose||!startAt||!endAt)return oscAlert("Hãy nhập đầy đủ phòng, mục đích và thời gian.");
-    await api("/api/operations",{action:"room-create",semester,roomName,purpose,startAt:new Date(startAt).toISOString(),endAt:new Date(endAt).toISOString(),eventId});
-    toast("Đã đặt phòng");await v95RefreshOperations(false);
-  }catch(e){oscAlert("Không đặt được phòng: "+(e.message||e))}
-}
-window.v95CreateRoom=v95CreateRoom;
-async function v95CancelRoom(id){if(!await oscConfirm("Hủy lịch đặt phòng này?"))return;try{await api("/api/operations",{action:"room-cancel",bookingId:id});toast("Đã hủy lịch phòng");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
-window.v95CancelRoom=v95CancelRoom;
-
 
 function renderTemp(){
   const root=q("#v95TempList");if(!root)return;
