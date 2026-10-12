@@ -86,9 +86,27 @@ function roomSegmentsOverlap(a,b){
   return false;
 }
 function validBookingEventDate(v){
-  return typeof v==="string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+"T00:00:00+07:00"));
+  if(typeof v!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;
+  const t=Date.parse(v+"T00:00:00+07:00");
+  if(!Number.isFinite(t))return false;
+  const x=vnDateParts(t);
+  return x.y+"-"+String(x.m).padStart(2,"0")+"-"+String(x.d).padStart(2,"0")===v;
 }
-async function assertBookableEvent(tx,db,eventId,semester){
+function eventDayFromActivity(state,event){
+  const sem=state?.semesters?.[event.semester];
+  for(const group of sem?.groups||[])for(const item of group.items||[]){
+    if(item.id!==event.linkedActivityId)continue;
+    const raw=String(item.date||"").trim();
+    if(validBookingEventDate(raw))return raw;
+    const parts=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(parts){
+      const date=parts[3]+"-"+parts[2].padStart(2,"0")+"-"+parts[1].padStart(2,"0");
+      if(validBookingEventDate(date))return date;
+    }
+  }
+  return "";
+}
+async function assertBookableEvent(tx,db,eventId,semester,state){
   if(!eventId)return;
   const snap=await tx.get(db.collection("eventPortals").doc(eventId));
   if(!snap.exists)throw bad("Sự kiện không tồn tại hoặc đã được xóa.","osc/not-found");
@@ -98,10 +116,10 @@ async function assertBookableEvent(tx,db,eventId,semester){
   if(event.isOpen!==true)throw bad("Cổng sự kiện đã đóng; không thể gắn với Room Booking.");
   if(millis(event.closeAt)>0&&millis(event.closeAt)<=now)throw bad("Sự kiện đã hết hạn nhận phản hồi.");
   // eventDate is the actual day of the event, independent of the submission portal closeAt.
-  const eventDate=String(event.eventDate||"");
-  if(validBookingEventDate(eventDate) && eventDate<new Intl.DateTimeFormat("en-CA",{
-    timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"
-  }).format(new Date(now)))throw bad("Sự kiện đã qua ngày tổ chức.");
+  const parts=vnDateParts(now);
+  const today=parts.y+"-"+String(parts.m).padStart(2,"0")+"-"+String(parts.d).padStart(2,"0");
+  const eventDate=validBookingEventDate(event.eventDate)?event.eventDate:eventDayFromActivity(state,event);
+  if(eventDate&&eventDate<today)throw bad("Sự kiện đã qua ngày tổ chức.");
 }
 
 function ensureRoomManager(actor){
@@ -222,7 +240,7 @@ async function roomCreate(req,body){
     const data=normalizeRoomBooking(body,slots);
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
-    await assertBookableEvent(tx,db,data.eventId,semester);
+    await assertBookableEvent(tx,db,data.eventId,semester,state);
     await assertNoRoomOverlap(tx,db,data);
     tx.set(mutex,{revision:(current.data()?.revision||0)+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
     tx.set(ref,{
@@ -247,7 +265,7 @@ async function roomUpdate(req,body){
     const data=normalizeRoomBooking(body,slots);
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
-    await assertBookableEvent(tx,db,data.eventId,existing.data().semester);
+    await assertBookableEvent(tx,db,data.eventId,existing.data().semester,state);
     await assertNoRoomOverlap(tx,db,data,id);
     tx.set(mutex,{revision:(current.data()?.revision||0)+1,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
     tx.update(ref,{
