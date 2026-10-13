@@ -4,7 +4,7 @@
 "use strict";
 const DAY=86400000,TZ=7*3600000;
 const WEEKDAYS=["Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy","Chủ Nhật"];
-const LIMIT_PER_DAY=8;
+const LIMIT_PER_DAY=20;
 let dialog=null,config=null,rowSequence=0,busy=false;
 
 function by(q,root=document){return root.querySelector(q)}
@@ -128,7 +128,7 @@ function collectEntries(){
     result.push({date,roomName,purpose,slotIds,eventId});
   }
   if(!result.length)throw new Error("Bạn chưa thêm phòng cho ngày nào. Hãy chọn ít nhất một ngày có lịch.");
-  if(result.length>56)throw new Error("Tối đa 56 lượt phòng trong một tuần.");
+  if(result.length>140)throw new Error("Tối đa 140 lượt phòng trong một tuần.");
   return result;
 }
 async function saveWeek(){
