@@ -3,7 +3,7 @@
 "use strict";
 var DAY=86400000, HOUR=3600000, TZ=7*HOUR;
 var weekdays=["Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy","Chủ Nhật"];
-var data={week:0,rows:[],history:[],cursor:null,more:false,loadedHistory:false,tab:"week",day:"",busy:false,historyBusy:false,slots:[],slotReady:false,slotBusy:false};
+var data={week:0,rows:[],history:[],cursor:null,more:false,loadedHistory:false,tab:"week",day:"",busy:false,historyBusy:false,slots:[],slotReady:false,slotBusy:false,followCurrentWeek:true};
 function el(s){return document.querySelector(s)}
 function safe(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function pad(n){return String(n).padStart(2,"0")}
@@ -11,6 +11,25 @@ function vnParts(ms){var parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/H
 function vnKey(ms){var d=vnParts(ms);return d.y+"-"+pad(d.m)+"-"+pad(d.d)}
 function startDay(ms){var d=vnParts(ms);return Date.UTC(d.y,d.m-1,d.d)-TZ}
 function monday(ms){var t=startDay(ms),day=new Date(t+TZ).getUTCDay();return t-((day+6)%7)*DAY}
+function fromWeekPicker(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value||""))throw Error("Vui lòng chọn ngày hợp lệ.");
+  const millis=Date.parse(value+"T00:00:00+07:00");
+  if(!Number.isFinite(millis)||vnKey(millis)!==value)throw Error("Ngày được chọn không hợp lệ.");
+  return monday(millis);
+}
+function setSelectedWeek(week,followNow=false){
+  const min=monday(Date.now()),max=min+104*7*DAY;
+  if(!Number.isFinite(week)||week<min||week>max||monday(week)!==week){
+    message("Vui lòng chọn một tuần từ hiện tại đến tối đa 2 năm tới.");
+    renderWeek();return;
+  }
+  const changed=data.week!==week;
+  data.week=week;data.followCurrentWeek=followNow;
+  if(changed)data.rows=[];
+  if(data.tab!=="week"){data.tab="week";paintTabs()}
+  renderWeek();
+  if(changed||!data.rows.length)getWeek();
+}
 function dayLabel(ms){return new Date(ms).toLocaleDateString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",day:"2-digit",month:"2-digit",year:"numeric"})}
 function clock(ms){var t=vnParts(ms);return pad(t.h)+":"+pad(t.min)}
 function inputDate(ms){var x=vnParts(ms);return x.y+"-"+pad(x.m)+"-"+pad(x.d)+"T"+pad(x.h)+":"+pad(x.min)}
@@ -44,10 +63,16 @@ function shell(){
     if(act==="reload"){if(data.tab==="week")getWeek();else if(data.tab==="history")getHistory(true);else loadSlots(true)}
     if(act==="week")switchTab("week");
     if(act==="history")switchTab("history");
-    if(act==="prev"||act==="next"){var proposed=data.week+(act==="prev"?-7*DAY:7*DAY);if(proposed>=monday(Date.now())&&proposed<=monday(Date.now())+104*7*DAY){data.week=proposed;data.rows=[];renderWeek();getWeek()}}
-    if(act==="today"){data.week=monday(Date.now());data.rows=[];renderWeek();getWeek()}
+    if(act==="prev"||act==="next"){setSelectedWeek(data.week+(act==="prev"?-7*DAY:7*DAY))}
+    if(act==="today"){setSelectedWeek(monday(Date.now()),true)}
     if(act==="edit"){var booking=data.rows.find(function(r){return r.id===button.dataset.id});if(booking)openForm(booking)}
     if(act==="more")getHistory(false);
+  };
+  root.onchange=function(e){
+    if(e.target&&e.target.id==="rbWeekDate"){
+      try{setSelectedWeek(fromWeekPicker(e.target.value))}
+      catch(err){message(err.message||"Ngày không hợp lệ.");renderWeek()}
+    }
   };
   paintTabs()
 }
@@ -57,7 +82,7 @@ function renderWeek(){
   var target=el("#rbContent");if(!target||data.tab!=="week")return;
   var today=startDay(Date.now()),rows=data.rows.filter(function(r){return r.status==="active"&&startDay(r.endAt-1)>=today});
   var unique=new Set(rows.map(function(r){return String(r.roomName||"").toLocaleLowerCase("vi")})).size;
-  var html='<div class="rb-week-header"><div><span class="rb-kicker">KẾ HOẠCH SỬ DỤNG PHÒNG</span><h3>'+dayLabel(data.week)+' – '+dayLabel(data.week+6*DAY)+'</h3><p>'+rows.length+' lượt sử dụng · '+unique+' phòng · GMT+7</p></div><div class="rb-pager"><button type="button" class="rb-button rb-outline" data-action="prev" '+(data.week<=monday(Date.now())?'disabled':'')+'>‹</button><button type="button" class="rb-button rb-outline" data-action="today">Tuần này</button><button type="button" class="rb-button rb-outline" data-action="next">›</button></div></div>';
+  var html='<div class="rb-week-header"><div><span class="rb-kicker">KẾ HOẠCH SỬ DỤNG PHÒNG</span><h3>'+dayLabel(data.week)+' – '+dayLabel(data.week+6*DAY)+'</h3><p>'+rows.length+' lượt sử dụng · '+unique+' phòng · GMT+7</p></div><div class="rb-pager"><label class="rb-week-pick"><span>Chọn tuần</span><input id="rbWeekDate" type="date" aria-label="Chọn một ngày trong tuần muốn xem" value="'+vnKey(data.week)+'" min="'+vnKey(monday(Date.now()))+'" max="'+vnKey(monday(Date.now())+104*7*DAY+6*DAY)+'"></label><button type="button" class="rb-button rb-outline" data-action="prev" '+(data.week<=monday(Date.now())?'disabled':'')+' aria-label="Tuần trước">‹</button><button type="button" class="rb-button rb-outline" data-action="today">Tuần này</button><button type="button" class="rb-button rb-outline" data-action="next" '+(data.week>=monday(Date.now())+104*7*DAY?'disabled':'')+' aria-label="Tuần sau">›</button></div></div>';
   html+='<div class="rb-stats"><div><span>Số phòng trong tuần</span><strong>'+unique+'</strong></div><div><span>Lượt sử dụng</span><strong>'+rows.length+'</strong></div><div><span>Tuần đang xem</span><strong>'+pad(vnParts(data.week).d)+'/'+pad(vnParts(data.week).m)+'</strong></div></div><div class="rb-week-grid">';
   for(var i=0;i<7;i++){
     var d=data.week+i*DAY,past=d<today,schedule=rows.filter(function(r){return r.startAt<d+DAY&&r.endAt>d}).sort(function(a,b){return a.startAt-b.startAt});
@@ -366,7 +391,10 @@ async function openWeekly(){
     events:(state.events||[]).filter(bookableEvent)
       .map(ev=>({id:String(ev.id||""),title:String(ev.title||"")})),
     request:request,
-    onSaved:()=>{
+    onSaved:(savedWeek)=>{
+      data.week=savedWeek;
+      data.followCurrentWeek=(savedWeek===monday(Date.now()));
+      data.rows=[];
       data.tab="week";
       paintTabs();
       renderWeek();
@@ -380,6 +408,16 @@ window.renderRoomBooking=renderRoomBooking;
 setInterval(function(){
   if(!currentFirebaseUser||el("#roomBooking")?.classList.contains("hidden"))return;
   var today=vnKey(Date.now());
-  if(today!==data.day){data.day=today;data.week=monday(Date.now());data.loadedHistory=false;if(data.tab==="history")getHistory(true);else if(data.tab==="week")getWeek()}
+  if(today!==data.day){
+    data.day=today;data.loadedHistory=false;
+    const previous=data.week;
+    if(data.followCurrentWeek)data.week=monday(Date.now());
+    if(previous!==data.week)data.rows=[];
+    if(data.tab==="history")getHistory(true);
+    else if(data.tab==="week"){
+      renderWeek();
+      if(previous!==data.week)getWeek();
+    }
+  }
 },60000);
 })();
