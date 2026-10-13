@@ -9,7 +9,7 @@ function notice(t){const e=$("#dhNotice");if(e)e.textContent=t||""}
 async function api(action,body={}){
  if(!currentFirebaseUser)throw Error("Vui lòng đăng nhập.");
  const token=await currentFirebaseUser.getIdToken();
- const r=await fetch("/api/drive-hub",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action,...body}),cache:"no-store"});
+ const r=await fetch("/api/operations",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action:"drive-"+action,...body}),cache:"no-store"});
  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Không thể hoàn tất yêu cầu.");return j;
 }
 function frame(){
