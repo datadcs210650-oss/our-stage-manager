@@ -127,3 +127,24 @@
 #rbSlotChips .rb-selected-chip{min-height:27px}
 .rb-slot-preview{overflow-wrap:anywhere}
 @media(max-width:540px){.rb-slot-top-actions .rb-button{flex:1}.rb-slot-dropdown{padding:7px}.rb-slot-option{padding:11px 9px!important}}
+
+
+/* V102: Explicit week selection in the schedule toolbar */
+#roomBookingRoot .rb-week-pick{
+  display:flex;flex-direction:column;gap:4px;min-width:178px;
+  color:#6a5360;font-size:11px;font-weight:800;line-height:1.2
+}
+#roomBookingRoot .rb-week-pick input[type="date"]{
+  display:block;width:100%;min-height:42px;
+  border:1px solid #ddcbd2;border-radius:11px;padding:7px 11px;
+  background:#fff;color:#512e40;font-family:inherit;font-size:13px;font-weight:700;
+  box-shadow:none
+}
+#roomBookingRoot .rb-week-pick input[type="date"]:focus-visible{
+  outline:3px solid rgba(120,29,59,.15);border-color:#a45777
+}
+#roomBookingRoot .rb-pager{align-items:flex-end}
+@media(max-width:760px){
+  #roomBookingRoot .rb-week-pick{flex:1;min-width:170px}
+  #roomBookingRoot .rb-pager{gap:8px}
+}
