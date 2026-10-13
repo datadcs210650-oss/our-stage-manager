@@ -1,0 +1,122 @@
+/* OSC V101 – seven-day room booking editor. Scoped to the weekly overlay. */
+.rb-week-overlay{
+  position:fixed;inset:0;z-index:2147483002;display:flex;align-items:center;
+  justify-content:center;padding:18px;background:rgba(25,14,20,.64);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+.rb-week-overlay *,.rb-week-overlay *::before,.rb-week-overlay *::after{box-sizing:border-box}
+.rb-week-panel{
+  width:min(1120px,100%);height:min(93dvh,930px);max-height:93vh;max-height:93dvh;
+  background:#fff;border-radius:22px;display:flex;flex-direction:column;min-height:0;
+  overflow:hidden;border:1px solid rgba(139,70,92,.23);
+  box-shadow:0 35px 120px rgba(20,8,13,.36);color:#31252c;
+}
+.rb-week-panel-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+  padding:23px clamp(17px,3vw,30px);border-bottom:1px solid #eee5e9;
+  background:linear-gradient(125deg,#fff,#fbf3f6);
+}
+.rb-week-panel-header h2{font-size:clamp(21px,2.7vw,28px);margin:5px 0 7px;font-weight:850;color:#36212c;line-height:1.25}
+.rb-week-panel-header p{margin:0;font-size:13px;line-height:1.6;color:#77696f}
+.rb-week-close{border:0;border-radius:11px;background:#f0e5e9;color:#7b3150;width:39px;height:39px;cursor:pointer;font-size:25px;flex:none}
+.rb-week-scroll{overflow:auto;padding:19px clamp(14px,2.6vw,27px);flex:1;min-height:0;overscroll-behavior:contain;background:#fdfbfc}
+.rb-week-day{border:1px solid #ece2e6;border-radius:15px;background:#fff;margin-bottom:14px;overflow:visible}
+.rb-week-day-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border-radius:14px 14px 0 0;background:#fbf5f7;border-bottom:1px solid #eee2e6;
+}
+.rb-week-day-header>div{display:flex;flex-direction:column;gap:3px}
+.rb-week-day-label{font-size:15px;color:#4d2637;font-weight:850}
+.rb-week-day-count{font-size:11px;color:#8a737e}
+.rb-week-entries{display:grid;gap:11px;padding:13px}
+.rb-week-entries:empty{display:none}
+.rb-week-day-empty{padding:16px 18px;margin:0;text-align:center;color:#988890;font-size:12px;line-height:1.6}
+.rb-week-day-empty[hidden]{display:none!important}
+.rb-week-entry{
+  border:1px solid #e7d6de;border-radius:12px;padding:15px 14px;background:#fff;
+  box-shadow:0 1px 6px rgba(120,29,59,.035);
+}
+.rb-week-entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.rb-week-entry-head>span{font-size:11px;font-weight:850;color:#915369;letter-spacing:.02em}
+.rb-week-remove{background:none;border:none;padding:4px 6px;color:#a64155;font-weight:750;font-size:12px;cursor:pointer}
+.rb-week-remove:hover{text-decoration:underline}
+.rb-week-entry-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:13px;margin-top:11px}
+.rb-week-entry-secondary{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.rb-week-entry label{display:grid;gap:6px;color:#554650;font-size:12px;font-weight:800;min-width:0}
+.rb-week-entry input:not([type="checkbox"]),.rb-week-entry select{
+  display:block;width:100%!important;max-width:100%;min-width:0;
+  height:43px!important;min-height:43px!important;margin:0!important;padding:9px 12px!important;
+  border:1px solid #ded6da!important;border-radius:10px!important;color:#2e2930!important;
+  background:#fff!important;box-shadow:none!important;
+  font:600 13px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+}
+.rb-week-entry input:focus-visible,.rb-week-entry select:focus-visible{
+  outline:3px solid rgba(120,29,59,.13)!important;border-color:#a65c78!important;
+}
+.rb-week-slot-field{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0}
+.rb-week-input-label{font-weight:800;font-size:12px;color:#554650}
+.rb-week-slot-button{
+  width:100%;min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border:1px solid #d8cbd2;border-radius:10px;padding:9px 12px;background:#fff;color:#62384a;
+  font-size:13px;cursor:pointer;text-align:left;
+}
+.rb-week-slot-button strong{font-size:13px;font-weight:750}
+.rb-week-slot-button[aria-expanded="true"]{border-color:#97516c;box-shadow:0 0 0 3px rgba(120,29,59,.1)}
+.rb-week-slot-popover{
+  position:relative;z-index:25;padding:10px;border:1px solid #e8d9e0;border-radius:12px;
+  box-shadow:0 10px 24px rgba(39,15,24,.10);background:#fff;
+}
+.rb-week-slot-popover[hidden]{display:none!important}
+.rb-week-slot-popover .rb-week-slot-search{
+  height:38px!important;min-height:38px!important;padding:8px 10px!important;
+  border:1px solid #c8d8ed!important;
+}
+.rb-week-slot-list{display:grid;gap:1px;max-height:185px;overflow:auto;margin-top:8px}
+.rb-week-slot-choice{
+  display:flex!important;align-items:center!important;gap:9px!important;
+  flex-direction:row!important;cursor:pointer;padding:8px 9px;border-radius:8px;
+  font-size:12px!important;font-weight:650!important;color:#484048!important;
+}
+.rb-week-slot-choice:hover{background:#fcf0f4}
+.rb-week-slot-choice input[type="checkbox"]{
+  width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;
+  min-height:16px!important;margin:0!important;appearance:auto!important;
+  -webkit-appearance:checkbox!important;accent-color:#781d3b!important;
+}
+.rb-week-no-slots{padding:10px;color:#8d8288;font-size:12px}
+.rb-week-picked{display:flex;flex-wrap:wrap;gap:5px;min-height:3px}
+.rb-week-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 6px 4px 9px;border:1px solid #eed6e0;border-radius:999px;
+  background:#fbf0f4;color:#7f2f4f;font-weight:800;font-size:11px;
+}
+.rb-week-chip-remove{background:none;border:none;font-size:15px;cursor:pointer;min-height:18px;color:#9f4565;padding:0 2px}
+.rb-week-slot-hours{font-size:11px;font-weight:550;color:#816e77;line-height:1.6;overflow-wrap:anywhere}
+.rb-week-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:17px clamp(17px,3vw,30px);background:#fff;border-top:1px solid #eae0e4;
+}
+.rb-week-footer>div:first-child{min-width:0}
+.rb-week-footer p{margin:0 0 4px;font-size:13px;font-weight:800;color:#622b43}
+.rb-week-footer small{color:#90838a;font-size:11px;line-height:1.55;display:block}
+.rb-week-footer-actions{display:flex;align-items:center;gap:9px;flex:none}
+.rb-week-footer .rb-week-error{color:#a92843;font-weight:700;max-width:700px;line-height:1.5;margin:4px 0}
+.rb-week-error:empty{display:none}
+@media(max-width:750px){
+  .rb-week-overlay{padding:0}
+  .rb-week-panel{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+  .rb-week-panel-header{padding:16px}
+  .rb-week-scroll{padding:12px}
+  .rb-week-entry-fields,.rb-week-entry-secondary{grid-template-columns:1fr}
+  .rb-week-footer{flex-direction:column;align-items:stretch;gap:11px;padding:13px 15px}
+  .rb-week-footer-actions{display:grid;grid-template-columns:1fr 1fr}
+  .rb-week-footer-actions button{width:100%}
+}
+@media(max-width:420px){
+  .rb-week-day-header{padding:12px;flex-wrap:wrap}
+  .rb-week-day-header button{width:100%}
+  .rb-week-entry{padding:12px}
+  .rb-week-day-label{font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){.rb-week-panel *{scroll-behavior:auto!important;transition:none!important}}
