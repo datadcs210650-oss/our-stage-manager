@@ -408,9 +408,17 @@ async function tempClear(req,body){
 
 module.exports=async function handler(req,res){
   try{
+    const callbackAction=String(req.query?.action||new URL(req.url||"/api/operations","https://ourstageclubmanager.vercel.app").searchParams.get("action")||"");
+    if(req.method==="GET"&&callbackAction==="drive-callback")
+      return require("../lib/drive-oauth-handler")(req,res);
     if(req.method==="GET")return sendJson(res,200,{ok:true,service:"operations",version:95});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
+    if(action.startsWith("drive-")){
+      if(action.length>60)throw bad("Thao tác Drive không hợp lệ.");
+      req.body={...body,action:action.slice(6)};
+      return require("../lib/drive-hub-handler")(req,res);
+    }
     if(action==="room-slot-list")out=await roomSlotList(req);
     else if(action==="room-slot-save")out=await roomSlotSave(req,body);
     else if(action==="rooms-list")out=await roomsList(req,body);
