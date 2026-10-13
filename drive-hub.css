@@ -30,3 +30,17 @@
 #driveHubRoot .dh-upload{display:inline-block;cursor:pointer}
 @media(max-width:760px){.dh-hero{flex-direction:column;align-items:flex-start;padding:18px}.dh-toolbar,.dh-heading,.dh-picker{align-items:stretch;flex-direction:column}.dh-heading>div{align-self:stretch}.dh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.dh-grid{grid-template-columns:1fr}}
+
+
+/* OSC Drive Hub dialogs — never use browser-native prompts */
+.dh-dialog-shade{position:fixed;inset:0;z-index:2147483400;background:rgba(30,17,24,.58);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px}
+.dh-dialog{width:min(460px,100%);background:#fff;color:#442638;padding:24px;border-radius:18px;box-shadow:0 25px 85px rgba(24,15,20,.24);display:grid;gap:12px;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.dh-dialog h3{font-size:20px;font-weight:850;margin:0;color:#612c44}
+.dh-dialog p{margin:0 0 5px;line-height:1.6;font-size:13px;color:#7b6a74}
+.dh-dialog label{font-size:12px;font-weight:800}
+.dh-dialog input,.dh-dialog select{width:100%;min-height:45px;border:1px solid #e0cad4;border-radius:10px;padding:9px 12px;color:#34222b;font:500 13px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#fff}
+.dh-dialog input:focus-visible,.dh-dialog select:focus-visible{outline:3px solid #eed5de}
+.dh-dialog-buttons{display:flex;gap:9px;justify-content:flex-end;margin-top:10px}
+.dh-dialog-buttons button{border-radius:10px;padding:11px 16px;border:1px solid #e7d7df;background:#fff;color:#603549;font-weight:750;cursor:pointer;font-size:13px}
+.dh-dialog-buttons button[type=submit]{background:#781d3b;color:#fff;border-color:#781d3b}
+@media(max-width:500px){.dh-dialog{padding:19px}.dh-dialog-buttons button{flex:1}}
