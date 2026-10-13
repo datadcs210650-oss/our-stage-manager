@@ -10,6 +10,22 @@ let dialog=null,config=null,rowSequence=0,busy=false;
 function by(q,root=document){return root.querySelector(q)}
 function safe(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function dateISO(ms){return new Date(ms+TZ).toISOString().slice(0,10)}
+function weekMonday(ms){
+  const local=new Date(ms+TZ).getUTCDay();
+  return ms-((local+6)%7)*DAY;
+}
+function dateToWeek(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value||""))throw Error("Vui lòng chọn ngày hợp lệ.");
+  const ms=Date.parse(value+"T00:00:00+07:00");
+  if(!Number.isFinite(ms)||dateISO(ms)!==value)throw Error("Ngày không hợp lệ.");
+  return weekMonday(ms);
+}
+function weekBounds(){
+  const today=dateISO(Date.now());
+  const dayStart=Date.parse(today+"T00:00:00+07:00");
+  const min=weekMonday(dayStart);
+  return {min,max:min+104*7*DAY};
+}
 function dateLabel(ms){return new Date(ms).toLocaleDateString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",day:"2-digit",month:"2-digit"})}
 function manager(){return typeof canEditClub==="function"&&canEditClub()===true}
 function selected(row){
@@ -86,6 +102,68 @@ function updateDay(day){
   by("[data-week-add]",day).disabled=rows.length>=LIMIT_PER_DAY||busy;
   total();
 }
+
+function snapshotDraft(){
+  if(!dialog||!config)return;
+  const rows=[...dialog.querySelectorAll(".rb-week-entry")].map(row=>({
+    date:row.dataset.date,
+    roomName:by(".rb-week-room",row).value,
+    purpose:by(".rb-week-purpose",row).value,
+    slotIds:selected(row),
+    eventId:by(".rb-week-event",row).value
+  }));
+  if(rows.length)config.drafts.set(config.weekStart,rows);
+  else config.drafts.delete(config.weekStart);
+}
+function syncWeekPicker(){
+  if(!dialog||!config)return;
+  const start=config.weekStart,bounds=weekBounds();
+  const input=by("#rbWeekChoose",dialog);
+  if(input){
+    input.value=dateISO(start);
+    input.min=dateISO(bounds.min);
+    input.max=dateISO(bounds.max+6*DAY);
+  }
+  by("#rbWeekCurrent",dialog).textContent="Thứ Hai "+dateLabel(start)+" – Chủ Nhật "+dateLabel(start+6*DAY);
+  by("#rbWeekPrevious",dialog).disabled=busy||start<=bounds.min;
+  by("#rbWeekNext",dialog).disabled=busy||start>=bounds.max;
+}
+function restoreDraft(){
+  const saved=config.drafts.get(config.weekStart)||[];
+  for(const entry of saved){
+    const day=[...dialog.querySelectorAll(".rb-week-day")].find(d=>d.dataset.date===entry.date);
+    if(!day)continue;
+    addRow(day);
+    const row=by(".rb-week-entry:last-child",by(".rb-week-entries",day));
+    if(!row)continue;
+    by(".rb-week-room",row).value=entry.roomName;
+    by(".rb-week-purpose",row).value=entry.purpose;
+    row.dataset.selectedSlots=JSON.stringify(entry.slotIds||[]);
+    by(".rb-week-event",row).value=entry.eventId||"";
+    updateSelectedUI(row);
+  }
+  total();
+}
+function changeWeek(next){
+  if(busy||!dialog||!config||!manager())return;
+  const bounds=weekBounds();
+  if(!Number.isFinite(next)||next<bounds.min||next>bounds.max||weekMonday(next)!==next){
+    setWarning("Vui lòng chọn tuần từ hiện tại đến tối đa 2 năm tới.");
+    syncWeekPicker();
+    return;
+  }
+  if(next===config.weekStart){syncWeekPicker();return}
+  snapshotDraft();
+  config.weekStart=next;
+  const scroll=by(".rb-week-scroll",dialog);
+  scroll.innerHTML=buildDays();
+  scroll.scrollTop=0;
+  syncWeekPicker();
+  restoreDraft();
+  setWarning("");
+  by("#rbWeekChoose",dialog).focus();
+}
+
 function releaseDialog(){
   if(!dialog)return;
   const node=dialog;dialog=null;config=null;
@@ -150,10 +228,10 @@ async function saveWeek(){
       semester:config.semester,entries
     });
     const count=Number(result.created||entries.length);
-    const callback=config.onSaved;
+    const callback=config.onSaved,savedWeek=config.weekStart;
     releaseDialog();
     if(typeof toast==="function")toast("Đã lưu "+count+" lượt phòng vào lịch tuần.");
-    if(typeof callback==="function")callback();
+    if(typeof callback==="function")callback(savedWeek);
   }catch(e){
     setWarning((e?.message||"Lưu thất bại.")+" Không có lịch mới nào được thêm; vui lòng kiểm tra và thử lại.");
   }finally{
@@ -181,8 +259,9 @@ function mount(root){
   overlay.className="rb-week-overlay";overlay.id="rbWeekModal";
   overlay.innerHTML='<section class="rb-week-panel" role="dialog" aria-modal="true" aria-labelledby="rbWeekTitle">'+
     '<header class="rb-week-panel-header"><div><span class="rb-kicker">OUR STAGE / ROOM BOOKING</span><h2 id="rbWeekTitle">Lập lịch phòng theo tuần</h2>'+
-    '<p>Tuần '+dateLabel(config.weekStart)+' – '+dateLabel(config.weekStart+6*DAY)+'. Thêm nhiều phòng cho từng ngày. Ngày không có phòng cứ để trống.</p></div>'+
+    '<p>Chọn tuần cần đặt lịch, sau đó thêm phòng cho những ngày có sử dụng. Ngày không có phòng có thể để trống.</p></div>'+
     '<button type="button" class="rb-week-close" aria-label="Đóng lịch tuần">×</button></header>'+
+    '<div class="rb-week-chooser"><div class="rb-week-choose-intro"><label for="rbWeekChoose">Chọn tuần cần đặt</label><span id="rbWeekCurrent" aria-live="polite"></span><small>Chọn một ngày bất kỳ, hệ thống tự lấy đủ thứ Hai–Chủ Nhật. Bản nháp chỉ lưu tạm khi chuyển tuần, chưa ghi lên hệ thống.</small></div><div class="rb-week-chooser-controls"><button type="button" id="rbWeekPrevious" class="rb-button rb-outline" aria-label="Chọn tuần trước">‹</button><input type="date" id="rbWeekChoose" aria-label="Chọn ngày thuộc tuần muốn đặt"><button type="button" id="rbWeekNext" class="rb-button rb-outline" aria-label="Chọn tuần sau">›</button></div></div>'+
     '<div class="rb-week-scroll">'+buildDays()+'</div>'+
     '<footer class="rb-week-footer"><div><p id="rbWeekSummary" aria-live="polite"></p><p class="rb-week-error" id="rbWeekError" role="alert"></p>'+
     '<small>Chỉ Admin/Super Admin được lưu. Các slot và sự kiện được kiểm tra lại tại máy chủ trước khi ghi.</small></div>'+
@@ -210,12 +289,19 @@ function mount(root){
       row.dataset.selectedSlots=JSON.stringify(selected(row).filter(id=>id!==chip.dataset.removeSlot));
       updateSelectedUI(row);
     }
+    if(e.target.id==="rbWeekPrevious")changeWeek(config.weekStart-7*DAY);
+    if(e.target.id==="rbWeekNext")changeWeek(config.weekStart+7*DAY);
     if(e.target.id==="rbWeekSubmit")saveWeek();
   });
   overlay.addEventListener("input",e=>{
     if(e.target.classList.contains("rb-week-slot-search"))htmlSlotOptions(e.target.closest(".rb-week-entry"));
   });
   overlay.addEventListener("change",e=>{
+    if(e.target.id==="rbWeekChoose"){
+      try{changeWeek(dateToWeek(e.target.value))}
+      catch(error){setWarning(error.message||"Ngày không hợp lệ.");syncWeekPicker()}
+      return;
+    }
     if(!e.target.matches(".rb-week-slot-list input[type=checkbox]"))return;
     const row=e.target.closest(".rb-week-entry"),ids=new Set(selected(row));
     if(e.target.checked)ids.add(e.target.value);else ids.delete(e.target.value);
@@ -224,6 +310,7 @@ function mount(root){
   document.addEventListener("keydown",keyHandler,true);
   document.addEventListener("pointerdown",outsideHandler,true);
   total();
+  syncWeekPicker();
   by(".rb-week-close",overlay).focus();
 }
 window.rbOpenWeekPlanner=function(settings){
@@ -236,7 +323,7 @@ window.rbOpenWeekPlanner=function(settings){
   config={
     weekStart:start,slots:settings.slots.slice().sort((a,b)=>a.start.localeCompare(b.start)),
     events:Array.isArray(settings.events)?settings.events.slice():[],
-    request:settings.request,semester:settings.semester,onSaved:settings.onSaved
+    request:settings.request,semester:settings.semester,onSaved:settings.onSaved,drafts:new Map()
   };
   mount();
 };
