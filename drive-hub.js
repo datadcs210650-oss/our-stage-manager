@@ -54,22 +54,48 @@ async function refresh(){
  finally{S.busy=false}
 }
 async function connect(){try{const o=await api("connect-start");if(!o.url.startsWith("https://accounts.google.com/"))throw Error("URL kết nối không an toàn.");location.assign(o.url)}catch(e){notice(e.message)}}
+
+function ask({title,description="",placeholder="",options=null,optional=false}){
+ return new Promise(resolve=>{
+  const shade=document.createElement("div");
+  shade.className="dh-dialog-shade";
+  const optionsMarkup=options?'<select id="dhDialogInput">'+options.map((o,i)=>'<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>').join("")+'</select>':
+    '<input id="dhDialogInput" type="text" maxlength="350" placeholder="'+esc(placeholder)+'" '+(optional?"":"required")+'>';
+  shade.innerHTML='<form class="dh-dialog" role="dialog" aria-modal="true" aria-labelledby="dhDialogTitle">'+
+   '<h3 id="dhDialogTitle">'+esc(title)+'</h3><p>'+esc(description)+'</p>'+
+   '<label>'+esc(options?"Chọn sự kiện":"Thông tin")+'</label>'+optionsMarkup+
+   '<div class="dh-dialog-buttons"><button type="button" data-cancel>Hủy</button><button type="submit">Xác nhận</button></div></form>';
+  const finish=value=>{document.removeEventListener("keydown",onKey,true);shade.remove();resolve(value)};
+  const onKey=e=>{if(e.key==="Escape"){e.stopPropagation();e.preventDefault();finish(null)}};
+  shade.addEventListener("click",e=>{if(e.target===shade||e.target.closest("[data-cancel]"))finish(null)});
+  shade.querySelector("form").onsubmit=e=>{
+   e.preventDefault();
+   const value=shade.querySelector("#dhDialogInput").value.trim();
+   if(!optional&&!value)return;
+   finish(value);
+  };
+  document.body.appendChild(shade);
+  document.addEventListener("keydown",onKey,true);
+  shade.querySelector("#dhDialogInput").focus();
+ });
+}
 async function setSemester(){
  if(!sup())return;
- const url=prompt("Link thư mục Drive học kỳ; để trống để tạo thư mục tự động:","");
+ const url=await ask({title:"Thiết lập Drive học kỳ",description:"Dán link thư mục Drive hoặc để trống để OSC tạo tự động trong kho tổng.",placeholder:"https://drive.google.com/drive/folders/…",optional:true});
  if(url===null)return;
  try{await api("semester-set",{semester:S.sem,folderUrl:url.trim()});await refresh()}catch(e){notice(e.message)}
 }
 async function addEvent(){
  const events=(state.events||[]).filter(x=>x.semester===S.sem);
  if(!events.length)return notice("Học kỳ này chưa có sự kiện.");
- const ans=prompt("Chọn số thứ tự sự kiện:\n"+events.map((x,i)=>(i+1)+". "+x.title).join("\n"),"1");
- if(ans===null)return;
- const index=Number(ans)-1;if(!Number.isInteger(index)||index<0||index>=events.length)return notice("Số thứ tự không hợp lệ.");
+ const selected=await ask({title:"Tạo kho tài liệu sự kiện",description:"Chọn sự kiện đã có trong Cổng sự kiện.",
+  options:events.map((x,i)=>({value:String(i),label:x.title||"Sự kiện"}))});
+ if(selected===null)return;
+ const index=Number(selected);if(!Number.isInteger(index)||index<0||index>=events.length)return notice("Lựa chọn không hợp lệ.");
  try{const a=await api("event-ensure",{eventId:events[index].id});S.event=a.id;await refresh()}catch(e){notice(e.message)}
 }
 async function addCategory(){
- const label=prompt("Tên danh mục mới:","");if(!label)return;
+ const label=await ask({title:"Thêm danh mục tài liệu",description:"Danh mục sẽ được tạo trong Google Drive tương ứng.",placeholder:"Ví dụ: Hợp đồng tài trợ"});if(!label)return;
  try{await api("category-add",{semester:S.sem,scope:S.scope,eventId:S.event,label});await refresh()}catch(e){notice(e.message)}
 }
 async function files(){
