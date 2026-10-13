@@ -253,6 +253,89 @@ async function roomCreate(req,body){
   });
   return{ok:true,version:99,bookingId:ref.id};
 }
+
+/* Atomic seven-day planner: empty days are omitted, populated days are all-or-nothing.
+   Every request shares the per-room mutex used by the existing single-booking API. */
+async function roomWeekCreate(req,body){
+  const actor=await requireUser(req);ensureRoomManager(actor);
+  const db=getDb(),semester=normalizeSemester(body.semester);
+  const state=await loadState(db);
+  if(semesterLocked(state,semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+  const window=roomWindow(body);
+  const entries=body.entries;
+  if(!Array.isArray(entries)||entries.length===0||entries.length>56)
+    throw bad("Lịch tuần cần ít nhất một lượt phòng, tối đa 56 lượt (8 lượt/ngày).");
+  const daily=new Map();
+  for(const entry of entries){
+    if(!entry||typeof entry!=="object"||Array.isArray(entry))
+      throw bad("Có dòng lịch tuần không hợp lệ.");
+    const date=String(entry.date||"");
+    if(!validBookingEventDate(date))throw bad("Ngày sử dụng không hợp lệ.");
+    const ms=Date.parse(date+"T00:00:00+07:00");
+    if(ms<window.start||ms>=window.end)
+      throw bad("Tất cả lịch phải thuộc tuần đã chọn (Thứ Hai đến Chủ Nhật).");
+    const n=(daily.get(date)||0)+1;
+    if(n>8)throw bad("Mỗi ngày chỉ được nhập tối đa 8 lượt sử dụng phòng.");
+    daily.set(date,n);
+  }
+  // Transaction reads complete before any writes: slot catalogue, events,
+  // all relevant existing bookings, and one conflict mutex per unique room.
+  const refs=entries.map(()=>db.collection("roomBookings").doc());
+  const result=await db.runTransaction(async tx=>{
+    const slots=await fetchSlotDoc(db,tx);
+    if(!slots.length)throw bad("Chưa có slot được Admin cài đặt.");
+    const rows=entries.map((entry,i)=>{
+      const data=normalizeRoomBooking(entry,slots);
+      if(!data.roomName||!data.purpose)throw bad("Ngày "+data.date+", dòng "+(i+1)+": thiếu phòng hoặc mục đích.");
+      return data;
+    });
+    for(let i=0;i<rows.length;i++)for(let j=0;j<i;j++){
+      if(rows[i].roomKey===rows[j].roomKey&&roomSegmentsOverlap(rows[i],rows[j]))
+        throw bad("Trùng phòng "+rows[i].roomName+" trong lịch tuần ("+rows[i].date+").","osc/room-conflict");
+    }
+    const ids=[...new Set(rows.map(x=>x.eventId).filter(Boolean))];
+    for(const id of ids)await assertBookableEvent(tx,db,id,semester,state);
+    const snap=await tx.get(db.collection("roomBookings")
+      .where("startAt",">=",admin.firestore.Timestamp.fromMillis(window.start-ROOM_MAX_MS))
+      .where("startAt","<",admin.firestore.Timestamp.fromMillis(window.end)));
+    const old=snap.docs.map(d=>d.data()||{}).filter(d=>d.status!=="cancelled");
+    for(const data of rows){
+      for(const existing of old){
+        const key=String(existing.roomKey||existing.roomName||"").normalize("NFD")
+          .replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
+        if(key===data.roomKey&&roomSegmentsOverlap(data,existing))
+          throw bad("Phòng "+data.roomName+" đã có lịch trùng giờ vào "+data.date+".","osc/room-conflict");
+      }
+    }
+    const lockRevisions=[];
+    for(const roomKey of [...new Set(rows.map(x=>x.roomKey))].sort()){
+      const ref=db.collection("roomBookingMutex").doc(
+        require("node:crypto").createHash("sha256").update(roomKey).digest("hex"));
+      const snapshot=await tx.get(ref);
+      lockRevisions.push({ref,revision:Number(snapshot.data()?.revision||0)});
+    }
+    for(const lock of lockRevisions){
+      tx.set(lock.ref,{
+        revision:lock.revision+1,
+        updatedAt:admin.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+    }
+    const createdByName=clean(actor.profile.displayName||actor.decoded.email||"Admin",120);
+    rows.forEach((data,i)=>tx.set(refs[i],{
+      semester,roomName:data.roomName,roomKey:data.roomKey,purpose:data.purpose,
+      eventId:data.eventId,date:data.date,slotIds:data.slotIds,slotSnapshot:data.slotSnapshot,
+      status:"active",
+      startAt:admin.firestore.Timestamp.fromDate(data.start),
+      endAt:admin.firestore.Timestamp.fromDate(data.end),
+      createdAt:admin.firestore.FieldValue.serverTimestamp(),
+      createdBy:actor.decoded.uid,createdByName,
+      source:"week-planner"
+    },{merge:false}));
+    return rows.length;
+  });
+  return{ok:true,version:101,created:result,bookingIds:refs.map(ref=>ref.id),weekStart:window.start};
+}
+
 async function roomUpdate(req,body){
   const actor=await requireUser(req);ensureRoomManager(actor);
   const db=getDb(),id=cleanId(body.bookingId,"Lịch phòng"),ref=db.collection("roomBookings").doc(id);
@@ -334,6 +417,7 @@ module.exports=async function handler(req,res){
     else if(action==="room-board")out=await roomBoard(req,body);
     else if(action==="room-history")out=await roomHistory(req,body);
     else if(action==="room-update")out=await roomUpdate(req,body);
+    else if(action==="room-week-create")out=await roomWeekCreate(req,body);
     else if(action==="room-create")out=await roomCreate(req,body);
     else if(action==="room-cancel")out=await roomCancel(req,body);
     else if(action==="temp-list")out=await tempList(req,body);
