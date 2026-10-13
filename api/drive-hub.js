@@ -48,7 +48,7 @@ async function status(){
     ownerEmail:saved.data?.ownerEmail||"",rootFolderUrl:saved.data?.rootFolderId?folderLink(saved.data.rootFolderId):"",
     semesters:await listSemesters()};
 }
-async function connectStart(actor){
+async function connectStart(actor,res){
   needSuper(actor);
   if(!D.configured())throw error("Cần cấu hình 3 biến môi trường Google Drive trên Vercel trước khi kết nối.","osc/drive-unconfigured");
   const nonce=D.crypto.randomBytes(32).toString("base64url");
@@ -56,6 +56,7 @@ async function connectStart(actor){
     uid:actor.decoded.uid,createdAt:admin.firestore.FieldValue.serverTimestamp(),
     expiresMs:Date.now()+10*60*1000,used:false
   });
+  res.setHeader("Set-Cookie","osc_drive_oauth="+D.hash(nonce)+"; Path=/api/drive-oauth-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=600");
   return{ok:true,url:D.authorizeURL(nonce)};
 }
 async function semesterSetup(actor,body){
@@ -206,7 +207,7 @@ module.exports=async function handler(req,res){
   const body=readJsonBody(req),action=String(body.action||"");
   let out;
   if(action==="status")out=await status();
-  else if(action==="connect-start")out=await connectStart(actor);
+  else if(action==="connect-start")out=await connectStart(actor,res);
   else if(action==="semester-set")out=await semesterSetup(actor,body);
   else if(action==="semester-get")out=await semesterContents(body);
   else if(action==="event-ensure")out=await eventEnsure(actor,body);
