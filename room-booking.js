@@ -30,11 +30,12 @@ async function request(action,body){
 function notice(x){var n=el("#rbNotice");if(n)n.textContent=x||""}
 function shell(){
   var root=el("#roomBookingRoot");if(!root)return;
-  root.innerHTML='<div class="rb-hero"><div><span class="rb-kicker">OUR STAGE / ROOM BOOKING</span><h2>Lịch phòng CLB</h2><p>Theo dõi phòng CLB theo từng tuần. Sau ngày sử dụng, lịch tự chuyển sang Lịch sử phòng.</p></div><div class="rb-hero-buttons">'+(manager()?'<button type="button" class="rb-button rb-primary" data-action="new">+ Thêm lịch phòng</button>':'<span class="rb-view">Chế độ chỉ xem</span>')+'<button type="button" class="rb-button rb-outline" data-action="reload">↻ Làm mới</button></div></div><div class="rb-tabs"><button type="button" data-action="week" id="rbWeekTab">Lịch phòng theo tuần</button><button type="button" data-action="history" id="rbHistoryTab">Lịch sử phòng</button>'+(manager()?'<button type="button" data-action="slots" id="rbSlotsTab">Cài đặt slot</button>':'')+'</div><p id="rbNotice" class="rb-notice" aria-live="polite"></p><div id="rbContent"></div>';
+  root.innerHTML='<div class="rb-hero"><div><span class="rb-kicker">OUR STAGE / ROOM BOOKING</span><h2>Lịch phòng CLB</h2><p>Theo dõi phòng CLB theo từng tuần. Sau ngày sử dụng, lịch tự chuyển sang Lịch sử phòng.</p></div><div class="rb-hero-buttons">'+(manager()?'<button type="button" class="rb-button rb-outline" data-action="new">+ Đặt phòng theo ngày</button><button type="button" class="rb-button rb-primary" data-action="weekly">+ Lập lịch cả tuần</button>':'<span class="rb-view">Chế độ chỉ xem</span>')+'<button type="button" class="rb-button rb-outline" data-action="reload">↻ Làm mới</button></div></div><div class="rb-tabs"><button type="button" data-action="week" id="rbWeekTab">Lịch phòng theo tuần</button><button type="button" data-action="history" id="rbHistoryTab">Lịch sử phòng</button>'+(manager()?'<button type="button" data-action="slots" id="rbSlotsTab">Cài đặt slot</button>':'')+'</div><p id="rbNotice" class="rb-notice" aria-live="polite"></p><div id="rbContent"></div>';
   root.onclick=function(e){
     var button=e.target.closest("button[data-action]");if(!button||!root.contains(button))return;
     var act=button.dataset.action;
     if(act==="new")openForm(null);
+    if(act==="weekly")openWeekly();
     if(act==="slots"&&manager())switchTab("slots");
     if(act==="slot-add")addSlotRow();
     if(act==="slot-sample")useSampleSlots();
@@ -338,6 +339,33 @@ async function openForm(booking){
   if(booking)overlay.querySelector("#rbCancel").onclick=()=>cancelBooking(booking,form);
   form.querySelector("#rbName").focus();
 }
+
+async function openWeekly(){
+  if(!manager())return message("Chỉ Admin/Super Admin được lập lịch phòng.");
+  if(!data.slotReady)await loadSlots(true);
+  if(!data.slotReady)return message("Không tải được danh sách slot. Vui lòng thử lại.");
+  if(!data.slots.length){
+    switchTab("slots");
+    return message("Hãy tạo ít nhất một slot trong Cài đặt slot trước khi lập lịch tuần.");
+  }
+  if(typeof window.rbOpenWeekPlanner!=="function")
+    return message("Chưa tải xong giao diện lập lịch tuần. Hãy tải lại trang.");
+  window.rbOpenWeekPlanner({
+    weekStart:data.week,
+    semester:semester,
+    slots:data.slots.slice(),
+    events:(state.events||[]).filter(bookableEvent)
+      .map(ev=>({id:String(ev.id||""),title:String(ev.title||"")})),
+    request:request,
+    onSaved:()=>{
+      data.tab="week";
+      paintTabs();
+      renderWeek();
+      getWeek();
+    }
+  });
+}
+
 function renderRoomBooking(){if(!data.week)data.week=monday(Date.now());data.day=vnKey(Date.now());if(data.tab==="slots"&&!manager())data.tab="week";shell();loadSlots(true);if(data.tab==="history"){renderHistory();getHistory(true)}else if(data.tab==="slots"){renderSlots()}else{renderWeek();getWeek()}}
 window.renderRoomBooking=renderRoomBooking;
 setInterval(function(){
