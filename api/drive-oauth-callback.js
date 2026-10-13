@@ -15,7 +15,15 @@ module.exports=async function(req,res){
     if(req.query?.error) return go(res,"cancelled");
     const nonce=String(req.query?.state||""),code=String(req.query?.code||"");
     if(!/^[A-Za-z0-9_-]{35,90}$/.test(nonce)||!code||code.length>3000)return go(res,"error");
-    const ref=getDb().collection(D.OAUTH_STATES).doc(D.hash(nonce));
+    // OAuth login-CSRF defense: nonce must originate from this browser session.
+    const cookie=String(req.headers?.cookie||"").split(";").map(x=>x.trim()).find(x=>x.startsWith("osc_drive_oauth="));
+    const cookieHash=cookie?cookie.slice("osc_drive_oauth=".length):"";
+    res.setHeader("Set-Cookie","osc_drive_oauth=; Path=/api/drive-oauth-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+    const expected=D.hash(nonce);
+    if(!/^[a-f0-9]{64}$/.test(cookieHash)||
+       !D.crypto.timingSafeEqual(Buffer.from(expected,"hex"),Buffer.from(cookieHash,"hex")))
+      return go(res,"error");
+    const ref=getDb().collection(D.OAUTH_STATES).doc(expected);
     const accepted=await getDb().runTransaction(async tx=>{
       const snap=await tx.get(ref);
       if(!snap.exists||snap.data()?.used===true||
