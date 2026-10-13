@@ -95,6 +95,8 @@ function releaseDialog(){
 }
 function keyHandler(e){
   if(e.key!=="Escape"||!dialog)return;
+  // The separate OSC confirmation dialog owns Escape while it is open.
+  if(document.querySelector(".osc-dialog-backdrop"))return;
   const pop=[...dialog.querySelectorAll(".rb-week-slot-popover")].find(p=>!p.hidden);
   if(pop){e.preventDefault();pop.hidden=true;return}
   if(!busy){e.preventDefault();releaseDialog()}
