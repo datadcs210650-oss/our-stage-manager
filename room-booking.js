@@ -100,17 +100,26 @@ async function getHistory(reset){
   }catch(e){notice(e.message||String(e));renderHistory()}finally{data.historyBusy=false}
 }
 /* The catalog is a shared, admin-managed schedule template; BCN may read but never mutate it. */
+let slotLoadPending=null;
 async function loadSlots(force){
-  if(data.slotBusy)return;
+  if(slotLoadPending)return slotLoadPending;
   if(data.slotReady&&!force)return;
   data.slotBusy=true;
-  try{
-    var result=await request("room-slot-list");
-    data.slots=(result.slots||[]).slice().sort(function(a,b){return a.start.localeCompare(b.start)});
-    data.slotReady=true;
-    if(data.tab==="slots")renderSlots();
-  }catch(e){data.slotReady=false;notice("Không tải được cấu hình slot: "+(e.message||String(e)))}
-  finally{data.slotBusy=false}
+  slotLoadPending=(async function(){
+    try{
+      const result=await request("room-slot-list");
+      data.slots=(result.slots||[]).slice().sort((a,b)=>a.start.localeCompare(b.start));
+      data.slotReady=true;
+      if(data.tab==="slots")renderSlots();
+    }catch(e){
+      data.slotReady=false;
+      notice("Không tải được cấu hình slot: "+(e.message||String(e)));
+    }finally{
+      data.slotBusy=false;
+      slotLoadPending=null;
+    }
+  })();
+  return slotLoadPending;
 }
 
 function slotLabel(x){return x.label+" ("+x.start+"–"+x.end+")"}
