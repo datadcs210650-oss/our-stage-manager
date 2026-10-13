@@ -263,8 +263,8 @@ async function roomWeekCreate(req,body){
   if(semesterLocked(state,semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
   const window=roomWindow(body);
   const entries=body.entries;
-  if(!Array.isArray(entries)||entries.length===0||entries.length>56)
-    throw bad("Lịch tuần cần ít nhất một lượt phòng, tối đa 56 lượt (8 lượt/ngày).");
+  if(!Array.isArray(entries)||entries.length===0||entries.length>140)
+    throw bad("Lịch tuần cần ít nhất một lượt phòng, tối đa 140 lượt (20 lượt/ngày).");
   const daily=new Map();
   for(const entry of entries){
     if(!entry||typeof entry!=="object"||Array.isArray(entry))
@@ -275,7 +275,7 @@ async function roomWeekCreate(req,body){
     if(ms<window.start||ms>=window.end)
       throw bad("Tất cả lịch phải thuộc tuần đã chọn (Thứ Hai đến Chủ Nhật).");
     const n=(daily.get(date)||0)+1;
-    if(n>8)throw bad("Mỗi ngày chỉ được nhập tối đa 8 lượt sử dụng phòng.");
+    if(n>20)throw bad("Mỗi ngày chỉ được nhập tối đa 20 lượt sử dụng phòng.");
     daily.set(date,n);
   }
   // Transaction reads complete before any writes: slot catalogue, events,
