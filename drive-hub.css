@@ -1,0 +1,32 @@
+/* OSC Drive Hub v1 */
+#driveHubRoot{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#392d35}
+#driveHubRoot *{box-sizing:border-box}
+.dh-hero{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #eadce2;background:linear-gradient(120deg,#fff,#fdf6f8);border-radius:19px;padding:25px;margin-bottom:18px}
+.dh-hero span{color:#9a4767;font-size:11px;letter-spacing:.13em;font-weight:850}
+.dh-hero h2{font-size:27px;color:#55283c;font-weight:850;margin:7px 0}
+.dh-hero p{color:#7b6b74;font-size:13px;line-height:1.6;margin:0}
+.dh-hero strong{font-size:12px;white-space:nowrap;padding:10px 14px;border-radius:99px;background:#f7e8ee;color:#7a2849}
+.dh-toolbar,.dh-heading,.dh-picker{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;background:#fff;border:1px solid #efe5e9;border-radius:12px;padding:14px;margin:12px 0}
+.dh-toolbar label,.dh-picker label{display:flex;gap:9px;align-items:center;font-weight:800;font-size:12px}
+.dh-toolbar input,.dh-picker select{border:1px solid #dfcbd4;border-radius:9px;padding:10px;background:#fff;color:#37222e}
+#driveHubRoot button,#driveHubRoot .dh-upload{background:#781d3b;color:#fff;border:1px solid #781d3b;padding:10px 14px;border-radius:10px;font-weight:750;font-size:12px;cursor:pointer}
+#driveHubRoot button:hover,#driveHubRoot .dh-upload:hover{background:#963e5b}
+#driveHubRoot button:focus-visible{outline:3px solid #d7a3b7;outline-offset:2px}
+.dh-tabs{display:flex;gap:7px;margin:14px 0}
+#driveHubRoot .dh-tabs button{background:#f6eff2;color:#79475d;border-color:#ecdee4}
+#driveHubRoot .dh-tabs button.on{background:#781d3b;color:#fff}
+.dh-heading h3{margin:0;font-size:17px;color:#47273a}
+.dh-heading>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dh-heading a{font-size:12px;font-weight:750;color:#781d3b;text-decoration:none}
+.dh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:14px 0}
+#driveHubRoot .dh-category{min-height:83px;text-align:left;background:#fff;color:#6b334b;border:1px solid #ece1e6;border-radius:13px;padding:15px;font-size:13px}
+#driveHubRoot .dh-category.on{background:#faf0f5;border-color:#b46b86}
+.dh-empty{background:#fff;border:1px dashed #e4d9df;border-radius:12px;padding:23px;text-align:center;color:#8b7f85;font-size:13px}
+.dh-tip{background:#faf6f8;padding:11px 14px;border-radius:11px;font-size:12px;line-height:1.7;color:#7c6570;margin:12px 0}
+#dhNotice,#dhProgress{font-size:12px;color:#a02949;margin:8px 0}
+.dh-files{display:grid;gap:8px}
+.dh-files>a{display:flex;justify-content:space-between;gap:12px;background:#fff;border:1px solid #eee4e8;padding:13px;border-radius:12px;text-decoration:none;color:#503447;font-size:13px;overflow-wrap:anywhere}
+.dh-files small{color:#9b8a93;white-space:nowrap}
+#driveHubRoot .dh-upload{display:inline-block;cursor:pointer}
+@media(max-width:760px){.dh-hero{flex-direction:column;align-items:flex-start;padding:18px}.dh-toolbar,.dh-heading,.dh-picker{align-items:stretch;flex-direction:column}.dh-heading>div{align-self:stretch}.dh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.dh-grid{grid-template-columns:1fr}}
