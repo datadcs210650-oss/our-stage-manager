@@ -87,6 +87,11 @@ module.exports = async function handler(req, res) {
           semester:term,mssv:memberId,positionTitle,systemRoleAtTerm:nextRole,
           updatedBy:actor.decoded.uid,updatedAt:admin.firestore.FieldValue.serverTimestamp()
         },{merge:true});
+        if(term&&positionTitle)tx.set(db.collection("oscLeadershipAudit").doc(),{
+          action:"account-position-updated",uid,semester:term,
+          previousTitle:String(current.data()?.positionTitle||""),nextTitle:positionTitle,
+          by:actor.decoded.uid,at:admin.firestore.FieldValue.serverTimestamp()
+        });
       });
 
     } catch (error) {
