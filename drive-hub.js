@@ -12,11 +12,27 @@ async function api(action,body={}){
  const r=await fetch("/api/operations",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action:"drive-"+action,...body}),cache:"no-store"});
  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Không thể hoàn tất yêu cầu.");return j;
 }
+function configDiagnostic(){
+ const h=S.state?.configuration;
+ if(!h)return '<div class="dh-tip">Không thể xác định chi tiết cấu hình. Hãy tải lại trang và kiểm tra Production Environment Variables trên Vercel.</div>';
+ const checks=[
+  ["DRIVE_OAUTH_CLIENT_ID",h.clientId],
+  ["DRIVE_OAUTH_CLIENT_SECRET",h.clientSecret],
+  ["DRIVE_TOKEN_ENCRYPTION_KEY",h.encryptionKeyValid]
+ ];
+ let advice="";
+ if(!h.clientId||!h.clientSecret)advice="Kiểm tra giá trị hai biến OAuth trên Vercel và Redeploy.";
+ else if(!h.encryptionKeyValid)advice="Khóa mã hóa chưa giải mã thành đúng 32 byte. Mở Terminal, chạy openssl rand -base64 32 rồi dán chính xác KẾT QUẢ vào DRIVE_TOKEN_ENCRYPTION_KEY trên Vercel, sau đó Redeploy.";
+ else advice="Các biến có vẻ hợp lệ. Hãy Redeploy bản Production mới nhất và thử làm mới.";
+ return '<div class="dh-tip"><strong>Kiểm tra cấu hình Google Drive (chỉ hiển thị trạng thái, không tiết lộ khóa)</strong><div class="dh-config-checks">'+
+ checks.map(([name,ok])=>'<div><span>'+esc(name)+'</span><strong class="'+(ok?"dh-good":"dh-bad")+'">'+(ok?"Hợp lệ":"Cần kiểm tra")+'</strong></div>').join("")+
+ '</div><p>'+esc(advice)+'</p></div>';
+}
 function frame(){
  $("#driveHubRoot").innerHTML='<div class="dh-hero"><div><span>OUR STAGE / DRIVE HUB</span><h2>Kho tài liệu OSC</h2><p>Tài liệu nằm trong Google Drive; hệ thống quản lý danh mục theo học kỳ và sự kiện.</p></div><strong>'+(S.state?.connected?"Đã kết nối Drive":"Chưa kết nối Drive")+'</strong></div>'+
  '<div class="dh-toolbar"><label>Học kỳ <input id="dhSemester" maxlength="4" value="'+esc(S.sem)+'"></label><button data-dh="refresh">Làm mới</button>'+
  (sup()?'<button data-dh="connect">Kết nối Google</button><button data-dh="set">Thiết lập thư mục học kỳ</button>':'')+'</div>'+
- '<p id="dhNotice" role="status"></p>'+(S.state&&!S.state.configured?'<div class="dh-tip">Cần cấu hình OAuth Client ID, Client Secret và khóa mã hóa trên Vercel để kích hoạt. Không nhập mật khẩu Google vào OSC.</div>':'')+
+ '<p id="dhNotice" role="status"></p>'+(S.state&&!S.state.configured?configDiagnostic():'')+
  '<div class="dh-tabs"><button data-dh="semester" class="'+(S.scope==="semester"?"on":"")+'">Tài liệu học kỳ</button><button data-dh="event" class="'+(S.scope==="event"?"on":"")+'">Tài liệu sự kiện</button></div><div id="dhContent"></div>';
  renderContent();
 }
