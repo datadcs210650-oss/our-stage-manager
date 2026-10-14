@@ -366,8 +366,9 @@ function bindClicks(){
 bindClicks();
 window.renderDriveHubV2=async function(){
  S.sem=String(typeof semester!=="undefined"?semester:"FA26").toUpperCase();
- S.tab="drive";S.notice="";S.meta=null;S.folder="";S.path=[];S.next="";
- try{await loadBase()}catch(err){S.notice=err.message||String(err);paint()}
+ S.tab=window.__oscOpenLeadership?"people":"drive";window.__oscOpenLeadership=false;
+ S.notice="";S.meta=null;S.folder="";S.path=[];S.next="";
+ try{await loadBase();if(S.tab==="people"&&chair())await peopleRefresh()}catch(err){S.notice=err.message||String(err);paint()}
 };
 window.renderDriveHub=window.renderDriveHubV2;
 })();
