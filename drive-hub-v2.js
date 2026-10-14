@@ -90,6 +90,7 @@ function header(){
   '<button type="button" data-v2="refresh">Làm mới</button>'+
   (S.status?.connected?'<button type="button" class="dh-light" data-v2="disconnect">Ngắt Google cá nhân</button>':
    '<button type="button" data-v2="connect">Liên kết Google cá nhân</button>')+
+  (!chair()?'<button type="button" data-v2="handoff-check">Kiểm tra lời mời nhận quyền Chủ tịch</button>':'')+
   '</div><p id="oscV2Notice" role="status" class="dh-v2-notice">'+e(S.notice)+'</p>'+
   '<div class="dh-tabs"><button class="'+(S.tab==="drive"?"on":"")+'" data-v2="tab" data-tab="drive">Tài liệu học kỳ</button>'+
   (chair()?'<button class="'+(S.tab==="people"?"on":"")+'" data-v2="tab" data-tab="people">Chức vụ & nhiệm kỳ</button>':'')+
