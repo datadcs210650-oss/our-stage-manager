@@ -25,5 +25,14 @@ jobs:
           node --check lib/drive-hub-handler.js
           node --check lib/drive-oauth-handler.js
           node --check drive-hub.js
+      - name: Check booking and Drive entrypoints
+        run: |
+          node --check api/operations.js
+          node --check lib/drive-folder-scope.js
+          node --check lib/room-date-policy.js
+          node --check room-booking.js
+          node --check room-booking-weekly.js
       - name: Regression tests
-        run: node --test tests/drive-hub.test.js
+        run: node --test tests/*.test.js
+      - name: Dependency vulnerability audit (high and critical)
+        run: npm audit --omit=dev --audit-level=high
