@@ -4,6 +4,7 @@ const {
   admin,getDb,sendJson,readJsonBody,requireUser,requireManager,
   validateUid,getTargetProfile,ensureTargetManageable,PERMISSION_KEYS,handleError
 }=require("../lib/firebase-admin");
+const {assertNotPast}=require("../lib/room-date-policy");
 
 function bad(message,code="osc/bad-request"){const e=new Error(message);e.code=code;return e}
 function clean(v,max=160){return String(v??"").trim().replace(/\s+/g," ").slice(0,max)}
@@ -23,6 +24,7 @@ function status(code){
   if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;
   if(["osc/not-found","osc/target-not-found"].includes(code))return 404;
   if(["osc/room-conflict","osc/semester-locked"].includes(code))return 409;
+  if(code==="osc/room-past-date")return 422;
   return 400;
 }
 
@@ -191,6 +193,7 @@ function resolveRoomFromSlots(body,slots){
   const parts=vnDateParts(localDay.getTime());
   const roundtrip=parts.y+"-"+String(parts.m).padStart(2,"0")+"-"+String(parts.d).padStart(2,"0");
   if(roundtrip!==date)throw bad("Ngày sử dụng phòng không hợp lệ.");
+  assertNotPast(date);
   const ids=body.slotIds;
   if(!Array.isArray(ids)||ids.length===0||ids.length>48||new Set(ids).size!==ids.length)throw bad("Vui lòng chọn slot hợp lệ.");
   const positions=ids.map(id=>slots.findIndex(x=>x.id===id)).sort((a,b)=>a-b);
@@ -238,6 +241,7 @@ async function roomCreate(req,body){
   await db.runTransaction(async tx=>{
     const slots=await fetchSlotDoc(db,tx);
     const data=normalizeRoomBooking(body,slots);
+    assertNotPast(data.date); // Re-check in the transaction for midnight rollover.
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
     await assertBookableEvent(tx,db,data.eventId,semester,state);
@@ -271,6 +275,7 @@ async function roomWeekCreate(req,body){
       throw bad("Có dòng lịch tuần không hợp lệ.");
     const date=String(entry.date||"");
     if(!validBookingEventDate(date))throw bad("Ngày sử dụng không hợp lệ.");
+    assertNotPast(date);
     const ms=Date.parse(date+"T00:00:00+07:00");
     if(ms<window.start||ms>=window.end)
       throw bad("Tất cả lịch phải thuộc tuần đã chọn (Thứ Hai đến Chủ Nhật).");
@@ -286,6 +291,7 @@ async function roomWeekCreate(req,body){
     if(!slots.length)throw bad("Chưa có slot được Admin cài đặt.");
     const rows=entries.map((entry,i)=>{
       const data=normalizeRoomBooking(entry,slots);
+      assertNotPast(data.date);
       if(!data.roomName||!data.purpose)throw bad("Ngày "+data.date+", dòng "+(i+1)+": thiếu phòng hoặc mục đích.");
       return data;
     });
@@ -344,8 +350,14 @@ async function roomUpdate(req,body){
     const existing=await tx.get(ref);
     if(!existing.exists||existing.data()?.status==="cancelled")throw bad("Lịch phòng không tồn tại hoặc đã hủy.","osc/not-found");
     if(semesterLocked(state,existing.data().semester))throw bad("Học kỳ đang bị khóa.","osc/semester-locked");
+    // A past historical record cannot be rewritten into a future booking.
+    const priorDay=String(existing.data()?.date||"");
+    if(priorDay)assertNotPast(priorDay);
+    else if(Number(existing.data()?.startAt?.toMillis?.()||0)<Date.now()-24*60*60*1000)
+      throw bad("Không thể sửa lịch sử phòng đã qua ngày.","osc/room-past-date");
     const slots=await fetchSlotDoc(db,tx);
     const data=normalizeRoomBooking(body,slots);
+    assertNotPast(data.date);
     const mutex=db.collection("roomBookingMutex").doc(require("node:crypto").createHash("sha256").update(data.roomKey).digest("hex"));
     const current=await tx.get(mutex);
     await assertBookableEvent(tx,db,data.eventId,existing.data().semester,state);
