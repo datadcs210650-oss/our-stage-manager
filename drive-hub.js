@@ -4,13 +4,15 @@ const $=q=>document.querySelector(q);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const m=()=>typeof canEditClub==="function"&&canEditClub();
 const sup=()=>String(currentProfile?.role||"")==="superadmin";
-const S={sem:"",scope:"semester",event:"",category:"",state:null,data:null,files:[],busy:false};
+const S={sem:"",scope:"semester",event:"",category:"",state:null,data:null,files:[],busy:false,error:""};
 function notice(t){const e=$("#dhNotice");if(e)e.textContent=t||""}
 async function api(action,body={}){
  if(!currentFirebaseUser)throw Error("Vui lòng đăng nhập.");
  const token=await currentFirebaseUser.getIdToken();
  const r=await fetch("/api/operations",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action:"drive-"+action,...body}),cache:"no-store"});
- const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Không thể hoàn tất yêu cầu.");return j;
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok){const e=new Error(j.error||"Yêu cầu máy chủ thất bại (HTTP "+r.status+").");e.code=j.code||"";throw e}
+ return j;
 }
 function configDiagnostic(){
  const h=S.state?.configuration;
@@ -29,10 +31,14 @@ function configDiagnostic(){
  '</div><p>'+esc(advice)+'</p></div>';
 }
 function frame(){
- $("#driveHubRoot").innerHTML='<div class="dh-hero"><div><span>OUR STAGE / DRIVE HUB</span><h2>Kho tài liệu OSC</h2><p>Tài liệu nằm trong Google Drive; hệ thống quản lý danh mục theo học kỳ và sự kiện.</p></div><strong>'+(S.state?.connected?"Đã kết nối Drive":"Chưa kết nối Drive")+'</strong></div>'+
+ $("#driveHubRoot").innerHTML='<div class="dh-hero"><div><span>OUR STAGE / DRIVE HUB</span><h2>Kho tài liệu OSC</h2><p>Tài liệu nằm trong Google Drive; hệ thống quản lý danh mục theo học kỳ và sự kiện.</p></div><strong>'+(S.state?.connected?"Đã cấp quyền Google":"Chưa kết nối Drive")+'</strong></div>'+
  '<div class="dh-toolbar"><label>Học kỳ <input id="dhSemester" maxlength="4" value="'+esc(S.sem)+'"></label><button data-dh="refresh">Làm mới</button>'+
- (sup()?'<button data-dh="connect">Kết nối Google</button><button data-dh="set">Thiết lập thư mục học kỳ</button>':'')+'</div>'+
- '<p id="dhNotice" role="status"></p>'+(S.state&&!S.state.configured?configDiagnostic():'')+
+ (sup()?'<button data-dh="connect">Kết nối Google</button><button class="dh-alt" data-dh="connect-shared">Kết nối thư mục chia sẻ</button><button data-dh="set">Thiết lập thư mục học kỳ</button>':'')+'</div>'+
+ '<p id="dhNotice" role="status"></p>'+
+ (S.state?.connected?'<p class="dh-tip">Tài khoản kết nối: <strong>'+esc(S.state.ownerEmail||"Không xác định")+
+ '</strong>. Phạm vi quyền: <strong>'+esc(S.state.oauthScope==="https://www.googleapis.com/auth/drive"?"Thư mục được chia sẻ (quyền Drive đầy đủ)":"Giới hạn drive.file")+
+ '</strong>. Quyền Google không đồng nghĩa với quyền chỉnh sửa từng thư mục.</p>':'')+
+ (S.state&&!S.state.configured?configDiagnostic():'')+
  '<div class="dh-tabs"><button data-dh="semester" class="'+(S.scope==="semester"?"on":"")+'">Tài liệu học kỳ</button><button data-dh="event" class="'+(S.scope==="event"?"on":"")+'">Tài liệu sự kiện</button></div><div id="dhContent"></div>';
  renderContent();
 }
@@ -61,15 +67,32 @@ function renderFiles(){
  '<p id="dhProgress" role="status"></p><div class="dh-files">'+(S.files.length?S.files.map(x=>'<a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">📄 '+esc(x.name)+' <small>'+Math.ceil((x.size||0)/1024)+' KB</small></a>').join(""):'<div class="dh-empty">Danh mục chưa có tệp.</div>')+'</div>';
 }
 async function refresh(){
- if(S.busy)return;S.busy=true;
+ if(S.busy)return;S.busy=true;S.error="";
  try{
-  S.state=await api("status");
-  S.data=S.state.connected?await api("semester-get",{semester:S.sem}).catch(()=>null):null;
-  frame();notice(S.state.connected?"":"Kho tài liệu chưa được kết nối với Drive.");
- }catch(e){notice(e.message)}
+  S.state=await api("status");S.data=null;
+  if(S.state.connected) {
+   try{S.data=await api("semester-get",{semester:S.sem})}
+   catch(e){if(e.code!=="osc/drive-missing-semester")S.error=e.message}
+  }
+  frame();
+  notice(S.error||(S.state.connected?"":"Kho tài liệu chưa được kết nối với Drive."));
+ }catch(e){S.state=null;S.data=null;S.error=e.message;frame();notice(S.error)}
  finally{S.busy=false}
 }
-async function connect(){try{const o=await api("connect-start");if(!o.url.startsWith("https://accounts.google.com/"))throw Error("URL kết nối không an toàn.");location.assign(o.url)}catch(e){notice(e.message)}}
+async function connect(mode="limited"){
+ if(mode==="shared"){
+  const choice=await ask({title:"Kết nối thư mục được chia sẻ",
+   description:"Chỉ dùng khi cần nhập link thư mục do người khác sở hữu hoặc thư mục tạo ngoài ứng dụng. Google sẽ yêu cầu quyền truy cập rộng tới Drive của tài khoản kết nối. OSC lưu token đã mã hóa và chỉ dùng trong Kho tài liệu. Nên dùng tài khoản Google riêng cho CLB.",
+   options:[{value:"cancel",label:"Hủy, giữ quyền giới hạn"},{value:"agree",label:"Tôi hiểu và tiếp tục đến Google"}]});
+  if(choice!=="agree")return;
+ }
+ try{
+  const o=await api("connect-start",{scopeMode:mode});
+  const u=new URL(o.url);
+  if(u.protocol!=="https:"||u.hostname!=="accounts.google.com")throw Error("URL kết nối không an toàn.");
+  location.assign(o.url);
+ }catch(e){notice(e.message)}
+}
 
 function ask({title,description="",placeholder="",options=null,optional=false}){
  return new Promise(resolve=>{
@@ -99,7 +122,14 @@ async function setSemester(){
  if(!sup())return;
  const url=await ask({title:"Thiết lập Drive học kỳ",description:"Dán link thư mục Drive hoặc để trống để OSC tạo tự động trong kho tổng.",placeholder:"https://drive.google.com/drive/folders/…",optional:true});
  if(url===null)return;
- try{await api("semester-set",{semester:S.sem,folderUrl:url.trim()});await refresh()}catch(e){notice(e.message)}
+ try{await api("semester-set",{semester:S.sem,folderUrl:url.trim()});await refresh()}
+ catch(e){
+  if(e.code==="osc/drive-change-confirm"){
+   const choice=await ask({title:"Xác nhận đổi thư mục học kỳ",description:"Tệp cũ sẽ không tự chuyển. Nếu học kỳ có kho sự kiện, hệ thống sẽ chặn việc thay đổi.",
+    options:[{value:"cancel",label:"Hủy"},{value:"agree",label:"Xác nhận đổi thư mục"}]});
+   if(choice==="agree")try{await api("semester-set",{semester:S.sem,folderUrl:url.trim(),confirmChange:true});await refresh()}catch(next){notice(next.message)}
+  }else notice(e.message);
+ }
 }
 async function addEvent(){
  const events=(state.events||[]).filter(x=>x.semester===S.sem);
@@ -141,7 +171,8 @@ document.addEventListener("click",e=>{
  const b=e.target.closest("[data-dh]");if(!b)return;
  const a=b.dataset.dh;
  if(a==="refresh"){S.sem=$("#dhSemester").value.trim().toUpperCase();S.category="";refresh()}
- if(a==="connect")connect();
+ if(a==="connect")connect(S.state?.oauthScope==="https://www.googleapis.com/auth/drive"?"shared":"limited");
+ if(a==="connect-shared")connect("shared");
  if(a==="set")setSemester();
  if(a==="semester"||a==="event"){S.scope=a;S.category="";S.files=[];frame()}
  if(a==="event-add")addEvent();
