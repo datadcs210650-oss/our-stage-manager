@@ -74,6 +74,7 @@ function optionEvents(){
 function addRow(day){
   if(!manager()||busy)return;
   const rows=by(".rb-week-entries",day),date=day.dataset.date;
+  if(date<dateISO(Date.now())){setWarning("Không thể nhập lịch cho ngày đã qua. Vui lòng chọn từ hôm nay trở đi.");return}
   if(rows.children.length>=LIMIT_PER_DAY){setWarning("Mỗi ngày tối đa "+LIMIT_PER_DAY+" lượt phòng.");return}
   rowSequence++;
   const row=document.createElement("article");
@@ -99,7 +100,7 @@ function updateDay(day){
   rows.forEach((row,i)=>{by(".rb-week-entry-head span",row).textContent="Lượt phòng "+(i+1)});
   by(".rb-week-day-count",day).textContent=rows.length?rows.length+" lượt":"Không có lịch";
   by(".rb-week-day-empty",day).hidden=rows.length>0;
-  by("[data-week-add]",day).disabled=rows.length>=LIMIT_PER_DAY||busy;
+  by("[data-week-add]",day).disabled=rows.length>=LIMIT_PER_DAY||busy||day.dataset.date<dateISO(Date.now());
   total();
 }
 
@@ -132,7 +133,7 @@ function restoreDraft(){
   const saved=config.drafts.get(config.weekStart)||[];
   for(const entry of saved){
     const day=[...dialog.querySelectorAll(".rb-week-day")].find(d=>d.dataset.date===entry.date);
-    if(!day)continue;
+    if(!day||entry.date<dateISO(Date.now()))continue;
     addRow(day);
     const row=by(".rb-week-entry:last-child",by(".rb-week-entries",day));
     if(!row)continue;
@@ -187,6 +188,7 @@ function collectEntries(){
   const result=[],seen=new Map();
   for(const row of dialog.querySelectorAll(".rb-week-entry")){
     const date=row.dataset.date;
+    if(date<dateISO(Date.now()))throw new Error("Không thể lưu lịch phòng vào ngày đã qua ("+date+").");
     const roomName=by(".rb-week-room",row).value.trim();
     const purpose=by(".rb-week-purpose",row).value.trim();
     const slotIds=selectedSlots(row).map(x=>x.id);
@@ -247,9 +249,10 @@ function buildDays(){
   let html="";
   for(let i=0;i<7;i++){
     const time=config.weekStart+i*DAY,date=dateISO(time);
+    const expired=date<dateISO(Date.now());
     html+='<section class="rb-week-day" data-date="'+safe(date)+'">'+
       '<div class="rb-week-day-header"><div><span class="rb-week-day-label">'+WEEKDAYS[i]+' · '+dateLabel(time)+'</span><span class="rb-week-day-count">Không có lịch</span></div>'+
-      '<button type="button" class="rb-button rb-outline" data-week-add>+ Thêm phòng</button></div>'+
+      '<button type="button" class="rb-button rb-outline" data-week-add '+(expired?'disabled aria-disabled="true"':'')+'>'+(expired?'Ngày đã qua':'+ Thêm phòng')+'</button></div>'+
       '<div class="rb-week-entries"></div><p class="rb-week-day-empty">Không có lịch phòng ngày này — có thể để trống.</p></section>';
   }
   return html;
