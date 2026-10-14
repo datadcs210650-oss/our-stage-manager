@@ -53,3 +53,13 @@
 .dh-config-checks strong.dh-good{color:#23654a;background:#e8f5ed}
 .dh-config-checks strong.dh-bad{color:#ae2548;background:#fff0f3}
 .dh-tip>p:last-child{font-weight:650;color:#66374c;margin-bottom:0}
+
+/* Nested document folders */
+.dh-breadcrumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:14px 0}
+#driveHubRoot .dh-breadcrumb button{background:#f6eff2;color:#6b334b;border:1px solid #e9d8e0;padding:8px 11px;max-width:100%;overflow-wrap:anywhere}
+.dh-breadcrumb span{color:#957584}
+.dh-subfolders{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:10px;margin:10px 0 20px}
+#driveHubRoot .dh-child-folder{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:10px;min-height:60px;background:#fff;color:#57384a;border:1px solid #eadde3;border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}
+#driveHubRoot .dh-child-folder:hover{background:#fcf3f7;color:#722741}
+#driveHubRoot #dhFileArea h4{margin:18px 0 9px;color:#60364b;font-size:13px}
+@media(max-width:520px){.dh-subfolders{grid-template-columns:1fr}.dh-breadcrumb{gap:4px}}
