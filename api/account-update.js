@@ -1,8 +1,11 @@
 "use strict";
+const D=require("../lib/osc-drive");
+const L=require("../lib/leadership-handler");
 
 const {
   admin,
   getAuth,
+  getDb,
   sendJson,
   ensurePost,
   readJsonBody,
@@ -33,6 +36,10 @@ module.exports = async function handler(req, res) {
     ensureRoleCanBeAssigned(actor.profile.role, nextRole);
     const active = body.active === true;
     const permissions = normalizePermissions(body.permissions, nextRole);
+    const memberId=body.mssv?L.mssv(body.mssv):String(target.data.mssv||"");
+    const term=body.semester?D.semester(body.semester):String(target.data.positionSemester||"");
+    const positionTitle=body.positionTitle?L.title(body.positionTitle):String(target.data.positionTitle||"");
+    if(/^chủ tịch$/i.test(positionTitle))throw D.error("Chức vụ Chủ tịch phải được cấp thông qua quy trình bàn giao quyền.","osc/forbidden");
 
     const auth = getAuth();
     const beforeAuth = await auth.getUser(uid);
@@ -57,15 +64,36 @@ module.exports = async function handler(req, res) {
       await auth.updateUser(uid, authPatch);
       authChanged = true;
 
-      await target.ref.set({
-        displayName,
-        email,
-        role: nextRole,
-        active,
-        permissions,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedBy: actor.decoded.uid
-      }, { merge: true });
+      const db=getDb(),identity=memberId?db.collection("oscMssvOwners").doc(memberId):null;
+      await db.runTransaction(async tx=>{
+        const current=await tx.get(target.ref);
+        if(!current.exists)throw D.error("Tài khoản không còn tồn tại.","osc/target-not-found");
+        const priorId=String(current.data()?.mssv||"");
+        const oldRef=priorId&&priorId!==memberId?db.collection("oscMssvOwners").doc(priorId):null;
+        const [reserved,oldClaim]=await Promise.all([
+          identity?tx.get(identity):null,oldRef?tx.get(oldRef):null
+        ]);
+        if(reserved?.exists&&reserved.data()?.uid!==uid)throw D.error("MSSV đã thuộc tài khoản khác.","osc/mssv-exists");
+        tx.set(target.ref,{
+          displayName,email,role:nextRole,active,permissions,
+          ...(memberId?{mssv:memberId}:{}),
+          ...(term&&positionTitle?{positionTitle,positionSemester:term}:{}),
+          updatedAt:admin.firestore.FieldValue.serverTimestamp(),
+          updatedBy:actor.decoded.uid
+        },{merge:true});
+        if(identity)tx.set(identity,{uid,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+        if(oldRef&&oldClaim?.data()?.uid===uid)tx.delete(oldRef);
+        if(term&&positionTitle)tx.set(target.ref.collection("oscPositionHistory").doc(term),{
+          semester:term,mssv:memberId,positionTitle,systemRoleAtTerm:nextRole,
+          updatedBy:actor.decoded.uid,updatedAt:admin.firestore.FieldValue.serverTimestamp()
+        },{merge:true});
+        if(term&&positionTitle)tx.set(db.collection("oscLeadershipAudit").doc(),{
+          action:"account-position-updated",uid,semester:term,
+          previousTitle:String(current.data()?.positionTitle||""),nextTitle:positionTitle,
+          by:actor.decoded.uid,at:admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
     } catch (error) {
       if (authChanged) {
         try {

@@ -1,5 +1,7 @@
 "use strict";
 
+const D = require("../lib/osc-drive");
+const L = require("../lib/leadership-handler");
 const {
   admin,
   getAuth,
@@ -37,6 +39,10 @@ module.exports = async function handler(req, res) {
       throw e;
     }
     const permissions = normalizePermissions(body.permissions, role);
+    const id = body.mssv ? L.mssv(body.mssv) : "";
+    const term = body.semester ? D.semester(body.semester) : "";
+    const positionTitle = body.positionTitle ? L.title(body.positionTitle) : (role==="admin"?"Quản trị viên":"Thành viên BCN");
+    if(/^chủ tịch$/i.test(positionTitle))throw D.error("Chức vụ Chủ tịch chỉ dành cho quyền Chủ tịch.","osc/forbidden");
     const auth = getAuth();
     const db = getDb();
 
@@ -67,23 +73,41 @@ module.exports = async function handler(req, res) {
       throw e;
     }
 
-    await profileRef.set({
-      displayName,
-      email,
-      role,
-      active: true,
-      permissions,
-      linkedExistingAuth: linkedExisting,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdBy: actor.decoded.uid,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedBy: actor.decoded.uid
-    }, { merge: false });
+    const ownerRef=id?db.collection("oscMssvOwners").doc(id):null;
+    const historyRef=term?profileRef.collection("oscPositionHistory").doc(term):null;
+    await db.runTransaction(async tx=>{
+      const old=await tx.get(profileRef);
+      if(old.exists)throw D.error("Tài khoản đã có hồ sơ quyền.","osc/profile-exists");
+      const owner=ownerRef?await tx.get(ownerRef):null;
+      if(owner?.exists&&owner.data()?.uid!==createdUid)throw D.error("MSSV đã được sử dụng.","osc/mssv-exists");
+      tx.create(profileRef,{
+        displayName,email,role,active:true,permissions,
+        ...(id?{mssv:id}:{}),
+        ...(term?{positionTitle,positionSemester:term}:{}),
+        linkedExistingAuth:linkedExisting,
+        createdAt:admin.firestore.FieldValue.serverTimestamp(),
+        createdBy:actor.decoded.uid,
+        updatedAt:admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy:actor.decoded.uid
+      });
+      if(ownerRef)tx.set(ownerRef,{uid:createdUid,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+      if(historyRef)tx.set(historyRef,{
+        semester:term,mssv:id,positionTitle,systemRoleAtTerm:role,
+        updatedBy:actor.decoded.uid,updatedAt:admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
 
     try {
       await auth.updateUser(createdUid, { displayName, disabled: false });
     } catch (error) {
-      try { await profileRef.delete(); } catch (rollbackError) { console.error("profile rollback failed", rollbackError); }
+      try{
+        await profileRef.delete();
+        if(id){
+          const ownerSnap=await ownerRef.get();
+          if(ownerSnap.data()?.uid===createdUid)await ownerRef.delete();
+        }
+        if(historyRef)await historyRef.delete();
+      }catch(rollbackError){console.error("profile rollback failed",rollbackError?.code)}
       throw error;
     }
 
@@ -92,6 +116,7 @@ module.exports = async function handler(req, res) {
       uid: createdUid,
       email,
       role,
+      mssv:id,positionTitle:term?positionTitle:"",
       linkedExisting
     });
   } catch (error) {

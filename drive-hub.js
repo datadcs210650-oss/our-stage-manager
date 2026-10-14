@@ -352,4 +352,19 @@ document.addEventListener("change",e=>{
  if(e.target?.id==="dhEvent"){S.event=e.target.value;S.category="";clearFolder();renderContent()}
  if(e.target?.id==="dhFile"){upload(e.target.files?.[0]);e.target.value=""}
 });
+
+// Load the isolated per-user Drive interface without modifying the legacy site's
+// 1 MB HTML entrypoint. Keep the previous implementation for safe migration.
+const v2Script=document.createElement("script");
+v2Script.src="/drive-hub-v2.js";
+v2Script.async=true;
+v2Script.onload=()=>{
+  const el=document.getElementById("driveHubRoot");
+  if(el&&el.childElementCount&&el.offsetParent!==null&&typeof window.renderDriveHubV2==="function")
+    window.renderDriveHubV2();
+};
+v2Script.onerror=()=>{const el=document.getElementById("driveHubRoot");
+  if(el){const p=document.createElement("p");p.textContent="Không tải được giao diện Drive mới. Vui lòng tải lại trang.";el.prepend(p)}
+};
+document.head.appendChild(v2Script);
 })();

@@ -20,6 +20,19 @@ module.exports = async function handler(req, res) {
     const uid = validateUid(body.uid);
     const target = await getTargetProfile(uid);
     ensureTargetManageable(actor, uid, target.data);
+    // Preserve historical BCN positions and MSSV when a term ends.
+    // To remove active access, use account-update with active:false instead.
+    if (target.data.mssv || target.data.positionSemester) {
+      const err = new Error("Tài khoản đã có lịch sử nhiệm kỳ. Hãy khóa tài khoản để giữ MSSV và chức vụ các kỳ trước.");
+      err.code = "osc/forbidden";
+      throw err;
+    }
+    const termHistory = await target.ref.collection("oscPositionHistory").limit(1).get();
+    if (!termHistory.empty) {
+      const err = new Error("Không thể xóa tài khoản còn lịch sử BCN. Hãy khóa tài khoản.");
+      err.code = "osc/forbidden";
+      throw err;
+    }
 
     const auth = getAuth();
     let authUser = null;
