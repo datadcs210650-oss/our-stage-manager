@@ -46,7 +46,7 @@ test("100 MB upload limit rejects larger files without contacting Drive",async()
   await assert.rejects(V2.apply(actor,{},null,{
    action:"drive2-upload-start",semester:"FA26",folderId:"club_folder_id",
    fileName:"large.pdf",size:101*1024*1024,mimeType:"application/pdf"
-  }),{code:"osc/bad-request"});
+  }),{code:"osc/drive-file-too-large"});
   assert.equal(apiCalls,0);
  });
 });
