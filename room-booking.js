@@ -35,6 +35,7 @@ function clock(ms){var t=vnParts(ms);return pad(t.h)+":"+pad(t.min)}
 function inputDate(ms){var x=vnParts(ms);return x.y+"-"+pad(x.m)+"-"+pad(x.d)+"T"+pad(x.h)+":"+pad(x.min)}
 function toISO(v){if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v))throw Error("Ngày giờ không hợp lệ.");var d=new Date(v+":00+07:00");if(!Number.isFinite(d.getTime())||inputDate(d.getTime())!==v)throw Error("Ngày giờ không hợp lệ.");return d.toISOString()}
 function manager(){return typeof canEditClub==="function"&&canEditClub()}
+function roomOwner(){return String(typeof currentProfile!=="undefined"?currentProfile?.role:"")==="superadmin"}
 function message(x){if(typeof toast==="function")toast(x);else if(typeof oscAlert==="function")oscAlert(x)}
 async function request(action,body){
   if(!currentFirebaseUser)throw Error("Phiên đăng nhập đã hết hạn.");
@@ -49,13 +50,13 @@ async function request(action,body){
 function notice(x){var n=el("#rbNotice");if(n)n.textContent=x||""}
 function shell(){
   var root=el("#roomBookingRoot");if(!root)return;
-  root.innerHTML='<div class="rb-hero"><div><span class="rb-kicker">OUR STAGE / ROOM BOOKING</span><h2>Lịch phòng CLB</h2><p>Theo dõi phòng CLB theo từng tuần. Sau ngày sử dụng, lịch tự chuyển sang Lịch sử phòng.</p></div><div class="rb-hero-buttons">'+(manager()?'<button type="button" class="rb-button rb-outline" data-action="new">+ Đặt phòng theo ngày</button><button type="button" class="rb-button rb-primary" data-action="weekly">+ Lập lịch cả tuần</button>':'<span class="rb-view">Chế độ chỉ xem</span>')+'<button type="button" class="rb-button rb-outline" data-action="reload">↻ Làm mới</button></div></div><div class="rb-tabs"><button type="button" data-action="week" id="rbWeekTab">Lịch phòng theo tuần</button><button type="button" data-action="history" id="rbHistoryTab">Lịch sử phòng</button>'+(manager()?'<button type="button" data-action="slots" id="rbSlotsTab">Cài đặt slot</button>':'')+'</div><p id="rbNotice" class="rb-notice" aria-live="polite"></p><div id="rbContent"></div>';
+  root.innerHTML='<div class="rb-hero"><div><span class="rb-kicker">OUR STAGE / ROOM BOOKING</span><h2>Lịch phòng CLB</h2><p>Theo dõi phòng CLB theo từng tuần. Sau ngày sử dụng, lịch tự chuyển sang Lịch sử phòng.</p></div><div class="rb-hero-buttons">'+(manager()?'<button type="button" class="rb-button rb-outline" data-action="new">+ Đặt phòng theo ngày</button><button type="button" class="rb-button rb-primary" data-action="weekly">+ Lập lịch cả tuần</button>':'<span class="rb-view">Chế độ chỉ xem</span>')+'<button type="button" class="rb-button rb-outline" data-action="reload">↻ Làm mới</button></div></div><div class="rb-tabs"><button type="button" data-action="week" id="rbWeekTab">Lịch phòng theo tuần</button><button type="button" data-action="history" id="rbHistoryTab">Lịch sử phòng</button>'+(roomOwner()?'<button type="button" data-action="slots" id="rbSlotsTab">Cài đặt slot</button>':'')+'</div><p id="rbNotice" class="rb-notice" aria-live="polite"></p><div id="rbContent"></div>';
   root.onclick=function(e){
     var button=e.target.closest("button[data-action]");if(!button||!root.contains(button))return;
     var act=button.dataset.action;
     if(act==="new")openForm(null);
     if(act==="weekly")openWeekly();
-    if(act==="slots"&&manager())switchTab("slots");
+    if(act==="slots"&&roomOwner())switchTab("slots");
     if(act==="slot-add")addSlotRow();
     if(act==="slot-sample")useSampleSlots();
     if(act==="slot-delete")removeSlotRow(button.dataset.id);
@@ -77,7 +78,7 @@ function shell(){
   paintTabs()
 }
 function paintTabs(){var w=el("#rbWeekTab"),h=el("#rbHistoryTab"),t=el("#rbSlotsTab");if(w)w.classList.toggle("active",data.tab==="week");if(h)h.classList.toggle("active",data.tab==="history");if(t)t.classList.toggle("active",data.tab==="slots")}
-function switchTab(mode){if(mode==="slots"&&!manager())return;data.tab=mode;paintTabs();if(mode==="week"){renderWeek();if(!data.rows.length)getWeek()}else if(mode==="history"){renderHistory();if(!data.loadedHistory)getHistory(true)}else{renderSlots();loadSlots(true)}}
+function switchTab(mode){if(mode==="slots"&&!roomOwner())return;data.tab=mode;paintTabs();if(mode==="week"){renderWeek();if(!data.rows.length)getWeek()}else if(mode==="history"){renderHistory();if(!data.loadedHistory)getHistory(true)}else{renderSlots();loadSlots(true)}}
 function renderWeek(){
   var target=el("#rbContent");if(!target||data.tab!=="week")return;
   var today=startDay(Date.now()),rows=data.rows.filter(function(r){return r.status==="active"&&startDay(r.endAt-1)>=today});
@@ -160,8 +161,8 @@ function slotRange(ids){
   return selected;
 }
 function renderSlots(){
-  const root=el("#rbContent");if(!root||data.tab!=="slots"||!manager())return;
-  let html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO ADMIN</span><h3>Danh sách slot sử dụng phòng</h3><p>Thiết lập giờ mỗi slot. Khi tạo booking, có thể chọn nhiều slot bất kỳ từ danh sách tìm kiếm. Chỉ những slot đã chọn mới được giữ phòng.</p></div><div class="rb-slot-top-actions"><button class="rb-button rb-outline" type="button" data-action="slot-sample">8 slot theo mẫu</button><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div></div>';
+  const root=el("#rbContent");if(!root||data.tab!=="slots"||!roomOwner())return;
+  let html='<div class="rb-slot-settings"><div class="rb-slot-intro"><div><span class="rb-kicker">THIẾT LẬP RIÊNG CHO CHỦ TỊCH</span><h3>Danh sách slot sử dụng phòng</h3><p>Thiết lập giờ mỗi slot. Khi tạo booking, có thể chọn nhiều slot bất kỳ từ danh sách tìm kiếm. Chỉ những slot đã chọn mới được giữ phòng.</p></div><div class="rb-slot-top-actions"><button class="rb-button rb-outline" type="button" data-action="slot-sample">8 slot theo mẫu</button><button class="rb-button rb-outline" type="button" data-action="slot-add">+ Thêm slot</button></div></div>';
   html+='<div class="rb-slot-heading"><b>Tên slot</b><b>Giờ bắt đầu</b><b>Giờ kết thúc</b><span></span></div><div class="rb-slot-rows">';
   data.slots.forEach(function(x){
     html+='<div class="rb-slot-row" data-slot-id="'+safe(x.id)+'"><input type="text" data-slot-field="label" maxlength="60" value="'+safe(x.label)+'" aria-label="Tên slot" required><input type="time" data-slot-field="start" value="'+safe(x.start)+'" required aria-label="Bắt đầu"><input type="time" data-slot-field="end" value="'+safe(x.end)+'" required aria-label="Kết thúc"><button type="button" class="rb-button rb-danger" data-action="slot-delete" data-id="'+safe(x.id)+'">Xóa</button></div>';
@@ -180,7 +181,7 @@ function newSlotId(){
   return "slot_"+Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 function addSlotRow(){
-  if(!manager())return;syncDraftSlots();
+  if(!roomOwner())return;syncDraftSlots();
   if(data.slots.length>=48)return slotError("Chỉ được tạo tối đa 48 slot.");
   const end=data.slots.length?data.slots[data.slots.length-1].end:"07:00";
   if(end==="24:00"||end==="23:59")return slotError("Không còn thời gian trống để thêm slot.");
@@ -191,10 +192,10 @@ function addSlotRow(){
   renderSlots();
 }
 function removeSlotRow(id){
-  if(!manager())return;syncDraftSlots();data.slots=data.slots.filter(x=>x.id!==id);renderSlots();
+  if(!roomOwner())return;syncDraftSlots();data.slots=data.slots.filter(x=>x.id!==id);renderSlots();
 }
 async function useSampleSlots(){
-  if(!manager())return;
+  if(!roomOwner())return;
   syncDraftSlots();
   if(data.slots.length&&typeof oscConfirm==="function"&&!await oscConfirm("Thay danh sách slot đang nhập bằng 8 slot mẫu?\n\nLịch đã đặt sẽ không bị thay đổi."))return;
   const values=[["07:00","08:30"],["08:45","10:15"],["10:30","12:00"],["12:45","14:15"],
@@ -203,7 +204,7 @@ async function useSampleSlots(){
   renderSlots();message("Đã nhập 8 slot mẫu. Nhấn Lưu danh sách slot để áp dụng.");
 }
 async function saveSlots(){
-  if(!manager())return;syncDraftSlots();slotError("");
+  if(!roomOwner())return;syncDraftSlots();slotError("");
   const button=el("#rbSlotSave");if(button)button.disabled=true;
   try{
     const result=await request("room-slot-save",{slots:data.slots});
