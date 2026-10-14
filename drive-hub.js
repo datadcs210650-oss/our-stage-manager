@@ -160,6 +160,12 @@ async function createSubfolder(){
 }
 async function renameSelected(itemId,oldName){
  if(!canWriteHere())return;
+ // A category is a Firestore-backed folder label. Update both Drive and
+ // the OSC category metadata instead of letting the two names drift apart.
+ if(S.scope==="semester-root"){
+  const category=(S.data?.categories||[]).find(c=>c.folderId===itemId);
+  if(category)return renameCategory(category.id,oldName,"semester");
+ }
  const name=await ask({title:"Đổi tên tệp hoặc thư mục",description:"Đổi tên trực tiếp trên Google Drive. Vị trí, nội dung và liên kết sẽ không thay đổi.",
    placeholder:"Nhập tên mới",defaultValue:oldName});
  if(name===null||name===oldName)return;
@@ -168,12 +174,12 @@ async function renameSelected(itemId,oldName){
   await files();notice("Đã đổi tên thành '"+name+"'.");
  }catch(e){notice(e.message)}
 }
-async function renameCategory(id,oldName){
+async function renameCategory(id,oldName,scopeOverride=""){
  const name=await ask({title:"Đổi tên danh mục",description:"Đổi tên thư mục trên Google Drive và tên danh mục trong OSC.",
   defaultValue:oldName});
  if(name===null||name===oldName)return;
  try{
-  const data=await api("category-rename",{scope:S.scope,semester:S.sem,eventId:S.event,categoryId:id,name});
+  const data=await api("category-rename",{scope:scopeOverride||S.scope,semester:S.sem,eventId:S.event,categoryId:id,name});
   if(S.category===id){S.path=[];S.folder="";S.rootId="";S.folderUrl="";}
   await refresh();if(S.category===id)await files();
   notice("Đã đổi tên danh mục thành '"+data.name+"'.");
