@@ -63,3 +63,25 @@
 #driveHubRoot .dh-child-folder:hover{background:#fcf3f7;color:#722741}
 #driveHubRoot #dhFileArea h4{margin:18px 0 9px;color:#60364b;font-size:13px}
 @media(max-width:520px){.dh-subfolders{grid-template-columns:1fr}.dh-breadcrumb{gap:4px}}
+
+/* File/folder actions and direct Google Drive browser */
+#driveHubRoot .dh-tabs{flex-wrap:wrap}
+#driveHubRoot .dh-category-wrap{display:flex;flex-direction:column;gap:4px;min-width:0}
+#driveHubRoot .dh-category-wrap .dh-category{width:100%;flex:1;overflow-wrap:anywhere}
+#driveHubRoot .dh-small-action{align-self:flex-end;background:transparent;border-color:transparent;color:#702e4b;padding:5px 9px;font-size:12px}
+#driveHubRoot .dh-small-action:hover{color:#fff}
+#driveHubRoot .dh-file-row,#driveHubRoot .dh-folder-row{display:flex;align-items:center;gap:9px;min-width:0}
+#driveHubRoot .dh-file-row{background:#fff;border:1px solid #eee4e8;padding:8px;border-radius:12px}
+#driveHubRoot .dh-file-row>a{flex:1;min-width:0;text-decoration:none;color:#503447;font-size:13px;overflow-wrap:anywhere;padding:6px}
+#driveHubRoot .dh-folder-row{background:#fff;border:1px solid #eadde3;border-radius:12px;padding:7px}
+#driveHubRoot .dh-folder-row .dh-child-folder{border:none;flex:1;min-width:0;min-height:46px}
+#driveHubRoot .dh-row-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+#driveHubRoot .dh-row-actions button{background:#f8edf2;border-color:#efdae3;color:#763953;font-size:11px;padding:8px;border-radius:8px}
+#driveHubRoot .dh-row-actions button:hover{background:#853251;color:#fff}
+#driveHubRoot .dh-files{margin:11px 0 18px}
+@media(max-width:600px){
+ #driveHubRoot .dh-folder-row,#driveHubRoot .dh-file-row{flex-wrap:wrap}
+ #driveHubRoot .dh-folder-row .dh-child-folder,#driveHubRoot .dh-file-row>a{flex-basis:100%}
+ #driveHubRoot .dh-row-actions{width:100%}
+ #driveHubRoot .dh-subfolders{grid-template-columns:1fr}
+}
