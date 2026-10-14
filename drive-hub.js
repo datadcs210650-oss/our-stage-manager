@@ -4,7 +4,7 @@ const $=q=>document.querySelector(q);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const m=()=>typeof canEditClub==="function"&&canEditClub();
 const sup=()=>String(currentProfile?.role||"")==="superadmin";
-const S={sem:"",scope:"semester",event:"",category:"",state:null,data:null,files:[],folders:[],folder:"",path:[],listVersion:0,busy:false,error:""};
+const S={sem:"",scope:"semester",event:"",category:"",state:null,data:null,files:[],folders:[],folder:"",rootId:"",folderUrl:"",path:[],listVersion:0,busy:false,error:""};
 function notice(t){const e=$("#dhNotice");if(e)e.textContent=t||""}
 async function api(action,body={}){
  if(!currentFirebaseUser)throw Error("Vui lòng đăng nhập.");
@@ -39,69 +39,158 @@ function frame(){
  '</strong>. Phạm vi quyền: <strong>'+esc(S.state.oauthScope==="https://www.googleapis.com/auth/drive"?"Thư mục được chia sẻ (quyền Drive đầy đủ)":"Giới hạn drive.file")+
  '</strong>. Quyền Google không đồng nghĩa với quyền chỉnh sửa từng thư mục.</p>':'')+
  (S.state&&!S.state.configured?configDiagnostic():'')+
- '<div class="dh-tabs"><button data-dh="semester" class="'+(S.scope==="semester"?"on":"")+'">Tài liệu học kỳ</button><button data-dh="event" class="'+(S.scope==="event"?"on":"")+'">Tài liệu sự kiện</button></div><div id="dhContent"></div>';
+ '<div class="dh-tabs"><button data-dh="root" class="'+(S.scope==="root"?"on":"")+'">Kho Drive tổng</button>'+
+ '<button data-dh="semester-root" class="'+(S.scope==="semester-root"?"on":"")+'">Thư mục gốc học kỳ</button>'+
+ '<button data-dh="semester" class="'+(S.scope==="semester"?"on":"")+'">Tài liệu học kỳ</button>'+
+ '<button data-dh="event" class="'+(S.scope==="event"?"on":"")+'">Tài liệu sự kiện</button></div><div id="dhContent"></div>';
  renderContent();
+}
+function canWriteHere(){return m()&&(S.scope!=="root"||sup())}
+function activeCategory(){
+ if(S.scope!=="semester"&&S.scope!=="event")return null;
+ const cats=S.scope==="event"?(S.data?.events||[]).find(x=>x.id===S.event)?.categories||[]:S.data?.categories||[];
+ return cats.find(c=>c.id===S.category)||null;
+}
+function browseArgs(extra={}){
+ return{scope:S.scope,semester:S.sem,eventId:S.event,categoryId:S.category,folderId:S.folder||S.rootId,...extra};
+}
+function rootLabel(){
+ if(S.scope==="root")return"Kho Google Drive tổng";
+ if(S.scope==="semester-root")return"Thư mục gốc "+S.sem;
+ return activeCategory()?.label||"Danh mục";
+}
+function copyLink(url){
+ const link=String(url||"");
+ if(!/^https:\/\/(drive|docs)\.google\.com\//.test(link))return notice("Chưa có liên kết Google Drive hợp lệ.");
+ const done=()=>notice("Đã sao chép liên kết Google Drive.");
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(link).then(done).catch(()=>copyFallback(link));return}
+ copyFallback(link);
+}
+function copyFallback(value){
+ const input=document.createElement("textarea");input.value=value;input.style.position="fixed";input.style.left="-9999px";
+ document.body.appendChild(input);input.focus();input.select();
+ const ok=document.execCommand("copy");input.remove();
+ notice(ok?"Đã sao chép liên kết.":"Không thể sao chép tự động. Hãy mở liên kết Drive và sao chép từ thanh địa chỉ.");
+}
+function currentLink(){
+ return S.folderUrl||(S.scope==="root"?S.state?.rootFolderUrl:S.scope==="semester-root"?S.data?.folderUrl:"")||"";
 }
 function renderContent(){
  const el=$("#dhContent");if(!el)return;
+ if(!S.state?.connected){el.innerHTML='<div class="dh-empty">Cần kết nối tài khoản Google trước khi truy cập tài liệu.</div>';return}
+ if(S.scope==="root"||S.scope==="semester-root"){
+  if(S.scope==="semester-root"&&!S.data){
+   el.innerHTML='<div class="dh-empty">Học kỳ '+esc(S.sem)+' chưa liên kết thư mục Google Drive.</div>';return;
+  }
+  const link=S.scope==="root"?S.state.rootFolderUrl:S.data.folderUrl;
+  el.innerHTML='<div class="dh-heading"><h3>'+esc(rootLabel())+'</h3><div>'+
+   '<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Mở Google Drive ↗</a>'+
+   '<button data-dh="copy-url" data-url="'+esc(link)+'">Sao chép link</button></div></div>'+
+   '<p class="dh-tip">Hiển thị tệp và thư mục hiện có trên Drive, kể cả tài liệu tạo trực tiếp trong Google Drive (nếu tài khoản kết nối có quyền truy cập). Nhấn vào tệp để xem trên Google Drive.</p><div id="dhFileArea"></div>';
+  renderFiles();return;
+ }
  if(!S.data){el.innerHTML='<div class="dh-empty">Chưa liên kết thư mục học kỳ này. Super Admin cần thiết lập Drive trước.</div>';return}
  let cats=S.data.categories||[],url=S.data.folderUrl,heading="Tài liệu "+S.sem;
  let html="";
  if(S.scope==="event"){
   const events=S.data.events||[],current=events.find(x=>x.id===S.event);
-  html+='<div class="dh-picker"><label>Chọn sự kiện <select id="dhEvent"><option value="">-- Chọn sự kiện --</option>'+events.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===S.event?"selected":"")+'>'+esc(x.name)+'</option>').join("")+'</select></label><button data-dh="event-add">+ Tạo kho sự kiện</button></div>';
-  if(!current){el.innerHTML=html+'<div class="dh-empty">Chọn một sự kiện hoặc tạo kho mới từ Cổng sự kiện.</div>';return}
+  html+='<div class="dh-picker"><label>Chọn sự kiện <select id="dhEvent"><option value="">-- Chọn sự kiện --</option>'+
+    events.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===S.event?"selected":"")+'>'+esc(x.name)+'</option>').join("")+
+    '</select></label><button data-dh="event-add">+ Tạo kho sự kiện</button></div>';
+  if(!current){el.innerHTML=html+'<div class="dh-empty">Chọn sự kiện hoặc tạo kho mới từ Cổng sự kiện.</div>';return}
   cats=current.categories||[];url=current.folderUrl;heading=current.name;
  }
- html+='<div class="dh-heading"><h3>'+esc(heading)+'</h3><div><a target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">Mở Drive ↗</a><button data-dh="category-add">+ Danh mục</button></div></div>';
- html+='<div class="dh-grid">'+cats.map(x=>'<button class="dh-category '+(S.category===x.id?"on":"")+'" data-dh="category" data-id="'+esc(x.id)+'">📁 '+esc(x.label)+'</button>').join("")+'</div><div id="dhFileArea"></div>';
+ html+='<div class="dh-heading"><h3>'+esc(heading)+'</h3><div>'+
+  '<a target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">Mở Drive ↗</a>'+
+  '<button data-dh="copy-url" data-url="'+esc(url)+'">Sao chép link</button>'+
+  '<button data-dh="category-add">+ Danh mục</button></div></div>';
+ html+='<div class="dh-grid">'+cats.map(x=>
+  '<div class="dh-category-wrap"><button class="dh-category '+(S.category===x.id?"on":"")+'" data-dh="category" data-id="'+esc(x.id)+'">📁 '+esc(x.label)+'</button>'+
+  '<button class="dh-small-action" data-dh="category-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.label)+'" title="Đổi tên danh mục">Đổi tên</button></div>').join("")+
+  '</div><div id="dhFileArea"></div>';
  el.innerHTML=html;renderFiles();
 }
 function renderFiles(){
  const el=$("#dhFileArea");if(!el)return;
- const cats=S.scope==="event"?(S.data.events||[]).find(x=>x.id===S.event)?.categories||[]:S.data.categories||[];
- const cat=cats.find(x=>x.id===S.category);
- if(!cat){el.innerHTML='<div class="dh-empty">Chọn danh mục để xem hoặc tải tệp.</div>';return}
- const breadcrumb='<div class="dh-breadcrumb"><button type="button" data-dh="folder-root">📁 '+esc(cat.label)+'</button>'+
- S.path.map((p,i)=>'<span aria-hidden="true">›</span><button type="button" data-dh="folder-up-to" data-depth="'+i+'">'+esc(p.name)+'</button>').join("")+'</div>';
- const current=S.path.length?S.path[S.path.length-1].name:cat.label;
- const folderHtml=S.folders.length?'<div class="dh-subfolders">'+S.folders.map(x=>
-   '<button type="button" class="dh-child-folder" data-dh="folder-open" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">📁 '+esc(x.name)+' <span aria-hidden="true">›</span></button>').join("")+'</div>':
-   '<div class="dh-empty">Chưa có thư mục con.</div>';
+ if(!["root","semester-root"].includes(S.scope)&&!activeCategory()){
+  el.innerHTML='<div class="dh-empty">Chọn danh mục để xem hoặc tải tệp.</div>';return;
+ }
+ const heading=S.path.length?S.path[S.path.length-1].name:rootLabel();
+ const link=currentLink();
+ const breadcrumb='<div class="dh-breadcrumb"><button type="button" data-dh="folder-root">📁 '+esc(rootLabel())+'</button>'+
+   S.path.map((p,i)=>'<span aria-hidden="true">›</span><button type="button" data-dh="folder-up-to" data-depth="'+i+'">'+esc(p.name)+'</button>').join("")+'</div>';
  const fileHtml=S.files.length?S.files.map(x=>
-    '<a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">📄 '+esc(x.name)+' <small>'+Math.ceil((x.size||0)/1024)+' KB</small></a>').join(""):
-    '<div class="dh-empty">Chưa có tệp trong thư mục này.</div>';
+   '<div class="dh-file-row"><a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">📄 '+esc(x.name)+' <small>'+Math.ceil((x.size||0)/1024)+' KB</small></a>'+
+   '<div class="dh-row-actions"><button data-dh="copy-url" data-url="'+esc(x.url)+'">Copy link</button>'+
+   (canWriteHere()?'<button data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join(""):
+   '<div class="dh-empty">Chưa có tệp trong thư mục này.</div>';
+ const folders=S.folders.length?'<div class="dh-subfolders">'+S.folders.map(x=>
+   '<div class="dh-folder-row"><button type="button" class="dh-child-folder" data-dh="folder-open" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">📁 '+esc(x.name)+' <span aria-hidden="true">›</span></button>'+
+   '<div class="dh-row-actions"><button data-dh="copy-url" data-url="'+esc(x.url)+'">Copy link</button>'+
+   (canWriteHere()?'<button data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join("")+'</div>':
+   '<div class="dh-empty">Chưa có thư mục con.</div>';
  el.innerHTML=breadcrumb+
-   '<div class="dh-heading"><h3>'+esc(current)+'</h3><div><button data-dh="folder-create">+ Thư mục con</button>'+
-   '<label class="dh-upload">Tải tệp lên <input id="dhFile" type="file" hidden></label></div></div>'+
-   '<p class="dh-tip">Bạn có thể tạo nhiều cấp thư mục con. Tệp tải lên sẽ lưu trong thư mục đang mở trên Google Drive, không lưu nội dung trên Firestore. Tối đa 500 MB/tệp.</p>'+
-   '<h4>Thư mục con</h4>'+folderHtml+'<h4>Tệp</h4>'+
+   '<div class="dh-heading"><h3>'+esc(heading)+'</h3><div>'+
+   (link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Mở thư mục ↗</a>'+
+    '<button data-dh="copy-url" data-url="'+esc(link)+'">Copy link thư mục</button>':'')+
+   (canWriteHere()?'<button data-dh="folder-create">+ Thư mục con</button>'+
+    '<label class="dh-upload">Tải tệp lên <input id="dhFile" type="file" hidden></label>':"")+'</div></div>'+
+   '<p class="dh-tip">Thao tác sẽ áp dụng bên trong thư mục đang mở: <strong>'+esc(heading)+
+   '</strong>. Không di chuyển tệp khi đổi tên. Tệp vẫn lưu trên Google Drive.</p>'+
+   '<h4>Thư mục con</h4>'+folders+'<h4>Tệp hiện có</h4>'+
    '<p id="dhProgress" role="status"></p><div class="dh-files">'+fileHtml+'</div>';
 }
 async function openFolder(id,name){
- if(!S.category||S.path.length>=12)return notice("Một danh mục chỉ hỗ trợ tối đa 12 cấp thư mục con.");
- S.folder=id;S.path.push({id,name});S.files=[];S.folders=[];renderFiles();await files();
+ if(S.path.length>=12)return notice("Chỉ hỗ trợ tối đa 12 cấp thư mục con.");
+ if(!S.folder&&!S.rootId)return notice("Hãy đợi thư mục hiện tại tải xong rồi thử lại.");
+ S.folder=id;S.path.push({id,name});S.files=[];S.folders=[];S.folderUrl="";renderFiles();await files();
 }
 async function createSubfolder(){
- if(!S.category)return;
- const name=await ask({title:"Tạo thư mục con",description:"Thư mục mới được tạo bên trong thư mục hiện đang mở trên Google Drive.",placeholder:"Ví dụ: Kịch bản tập luyện"});
+ if(!canWriteHere())return;
+ const current=S.path.length?S.path[S.path.length-1].name:rootLabel();
+ const name=await ask({title:"Tạo thư mục con",description:"Thư mục mới sẽ nằm NGAY BÊN TRONG: "+current,placeholder:"Tên thư mục con"});
  if(!name)return;
+ const expected=S.folder||S.rootId;
  try{
-  const result=await api("folder-create",{semester:S.sem,scope:S.scope,eventId:S.event,categoryId:S.category,folderId:S.folder,name});
-  if(!result.folder?.id)throw Error("Không nhận được thư mục mới từ Google Drive.");
-  await openFolder(result.folder.id,result.folder.name||name);
-  notice("Đã tạo thư mục con: "+(result.folder.name||name));
+   const result=await api("folder-create",browseArgs({name}));
+   if(!result.folder?.id)throw Error("Google Drive chưa xác nhận thư mục mới.");
+   if(expected&&result.parentFolderId!==expected)throw Error("Google Drive trả sai thư mục mẹ. Hãy kiểm tra lại Drive.");
+   await files();notice("Đã tạo '"+result.folder.name+"' trong '"+current+"'.");
  }catch(e){notice(e.message)}
 }
+async function renameSelected(itemId,oldName){
+ if(!canWriteHere())return;
+ const name=await ask({title:"Đổi tên tệp hoặc thư mục",description:"Đổi tên trực tiếp trên Google Drive. Vị trí, nội dung và liên kết sẽ không thay đổi.",
+   placeholder:"Nhập tên mới",defaultValue:oldName});
+ if(name===null||name===oldName)return;
+ try{
+  await api("item-rename",browseArgs({itemId,name}));
+  await files();notice("Đã đổi tên thành '"+name+"'.");
+ }catch(e){notice(e.message)}
+}
+async function renameCategory(id,oldName){
+ const name=await ask({title:"Đổi tên danh mục",description:"Đổi tên thư mục trên Google Drive và tên danh mục trong OSC.",
+  defaultValue:oldName});
+ if(name===null||name===oldName)return;
+ try{
+  const data=await api("category-rename",{scope:S.scope,semester:S.sem,eventId:S.event,categoryId:id,name});
+  if(S.category===id){S.path=[];S.folder="";S.rootId="";S.folderUrl="";}
+  await refresh();if(S.category===id)await files();
+  notice("Đã đổi tên danh mục thành '"+data.name+"'.");
+ }catch(e){notice(e.message)}
+}
+
 async function refresh(){
  if(S.busy)return;S.busy=true;S.error="";
  try{
   S.state=await api("status");S.data=null;
-  if(S.state.connected) {
+  if(S.state.connected){
    try{S.data=await api("semester-get",{semester:S.sem})}
    catch(e){if(e.code!=="osc/drive-missing-semester")S.error=e.message}
   }
   frame();
+  if(S.scope==="root"||(S.data&&["semester-root","semester","event"].includes(S.scope)&&
+     (["root","semester-root"].includes(S.scope)||S.category)))await files();
   notice(S.error||(S.state.connected?"":"Kho tài liệu chưa được kết nối với Drive."));
  }catch(e){S.state=null;S.data=null;S.error=e.message;frame();notice(S.error)}
  finally{S.busy=false}
@@ -121,12 +210,12 @@ async function connect(mode="limited"){
  }catch(e){notice(e.message)}
 }
 
-function ask({title,description="",placeholder="",options=null,optional=false}){
+function ask({title,description="",placeholder="",defaultValue="",options=null,optional=false}){
  return new Promise(resolve=>{
   const shade=document.createElement("div");
   shade.className="dh-dialog-shade";
   const optionsMarkup=options?'<select id="dhDialogInput">'+options.map((o,i)=>'<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>').join("")+'</select>':
-    '<input id="dhDialogInput" type="text" maxlength="350" placeholder="'+esc(placeholder)+'" '+(optional?"":"required")+'>';
+    '<input id="dhDialogInput" type="text" maxlength="350" placeholder="'+esc(placeholder)+'" value="'+esc(defaultValue)+'" '+(optional?"":"required")+'>';
   shade.innerHTML='<form class="dh-dialog" role="dialog" aria-modal="true" aria-labelledby="dhDialogTitle">'+
    '<h3 id="dhDialogTitle">'+esc(title)+'</h3><p>'+esc(description)+'</p>'+
    '<label>'+esc(options?"Chọn sự kiện":"Thông tin")+'</label>'+optionsMarkup+
@@ -172,11 +261,17 @@ async function addCategory(){
  try{await api("category-add",{semester:S.sem,scope:S.scope,eventId:S.event,label});await refresh()}catch(e){notice(e.message)}
 }
 async function files(){
- const seq=++S.listVersion,scope=S.scope,semester=S.sem,eventId=S.event,categoryId=S.category,folderId=S.folder;
+ const seq=++S.listVersion,scope=S.scope,semester=S.sem,eventId=S.event,categoryId=S.category;
+ const requested=S.folder||S.rootId;
  try{
-  const a=await api("files-list",{semester,scope,eventId,categoryId,folderId});
-  if(seq!==S.listVersion||S.scope!==scope||S.sem!==semester||S.event!==eventId||S.category!==categoryId||S.folder!==folderId)return;
-  S.files=a.files||[];S.folders=a.folders||[];renderFiles();notice("");
+  const a=await api("files-list",browseArgs());
+  if(seq!==S.listVersion||S.scope!==scope||S.sem!==semester||S.event!==eventId||S.category!==categoryId||
+     requested!==(S.folder||S.rootId))return;
+  S.files=a.files||[];S.folders=a.folders||[];
+  S.rootId=a.rootFolderId||"";
+  S.folder=a.folderId||"";
+  S.folderUrl=a.folderUrl||"";
+  renderFiles();notice("");
  }catch(e){
   if(seq!==S.listVersion)return;
   S.files=[];S.folders=[];renderFiles();notice(e.message);
@@ -187,7 +282,7 @@ async function upload(file){
  if(file.size>500*1024*1024){el.textContent="Tệp vượt 500 MB; hãy mở trực tiếp thư mục trên Drive.";return}
  try{
   el.textContent="Đang cấp phiên tải lên…";
-  const d=await api("upload-start",{semester:S.sem,scope:S.scope,eventId:S.event,categoryId:S.category,folderId:S.folder,fileName:file.name,size:file.size,mimeType:file.type||"application/octet-stream"});
+  const d=await api("upload-start",browseArgs({fileName:file.name,size:file.size,mimeType:file.type||"application/octet-stream"}));
   if(!/^https:\/\/www\.googleapis\.com\//.test(d.uploadUrl))throw Error("URL tải lên không hợp lệ.");
   el.textContent="Đang tải "+file.name+" lên Google Drive…";
   const r=await fetch(d.uploadUrl,{method:"PUT",headers:{"Content-Type":file.type||"application/octet-stream"},body:file});
@@ -197,34 +292,49 @@ async function upload(file){
   el.textContent="Tải lên hoàn tất.";await files();
  }catch(e){el.textContent=e.message||String(e)}
 }
+function clearFolder(){
+ ++S.listVersion;S.folder="";S.rootId="";S.folderUrl="";S.path=[];S.files=[];S.folders=[];
+}
 window.renderDriveHub=function(){
  if(!m()){const root=$("#driveHubRoot");if(root)root.textContent="Chỉ Admin và Super Admin được truy cập.";return}
- S.sem=String(semester||"FA26");S.folder="";S.path=[];S.files=[];S.folders=[];refresh();
+ S.sem=String(semester||"FA26");clearFolder();refresh();
 };
 document.addEventListener("click",e=>{
  if(!$("#driveHubRoot")?.contains(e.target))return;
  const b=e.target.closest("[data-dh]");if(!b)return;
  const a=b.dataset.dh;
- if(a==="refresh"){S.sem=$("#dhSemester").value.trim().toUpperCase();S.category="";S.folder="";S.path=[];S.files=[];S.folders=[];refresh()}
- if(a==="connect")connect(S.state?.oauthScope==="https://www.googleapis.com/auth/drive"?"shared":"limited");
- if(a==="connect-shared")connect("shared");
- if(a==="set")setSemester();
- if(a==="semester"||a==="event"){S.scope=a;S.category="";S.folder="";S.path=[];S.files=[];S.folders=[];frame()}
- if(a==="event-add")addEvent();
- if(a==="category-add")addCategory();
- if(a==="folder-create")createSubfolder();
- if(a==="folder-open")openFolder(b.dataset.id,b.dataset.name);
- if(a==="folder-root"){S.folder="";S.path=[];S.files=[];S.folders=[];renderFiles();files()}
+ if(a==="refresh"){
+  S.sem=$("#dhSemester")?.value.trim().toUpperCase()||S.sem;
+  clearFolder();refresh();return;
+ }
+ if(a==="connect"){connect(S.state?.oauthScope==="https://www.googleapis.com/auth/drive"?"shared":"limited");return}
+ if(a==="connect-shared"){connect("shared");return}
+ if(a==="set"){setSemester();return}
+ if(["root","semester-root","semester","event"].includes(a)){
+  S.scope=a;S.category="";clearFolder();frame();
+  if(a==="root"||(a==="semester-root"&&S.data))files();
+  return;
+ }
+ if(a==="event-add"){addEvent();return}
+ if(a==="category-add"){addCategory();return}
+ if(a==="category-rename"){renameCategory(b.dataset.id,b.dataset.name);return}
+ if(a==="folder-create"){createSubfolder();return}
+ if(a==="item-rename"){renameSelected(b.dataset.id,b.dataset.name);return}
+ if(a==="copy-url"){copyLink(b.dataset.url);return}
+ if(a==="folder-open"){openFolder(b.dataset.id,b.dataset.name);return}
+ if(a==="folder-root"){clearFolder();renderFiles();files();return}
  if(a==="folder-up-to"){
   const depth=Number(b.dataset.depth);
   if(Number.isInteger(depth)&&depth>=0&&depth<S.path.length){
-   S.path=S.path.slice(0,depth+1);S.folder=S.path[depth].id;S.files=[];S.folders=[];renderFiles();files();
+   const next=S.path.slice(0,depth+1);
+   clearFolder();S.path=next;S.folder=next[depth].id;renderFiles();files();
   }
+  return;
  }
- if(a==="category"){S.category=b.dataset.id;S.folder="";S.path=[];S.files=[];S.folders=[];renderContent();files()}
+ if(a==="category"){S.category=b.dataset.id;clearFolder();renderContent();files()}
 });
 document.addEventListener("change",e=>{
- if(e.target?.id==="dhEvent"){S.event=e.target.value;S.category="";S.folder="";S.path=[];S.files=[];S.folders=[];renderContent()}
+ if(e.target?.id==="dhEvent"){S.event=e.target.value;S.category="";clearFolder();renderContent()}
  if(e.target?.id==="dhFile"){upload(e.target.files?.[0]);e.target.value=""}
 });
 })();
