@@ -282,3 +282,21 @@
  #driveHubRoot .dh-folder-row{transition:none}
  #driveHubRoot .dh-folder-row:hover{transform:none}
 }
+
+
+/* Drive Hub V2 — personal Google access, responsive management */
+#driveHubRoot .dh-v2-notice{font-size:13px;color:#903755;line-height:1.6;margin:10px 0;min-height:17px}
+#driveHubRoot .dh-v2-caption{font-size:13px;font-weight:750;color:#5e3647;margin:22px 0 10px}
+#driveHubRoot .dh-toolbar select,#driveHubRoot .dh-toolbar input{min-height:39px;min-width:95px;max-width:170px;border:1px solid #dfcbd4;border-radius:9px;padding:7px 11px;background:#fff;font-size:13px}
+#driveHubRoot .dh-toolbar .dh-light{background:#fff;color:#783953}
+#driveHubRoot .dh-v2-people{display:grid;gap:10px}
+#driveHubRoot .dh-v2-people>.dh-file-row{align-items:center;min-height:66px}
+#driveHubRoot .dh-v2-people .dh-file-info{min-width:0;flex:1}
+#driveHubRoot .dh-v2-people .dh-file-info small{white-space:normal;overflow-wrap:anywhere}
+#driveHubRoot .dh-subfolders:empty::after{content:"Chưa có thư mục con";color:#9b8791;font-size:13px;padding:16px}
+#driveHubRoot .dh-tabs button{font-size:12px;line-height:1.4}
+#driveHubRoot .dh-file-row .dh-row-actions{max-width:100%;flex-wrap:wrap}
+#driveHubRoot .dh-subfolders .dh-row-actions{width:100%;flex-wrap:wrap}
+@media(max-width:680px){#driveHubRoot .dh-v2-people .dh-file-row{flex-direction:column;align-items:stretch}
+#driveHubRoot .dh-v2-people .dh-row-actions{width:100%;justify-content:flex-start}
+#driveHubRoot .dh-toolbar select,#driveHubRoot .dh-toolbar input{max-width:100%;width:100%}}
