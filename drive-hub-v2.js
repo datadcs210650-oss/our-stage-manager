@@ -2,6 +2,7 @@
 "use strict";
 // OSC Drive Hub V2. Does not use the owner's Google token: every action is per-user.
 const root=()=>document.getElementById("driveHubRoot");
+const legacyDriveRenderer=window.renderDriveHub; // explicit Chair-only migration viewer
 const e=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const chair=()=>currentProfile?.role==="superadmin";
 const user=()=>typeof currentFirebaseUser!=="undefined"?currentFirebaseUser:null;
@@ -88,6 +89,7 @@ function header(){
   '</select></label>'+
   (chair()?'<input id="oscV2NewSem" maxlength="4" placeholder="SP27" aria-label="Thêm học kỳ mới">':'')+
   '<button type="button" data-v2="refresh">Làm mới</button>'+
+  (chair()?'<button type="button" class="dh-light" data-v2="legacy">Kho sự kiện cũ (chuyển đổi)</button>':"")+
   (S.status?.connected?'<button type="button" class="dh-light" data-v2="disconnect">Ngắt Google cá nhân</button>':
    '<button type="button" data-v2="connect">Liên kết Google cá nhân</button>')+
   (!chair()?'<button type="button" data-v2="handoff-check">Kiểm tra lời mời nhận quyền Chủ tịch</button>':'')+
@@ -316,6 +318,10 @@ function bindClicks(){
     if(yes==="yes"){await call("disconnect");await loadBase()}return;
    }
    if(action==="refresh"){await loadBase();return}
+   if(action==="legacy"){
+    if(!chair()||typeof legacyDriveRenderer!=="function")throw Error("Chức năng không khả dụng.");
+    legacyDriveRenderer();return;
+   }
    if(action==="link-set"){await linkSet();return}
    if(action==="policy"){await policySet();return}
    if(action==="copy"){await copy(b.dataset.url);return}
