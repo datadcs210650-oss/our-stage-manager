@@ -186,7 +186,7 @@ async function policySet(){
   if(!p)return;publicAllowed=p==="on";
  }
  const v=await call("policy-set",{semester:S.sem,internalOnly:internal==="internal",allowPublic:publicAllowed});
- S.meta.policy=v.policy;notify("Đã lưu chính sách chia sẻ học kỳ.");
+ S.meta.policy=v.policy;notify("Đã lưu chính sách. "+(v.warning||""));
 }
 async function sharing(itemId){
  const d=await call("permissions-list",{semester:S.sem,folderId:currentId(),itemId});
