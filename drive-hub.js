@@ -120,14 +120,23 @@ function renderFiles(){
  const breadcrumb='<div class="dh-breadcrumb"><button type="button" data-dh="folder-root">📁 '+esc(rootLabel())+'</button>'+
    S.path.map((p,i)=>'<span aria-hidden="true">›</span><button type="button" data-dh="folder-up-to" data-depth="'+i+'">'+esc(p.name)+'</button>').join("")+'</div>';
  const fileHtml=S.files.length?S.files.map(x=>
-   '<div class="dh-file-row"><a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">📄 '+esc(x.name)+' <small>'+Math.ceil((x.size||0)/1024)+' KB</small></a>'+
-   '<div class="dh-row-actions"><button data-dh="copy-url" data-url="'+esc(x.url)+'">Copy link</button>'+
-   (canWriteHere()?'<button data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join(""):
+   '<div class="dh-file-row">'+
+   '<a class="dh-file-link" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(x.name)+'">'+
+   '<span class="dh-file-icon" aria-hidden="true">📄</span>'+
+   '<span class="dh-file-info"><span class="dh-file-name">'+esc(x.name)+'</span>'+
+   '<small>'+Math.max(1,Math.ceil((x.size||0)/1024))+' KB · Mở trong Google Drive</small></span>'+
+   '<span class="dh-file-arrow" aria-hidden="true">↗</span></a>'+
+   '<div class="dh-row-actions"><button type="button" data-dh="copy-url" data-url="'+esc(x.url)+'" aria-label="Sao chép liên kết '+esc(x.name)+'">Sao chép link</button>'+
+   (canWriteHere()?'<button type="button" data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'" aria-label="Đổi tên '+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join(""):
    '<div class="dh-empty">Chưa có tệp trong thư mục này.</div>';
  const folders=S.folders.length?'<div class="dh-subfolders">'+S.folders.map(x=>
-   '<div class="dh-folder-row"><button type="button" class="dh-child-folder" data-dh="folder-open" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">📁 '+esc(x.name)+' <span aria-hidden="true">›</span></button>'+
-   '<div class="dh-row-actions"><button data-dh="copy-url" data-url="'+esc(x.url)+'">Copy link</button>'+
-   (canWriteHere()?'<button data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join("")+'</div>':
+   '<div class="dh-folder-row">'+
+   '<button type="button" class="dh-child-folder" data-dh="folder-open" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'" title="Mở '+esc(x.name)+'">'+
+   '<span class="dh-folder-glyph" aria-hidden="true">📁</span>'+
+   '<span class="dh-folder-name">'+esc(x.name)+'</span>'+
+   '<span class="dh-folder-chevron" aria-hidden="true">›</span></button>'+
+   '<div class="dh-row-actions"><button type="button" data-dh="copy-url" data-url="'+esc(x.url)+'" aria-label="Sao chép liên kết '+esc(x.name)+'">Sao chép link</button>'+
+   (canWriteHere()?'<button type="button" data-dh="item-rename" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'" aria-label="Đổi tên '+esc(x.name)+'">Đổi tên</button>':"")+'</div></div>').join("")+'</div>':
    '<div class="dh-empty">Chưa có thư mục con.</div>';
  el.innerHTML=breadcrumb+
    '<div class="dh-heading"><h3>'+esc(heading)+'</h3><div>'+
@@ -137,7 +146,7 @@ function renderFiles(){
     '<label class="dh-upload">Tải tệp lên <input id="dhFile" type="file" hidden></label>':"")+'</div></div>'+
    '<p class="dh-tip">Thao tác sẽ áp dụng bên trong thư mục đang mở: <strong>'+esc(heading)+
    '</strong>. Không di chuyển tệp khi đổi tên. Tệp vẫn lưu trên Google Drive.</p>'+
-   '<h4>Thư mục con</h4>'+folders+'<h4>Tệp hiện có</h4>'+
+   '<h4>Thư mục con <span class="dh-section-count">('+S.folders.length+')</span></h4>'+folders+'<h4>Tệp hiện có <span class="dh-section-count">('+S.files.length+')</span></h4>'+
    '<p id="dhProgress" role="status"></p><div class="dh-files">'+fileHtml+'</div>';
 }
 async function openFolder(id,name){

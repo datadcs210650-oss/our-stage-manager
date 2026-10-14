@@ -85,3 +85,200 @@
  #driveHubRoot .dh-row-actions{width:100%}
  #driveHubRoot .dh-subfolders{grid-template-columns:1fr}
 }
+
+
+/* Drive Hub v2 — consistent, legible tiles for large and small screens.
+   Parent-width responsive so the admin sidebar never forces vertical text. */
+#driveHubRoot #dhFileArea{min-width:0;max-width:100%}
+#driveHubRoot .dh-subfolders{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
+ gap:14px;
+ align-items:stretch;
+ margin:12px 0 24px;
+ width:100%;
+}
+#driveHubRoot .dh-folder-row{
+ display:flex;
+ flex-direction:column;
+ justify-content:space-between;
+ align-items:stretch;
+ gap:12px;
+ min-width:0;
+ min-height:158px;
+ height:auto;
+ padding:16px;
+ background:#fff;
+ border:1px solid #eadde3;
+ border-radius:16px;
+ box-shadow:0 2px 7px rgba(79,39,57,.035);
+ transition:border-color .18s,box-shadow .18s,transform .18s;
+}
+#driveHubRoot .dh-folder-row:hover{
+ border-color:#d7a7ba;
+ box-shadow:0 7px 20px rgba(92,38,62,.08);
+ transform:translateY(-1px);
+}
+#driveHubRoot .dh-folder-row .dh-child-folder{
+ display:flex;
+ flex:1 1 auto;
+ width:100%;
+ min-width:0;
+ min-height:60px;
+ align-items:flex-start;
+ justify-content:flex-start;
+ gap:12px;
+ padding:0;
+ margin:0;
+ border:0;
+ border-radius:8px;
+ text-align:left;
+ color:#512f42;
+ background:transparent;
+ font-size:14px;
+ font-weight:750;
+ line-height:1.5;
+ white-space:normal;
+ word-break:normal;
+ box-shadow:none;
+}
+#driveHubRoot .dh-folder-row .dh-child-folder:hover{
+ background:transparent;
+ color:#832e52;
+}
+#driveHubRoot .dh-folder-glyph{
+ display:grid;
+ place-items:center;
+ flex:0 0 46px;
+ width:46px;
+ height:46px;
+ border-radius:13px;
+ background:#fbecf2;
+ font-size:23px;
+ line-height:1;
+}
+#driveHubRoot .dh-folder-name{
+ display:-webkit-box;
+ -webkit-box-orient:vertical;
+ -webkit-line-clamp:3;
+ min-width:0;
+ max-width:100%;
+ flex:1 1 auto;
+ margin-top:2px;
+ color:inherit;
+ overflow:hidden;
+ overflow-wrap:anywhere;
+ word-break:normal;
+ white-space:normal;
+ letter-spacing:0;
+ line-height:1.55;
+ text-transform:none;
+ text-align:left;
+}
+#driveHubRoot .dh-folder-chevron{
+ flex:0 0 auto;
+ align-self:flex-start;
+ margin-left:auto;
+ margin-top:7px;
+ color:#ac7d92;
+ font-size:22px;
+ line-height:1;
+}
+#driveHubRoot .dh-folder-row .dh-row-actions{
+ display:flex;
+ flex:0 0 auto;
+ align-items:center;
+ justify-content:flex-start;
+ gap:8px;
+ flex-wrap:wrap;
+ width:100%;
+ min-width:0;
+ padding-top:12px;
+ border-top:1px solid #f1e6eb;
+}
+#driveHubRoot .dh-row-actions button{
+ background:#f8eef2;
+ border:1px solid #efdee5;
+ color:#783852;
+ min-width:0;
+ padding:8px 11px;
+ border-radius:9px;
+ font-size:12px;
+ font-weight:700;
+ line-height:1.3;
+ white-space:nowrap;
+}
+#driveHubRoot .dh-row-actions button:hover{background:#762945;border-color:#762945;color:#fff}
+#driveHubRoot .dh-files{display:grid;gap:10px}
+#driveHubRoot .dh-file-row{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:12px;
+ width:100%;
+ min-width:0;
+ padding:12px 14px;
+ background:#fff;
+ border:1px solid #ece0e5;
+ border-radius:13px;
+}
+#driveHubRoot .dh-file-row .dh-file-link{
+ display:flex;
+ flex:1 1 260px;
+ min-width:0;
+ align-items:center;
+ gap:12px;
+ padding:0;
+ text-decoration:none;
+ color:#563044;
+}
+#driveHubRoot .dh-file-icon{
+ display:grid;
+ place-items:center;
+ flex:0 0 40px;
+ width:40px;
+ height:40px;
+ border-radius:10px;
+ background:#f6eff3;
+ font-size:20px;
+}
+#driveHubRoot .dh-file-info{
+ display:flex;
+ flex:1 1 auto;
+ min-width:0;
+ flex-direction:column;
+ gap:4px;
+}
+#driveHubRoot .dh-file-name{
+ color:#4e3040;
+ font-size:13px;
+ font-weight:750;
+ line-height:1.5;
+ overflow-wrap:anywhere;
+ word-break:normal;
+ white-space:normal;
+}
+#driveHubRoot .dh-file-info small{font-size:11px;font-weight:500;color:#93808b;white-space:normal}
+#driveHubRoot .dh-file-arrow{flex:0 0 auto;color:#a67b91;font-size:16px}
+#driveHubRoot .dh-file-row .dh-row-actions{flex:0 0 auto;width:auto;justify-content:flex-end}
+#driveHubRoot .dh-section-count{color:#a28d99;font-size:12px;font-weight:500}
+#driveHubRoot .dh-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+#driveHubRoot .dh-breadcrumb{min-width:0;max-width:100%}
+#driveHubRoot .dh-breadcrumb button{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:680px){
+ #driveHubRoot .dh-subfolders{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+ #driveHubRoot .dh-file-row{flex-wrap:wrap}
+ #driveHubRoot .dh-file-row .dh-file-link{flex-basis:100%;width:100%}
+ #driveHubRoot .dh-file-row .dh-row-actions{width:100%;justify-content:flex-start;padding-left:52px}
+}
+@media(max-width:440px){
+ #driveHubRoot .dh-subfolders{grid-template-columns:minmax(0,1fr);gap:10px}
+ #driveHubRoot .dh-folder-row{min-height:135px;padding:13px}
+ #driveHubRoot .dh-folder-glyph{flex-basis:40px;width:40px;height:40px}
+ #driveHubRoot .dh-file-row .dh-row-actions{padding-left:0}
+ #driveHubRoot .dh-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+ #driveHubRoot .dh-folder-row{transition:none}
+ #driveHubRoot .dh-folder-row:hover{transform:none}
+}
