@@ -9394,7 +9394,7 @@ async function renderAccounts(){
         <td>${esc(perms||"—")}</td>
         <td>
           ${u.id===currentFirebaseUser?.uid?`<span class="small-help">Tài khoản hiện tại</span>`:
-          manageable?`<div class="account-actions"><button class="secondary" onclick="editAccountProfile('${u.id}')">Chỉnh sửa</button><button class="danger" onclick="deleteAccountProfile('${u.id}')">Xóa</button></div>`:
+          manageable?`<div class="account-actions"><button class="secondary" onclick="editAccountProfile('${u.id}')">Chỉnh sửa</button>${u.mssv||u.positionSemester?`<span class="small-help">Có lịch sử — hãy Khóa khi rời BCN</span>`:`<button class="danger" onclick="deleteAccountProfile('${u.id}')">Xóa</button>`}</div>`:
           `<span class="small-help">Không có quyền chỉnh tài khoản này</span>`}
         </td>
       </tr>`;
