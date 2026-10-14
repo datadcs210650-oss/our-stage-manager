@@ -177,7 +177,7 @@ async function roomSlotList(req){
   return{ok:true,version:99,slots,canEdit:isManager(actor)};
 }
 async function roomSlotSave(req,body){
-  const actor=await requireUser(req);ensureRoomManager(actor);
+  const actor=await requireUser(req);if(actor.profile.role!=="superadmin")throw bad("Chỉ Chủ tịch được thiết lập phòng.","osc/forbidden");
   const slots=validateSlots(body.slots);
   await getDb().doc(ROOM_SLOT_DOC).set({
     slots,updatedAt:admin.firestore.FieldValue.serverTimestamp(),
@@ -426,6 +426,14 @@ module.exports=async function handler(req,res){
     if(req.method==="GET")return sendJson(res,200,{ok:true,service:"operations",version:95});
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");let out;
+    if(action.startsWith("drive2-")){
+      if(action.length>70)throw bad("Thao tác Drive không hợp lệ.");
+      return require("../lib/drive-personal-handler")(req,res);
+    }
+    if(action.startsWith("leadership-")){
+      if(action.length>70)throw bad("Thao tác chức vụ không hợp lệ.");
+      return require("../lib/leadership-handler")(req,res);
+    }
     if(action.startsWith("drive-")){
       if(action.length>60)throw bad("Thao tác Drive không hợp lệ.");
       req.body={...body,action:action.slice(6)};
