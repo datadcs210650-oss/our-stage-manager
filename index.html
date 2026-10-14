@@ -9460,6 +9460,9 @@ function openCreateAccount(){
     <div class="form-grid">
       <label>Tên hiển thị<input id="accName" maxlength="100"></label>
       <label>Email<input id="accEmail" type="email" autocomplete="off" maxlength="254"></label>
+      <label>MSSV<input id="accMssv" maxlength="25" placeholder="Ví dụ DE210001" required></label>
+      <label>Chức vụ học kỳ<input id="accPositionTitle" maxlength="80" placeholder="Ví dụ Phó Chủ tịch / Thư ký" required></label>
+      <label>Học kỳ bổ nhiệm<input id="accTerm" maxlength="4" value="${esc(semester)}" required></label>
       <label>Mật khẩu<input id="accPass" type="password" placeholder="Tối thiểu 8 ký tự" autocomplete="new-password" minlength="8" maxlength="128"></label>
       <label>Vai trò<select id="accRole" onchange="setPermissionInputsDisabled('acc',this.value==='admin')">
         <option value="bcn">BCN — Xem/chỉnh sửa theo quyền</option>
@@ -9481,6 +9484,8 @@ async function createAccount(){
   const email=$("#accEmail").value.trim().toLowerCase(),password=$("#accPass").value,displayName=$("#accName").value.trim(),wantedRole=$("#accRole").value;
   const newRole=(role()==="superadmin"&&wantedRole==="admin")?"admin":"bcn";
   if(!displayName||!email)return oscAlert("Vui lòng nhập tên và email.");
+  const mssv=$("#accMssv").value.trim().toUpperCase(),positionTitle=$("#accPositionTitle").value.trim(),accountTerm=$("#accTerm").value.trim().toUpperCase();
+  if(!/^[A-Z0-9-]{5,25}$/.test(mssv)||!positionTitle||!/^(SP|SU|FA)\d{2}$/.test(accountTerm))return oscAlert("Vui lòng nhập MSSV, chức vụ và học kỳ hợp lệ.");
   if(password.length<8||password.length>128)return oscAlert("Mật khẩu phải từ 8 đến 128 ký tự.");
   if((currentFirebaseUser?.email||"").toLowerCase()===email)return oscAlert("Email này là tài khoản đang đăng nhập.");
   const existingProfile=accountRows.find(u=>String(u.email||"").toLowerCase()===email);
@@ -9490,7 +9495,7 @@ async function createAccount(){
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang tạo…"}
     const token=await currentFirebaseUser.getIdToken();
-    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})},15000);
+    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions,mssv,positionTitle,semester:accountTerm})},15000);
     const data=await res.json().catch(()=>({}));
     if(!res.ok){
       const detail=data.error||`API trả về lỗi ${res.status}`;
@@ -9512,6 +9517,9 @@ async function editAccountProfile(uid){
     <div class="form-grid">
       <label>Tên<input id="editAccName" maxlength="100" value="${esc(u.displayName||"")}"></label>
       <label>Email đăng nhập<input id="editAccEmail" type="email" maxlength="254" value="${esc(u.email||"")}"></label>
+      <label>MSSV<input id="editAccMssv" maxlength="25" value="${esc(u.mssv||"")}" required></label>
+      <label>Chức vụ học kỳ<input id="editAccPositionTitle" maxlength="80" value="${esc(u.positionSemester===semester?u.positionTitle||"":"")}" required></label>
+      <label>Học kỳ bổ nhiệm<input id="editAccTerm" maxlength="4" value="${esc(semester)}" required></label>
       <label>Vai trò<select id="editAccRole" ${canEditRole?"":"disabled"} onchange="setPermissionInputsDisabled('editAcc',this.value==='admin')">
         <option value="bcn" ${u.role==="bcn"?"selected":""}>BCN — Xem/chỉnh sửa theo quyền</option>
         ${canEditRole?`<option value="admin" ${u.role==="admin"?"selected":""}>Admin — Toàn quyền</option>`:""}
@@ -9536,7 +9544,9 @@ async function saveAccountProfile(uid){
   const newEmail=$("#editAccEmail").value.trim().toLowerCase();
   if(!displayName)return oscAlert("Vui lòng nhập tên hiển thị.");
   if(!newEmail)return oscAlert("Vui lòng nhập email đăng nhập.");
-  const payload={uid,displayName,email:newEmail,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
+  const mssv=$("#editAccMssv").value.trim().toUpperCase(),positionTitle=$("#editAccPositionTitle").value.trim(),accountTerm=$("#editAccTerm").value.trim().toUpperCase();
+  if(!/^[A-Z0-9-]{5,25}$/.test(mssv)||!positionTitle||!/^(SP|SU|FA)\d{2}$/.test(accountTerm))return oscAlert("Hãy nhập đầy đủ MSSV, chức vụ và học kỳ hợp lệ.");
+  const payload={uid,displayName,email:newEmail,mssv,positionTitle,semester:accountTerm,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
   const btn=$("#saveAccountProfileBtn");
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang lưu…"}
