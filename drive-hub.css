@@ -44,3 +44,12 @@
 .dh-dialog-buttons button{border-radius:10px;padding:11px 16px;border:1px solid #e7d7df;background:#fff;color:#603549;font-weight:750;cursor:pointer;font-size:13px}
 .dh-dialog-buttons button[type=submit]{background:#781d3b;color:#fff;border-color:#781d3b}
 @media(max-width:500px){.dh-dialog{padding:19px}.dh-dialog-buttons button{flex:1}}
+
+/* Safe server-side Google Drive configuration diagnostics */
+.dh-config-checks{display:grid;gap:7px;margin:11px 0}
+.dh-config-checks>div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #eadfe5}
+.dh-config-checks span{font-size:12px;font-weight:650;overflow-wrap:anywhere}
+.dh-config-checks strong{font-size:12px;border-radius:12px;padding:4px 8px}
+.dh-config-checks strong.dh-good{color:#23654a;background:#e8f5ed}
+.dh-config-checks strong.dh-bad{color:#ae2548;background:#fff0f3}
+.dh-tip>p:last-child{font-weight:650;color:#66374c;margin-bottom:0}
