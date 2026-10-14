@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - 'fix/drive-shared-folder-*'
+      - 'fix/**'
   pull_request:
     branches:
       - main
