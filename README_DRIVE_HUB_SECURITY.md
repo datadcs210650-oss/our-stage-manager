@@ -60,3 +60,22 @@ Mã nguồn giao diện, API và kết nối Google Drive đã có trong repo; *
 - [ ] Thử link bị xóa, Viewer, chưa chia sẻ, token bị thu hồi: website phải báo rõ, không âm thầm hiển thị dữ liệu trống.
 - [ ] Kiểm tra tính năng học kỳ, sự kiện, danh mục và upload với tài khoản Admin; BCN và người chưa đăng nhập không được xem/tạo kho.
 - [ ] Trước khi triển khai production, xác nhận bản preview Vercel **READY**. Sau khi triển khai, xác nhận OAuth hoạt động thật và ghi nhận lỗi runtime nếu có.
+
+
+## Cập nhật quản lý Google Drive — 14/10/2026
+- **Kho Drive tổng:** tab riêng duyệt tệp và thư mục trực tiếp bên trong folder OSC kết nối, kể cả file đã được tải lên bằng Drive (phụ thuộc phạm vi OAuth). Super Admin được tạo thư mục, tải lên và đổi tên; Admin được xem.
+- **Thư mục gốc học kỳ:** tab riêng duyệt trực tiếp folder học kỳ đã liên kết (kể cả khi nằm bên ngoài folder OSC tổng), khác với các danh mục và kho sự kiện. Đây là nơi kiểm tra được thư mục con đang nằm ở đâu.
+- Trong mỗi thư mục có nút **Sao chép link**, **Mở Google Drive**, **Tạo thư mục con**, **Đổi tên** tệp/thư mục. Tệp được mở trên Google Drive (không tự động phân tích nội dung hoặc sao chép byte vào Vercel/Firestore).
+- Tạo thư mục mới luôn gọi Google Drive với `parents: [ID thư mục đang mở]`; sau khi tạo, server truy vấn lại metadata và **báo lỗi nếu Google không xác nhận đúng cha**. Chức năng tạo mới không tự chuyển vào thư mục con hoặc tái sử dụng tên trùng.
+- Đổi tên file chỉ gửi `name` bằng PATCH, không đưa vào `addParents/removeParents`; server bắt buộc kiểm tra file là con trực tiếp của thư mục đang mở và `capabilities.canRename` là true. Đổi tên danh mục OSC có cập nhật tên danh mục trong Firestore, giữ nguyên ID và link.
+- Lưu ý quyền: OAuth giới hạn `drive.file` có thể không đọc các file do người khác tạo/tải trực tiếp vào Drive. Muốn xem toàn bộ file được chia sẻ, cần Super Admin cấp quyền **Kết nối thư mục chia sẻ** (`drive` scope) và tài khoản Google phải có quyền tương ứng.
+- API và giao diện không tự xóa, di chuyển hay sửa quyền chia sẻ của tệp. Nếu Drive trả lỗi vị trí sai, hãy kiểm tra nơi Google thực tế đã lưu trước khi tạo lại.
+
+### Bài kiểm tra cần chạy trên Drive thật
+1. Vào Kho Drive tổng, mở thư mục mẹ A, tạo thư mục con B; bấm B tạo C, xác nhận A/B/C trên Google Drive (không có C đứng ngang hàng B).
+2. Sao chép link B, mở đường dẫn từ OSC và kiểm tra Google Drive xác định đúng thư mục.
+3. Đổi tên B, đổi tên một tài liệu trong B; kiểm tra link/ID và vị trí không thay đổi.
+4. Truy cập tab Thư mục gốc học kỳ và kiểm tra những file Google Docs/PDF đã được đưa vào Drive từ bên ngoài OSC; nếu bị thiếu, kiểm tra OAuth scope.
+5. Cố đổi tên tệp ngoài phạm vi được chọn bằng ID thủ công, tài khoản Viewer hoặc BCN: phải bị từ chối.
+6. Kiểm tra GitHub Actions thành công, Vercel preview READY, cuối cùng kiểm tra Production sau merge.
+
