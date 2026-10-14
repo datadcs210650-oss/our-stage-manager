@@ -1,0 +1,29 @@
+name: OSC Drive Hub checks
+on:
+  push:
+    branches:
+      - main
+      - 'fix/drive-shared-folder-*'
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  drive-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Syntax checks
+        run: |
+          node --check lib/osc-drive.js
+          node --check lib/drive-hub-handler.js
+          node --check lib/drive-oauth-handler.js
+          node --check drive-hub.js
+      - name: Regression tests
+        run: node --test tests/drive-hub.test.js
