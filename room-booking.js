@@ -34,8 +34,10 @@ function dayLabel(ms){return new Date(ms).toLocaleDateString("vi-VN",{timeZone:"
 function clock(ms){var t=vnParts(ms);return pad(t.h)+":"+pad(t.min)}
 function inputDate(ms){var x=vnParts(ms);return x.y+"-"+pad(x.m)+"-"+pad(x.d)+"T"+pad(x.h)+":"+pad(x.min)}
 function toISO(v){if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v))throw Error("Ngày giờ không hợp lệ.");var d=new Date(v+":00+07:00");if(!Number.isFinite(d.getTime())||inputDate(d.getTime())!==v)throw Error("Ngày giờ không hợp lệ.");return d.toISOString()}
-function manager(){return typeof canEditClub==="function"&&canEditClub()}
-function roomOwner(){return String(typeof currentProfile!=="undefined"?currentProfile?.role:"")==="superadmin"}
+function roomOwner(){
+  return !!currentFirebaseUser&&String(typeof currentProfile!=="undefined"?currentProfile?.role:"")==="superadmin"&&currentProfile?.active===true;
+}
+function manager(){return roomOwner()}
 function message(x){if(typeof toast==="function")toast(x);else if(typeof oscAlert==="function")oscAlert(x)}
 async function request(action,body){
   if(!currentFirebaseUser)throw Error("Phiên đăng nhập đã hết hạn.");
@@ -345,7 +347,7 @@ async function cancelBooking(booking,form){
   catch(e){form.querySelector("#rbFormError").textContent=e.message||String(e)}
 }
 async function openForm(booking){
-  if(!manager())return message("Chỉ Admin hoặc Super Admin được thay đổi lịch phòng.");
+  if(!manager())return message("Chỉ Super Admin được thay đổi lịch phòng.");
   if(!data.slotReady)await loadSlots(true);
   if(!data.slotReady)return message("Không thể tải danh sách slot. Hãy thử lại.");
   if(!data.slots.length){switchTab("slots");return message("Hãy tạo slot trước khi nhập lịch phòng.")}
@@ -379,7 +381,7 @@ async function openForm(booking){
 }
 
 async function openWeekly(){
-  if(!manager())return message("Chỉ Admin/Super Admin được lập lịch phòng.");
+  if(!manager())return message("Chỉ Super Admin được lập lịch phòng.");
   if(!data.slotReady)await loadSlots(true);
   if(!data.slotReady)return message("Không tải được danh sách slot. Vui lòng thử lại.");
   if(!data.slots.length){
@@ -407,7 +409,7 @@ async function openWeekly(){
   });
 }
 
-function renderRoomBooking(){if(!data.week)data.week=monday(Date.now());data.day=vnKey(Date.now());if(data.tab==="slots"&&!manager())data.tab="week";shell();loadSlots(true);if(data.tab==="history"){renderHistory();getHistory(true)}else if(data.tab==="slots"){renderSlots()}else{renderWeek();getWeek()}}
+function renderRoomBooking(){if(!data.week)data.week=monday(Date.now());data.day=vnKey(Date.now());if(data.tab==="slots"&&!roomOwner())data.tab="week";shell();loadSlots(true);if(data.tab==="history"){renderHistory();getHistory(true)}else if(data.tab==="slots"){renderSlots()}else{renderWeek();getWeek()}}
 window.renderRoomBooking=renderRoomBooking;
 setInterval(function(){
   if(!currentFirebaseUser||el("#roomBooking")?.classList.contains("hidden"))return;

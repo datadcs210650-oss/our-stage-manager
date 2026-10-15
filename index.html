@@ -3312,6 +3312,9 @@ function watchOwnProfileRealtime(){
     updateAdminIdentityChip();
     renderAll();
     applyRoleAccess();
+    // Re-render Room Booking immediately when role changes during an open session.
+    // The API independently rejects all non-Super-Admin writes.
+    if($("#roomBooking")&&!$("#roomBooking").classList.contains("hidden")&&typeof renderRoomBooking==="function")renderRoomBooking();
     if(beforeSig&&beforeSig!==afterSig){
       Promise.resolve().then(()=>watchRealtimeCollections({force:true})).catch(e=>console.warn("permission realtime restart",e));
     }
@@ -11047,8 +11050,8 @@ function renderAll(){
 <script src="/ticket-studio-admin.js?v=95"></script>
 <script src="/event-routing-admin.js?v=95"></script>
 <script src="/v95-operations.js?v=99"></script>
-<script src="/room-booking.js?v=103"></script>
-<script src="/room-booking-weekly.js?v=102"></script>
+<script src="/room-booking.js?v=104"></script>
+<script src="/room-booking-weekly.js?v=103"></script>
 <script src="/drive-hub.js?v=5"></script>
 <script src="/member-compare-core.js?v=2"></script>
 <script src="/member-compare.js?v=2"></script>

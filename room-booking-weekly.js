@@ -27,7 +27,9 @@ function weekBounds(){
   return {min,max:min+104*7*DAY};
 }
 function dateLabel(ms){return new Date(ms).toLocaleDateString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",day:"2-digit",month:"2-digit"})}
-function manager(){return typeof canEditClub==="function"&&canEditClub()===true}
+function manager(){
+  return !!currentFirebaseUser&&typeof currentProfile!=="undefined"&&currentProfile?.role==="superadmin"&&currentProfile?.active===true;
+}
 function selected(row){
   try{const ids=JSON.parse(row.dataset.selectedSlots||"[]");return Array.isArray(ids)?ids:[]}
   catch{return []}
@@ -267,7 +269,7 @@ function mount(root){
     '<div class="rb-week-chooser"><div class="rb-week-choose-intro"><label for="rbWeekChoose">Chọn tuần cần đặt</label><span id="rbWeekCurrent" aria-live="polite"></span><small>Chọn một ngày bất kỳ, hệ thống tự lấy đủ thứ Hai–Chủ Nhật. Bản nháp chỉ lưu tạm khi chuyển tuần, chưa ghi lên hệ thống.</small></div><div class="rb-week-chooser-controls"><button type="button" id="rbWeekPrevious" class="rb-button rb-outline" aria-label="Chọn tuần trước">‹</button><input type="date" id="rbWeekChoose" aria-label="Chọn ngày thuộc tuần muốn đặt"><button type="button" id="rbWeekNext" class="rb-button rb-outline" aria-label="Chọn tuần sau">›</button></div></div>'+
     '<div class="rb-week-scroll">'+buildDays()+'</div>'+
     '<footer class="rb-week-footer"><div><p id="rbWeekSummary" aria-live="polite"></p><p class="rb-week-error" id="rbWeekError" role="alert"></p>'+
-    '<small>Chỉ Admin/Super Admin được lưu. Các slot và sự kiện được kiểm tra lại tại máy chủ trước khi ghi.</small></div>'+
+    '<small>Chỉ Super Admin được lưu. Các slot và sự kiện được kiểm tra lại tại máy chủ trước khi ghi.</small></div>'+
     '<div class="rb-week-footer-actions"><button type="button" class="rb-button rb-outline" data-week-close>Đóng</button>'+
     '<button type="button" class="rb-button rb-primary" id="rbWeekSubmit">Lưu lịch cả tuần</button></div></footer></section>';
   document.body.append(overlay);
@@ -317,7 +319,7 @@ function mount(root){
   by(".rb-week-close",overlay).focus();
 }
 window.rbOpenWeekPlanner=function(settings){
-  if(!manager()){if(typeof toast==="function")toast("Chỉ Admin/Super Admin được lập lịch phòng.");return}
+  if(!manager()){if(typeof toast==="function")toast("Chỉ Super Admin được lập lịch phòng.");return}
   if(dialog)return;
   if(!settings||!Number.isFinite(settings.weekStart)||!Array.isArray(settings.slots)||!settings.slots.length||
      typeof settings.request!=="function"||typeof settings.semester!=="string")return;

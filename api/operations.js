@@ -124,8 +124,13 @@ async function assertBookableEvent(tx,db,eventId,semester,state){
   if(eventDate&&eventDate<today)throw bad("Sự kiện đã qua ngày tổ chức.");
 }
 
+function roomOwner(actor){
+  // Only the active Super Admin (verified by requireUser) may mutate Room Booking.
+  // Keep isManager() unchanged: it also protects other, unrelated OSC modules.
+  return actor?.profile?.role==="superadmin";
+}
 function ensureRoomManager(actor){
-  if(!isManager(actor))throw bad("Chỉ Admin hoặc Super Admin được tạo, sửa và hủy lịch phòng.","osc/forbidden");
+  if(!roomOwner(actor))throw bad("Chỉ Super Admin được thêm phòng, lập, chỉnh sửa hoặc hủy lịch phòng.","osc/forbidden");
 }
 async function assertNoRoomOverlap(tx,db,data,exceptId=""){
   // Look back 24h because any booking is limited to 24 hours.
@@ -174,10 +179,10 @@ async function fetchSlotDoc(db,tx=null){
 }
 async function roomSlotList(req){
   const actor=await requireUser(req),slots=await fetchSlotDoc(getDb());
-  return{ok:true,version:99,slots,canEdit:isManager(actor)};
+  return{ok:true,version:100,slots,canEdit:roomOwner(actor)};
 }
 async function roomSlotSave(req,body){
-  const actor=await requireUser(req);if(actor.profile.role!=="superadmin")throw bad("Chỉ Chủ tịch được thiết lập phòng.","osc/forbidden");
+  const actor=await requireUser(req);ensureRoomManager(actor);
   const slots=validateSlots(body.slots);
   await getDb().doc(ROOM_SLOT_DOC).set({
     slots,updatedAt:admin.firestore.FieldValue.serverTimestamp(),
@@ -209,7 +214,7 @@ async function roomsList(req,body){
   const actor=await requireUser(req),db=getDb(),semester=normalizeSemester(body.semester);
   const snap=await db.collection("roomBookings").where("semester","==",semester).get();
   const rows=snap.docs.map(roomPublic).filter(x=>x.status==="active").sort((a,b)=>a.startAt-b.startAt);
-  return{ok:true,version:98,rows,canEdit:isManager(actor)};
+  return{ok:true,version:100,rows,canEdit:roomOwner(actor)};
 }
 async function roomBoard(req,body){
   const actor=await requireUser(req),db=getDb(),win=roomWindow(body);
@@ -219,7 +224,7 @@ async function roomBoard(req,body){
   const rows=snap.docs.map(roomPublic)
     .filter(x=>x.status==="active"&&x.endAt>win.start&&x.startAt<win.end)
     .sort((a,b)=>a.startAt-b.startAt||a.roomName.localeCompare(b.roomName,"vi"));
-  return{ok:true,version:98,rows,canEdit:isManager(actor),serverNow:Date.now(),weekStart:win.start};
+  return{ok:true,version:100,rows,canEdit:roomOwner(actor),serverNow:Date.now(),weekStart:win.start};
 }
 async function roomHistory(req,body){
   const actor=await requireUser(req),db=getDb(),now=Date.now();
@@ -231,7 +236,7 @@ async function roomHistory(req,body){
     .orderBy("endAt","desc").limit(limit+1).get();
   const page=snap.docs.slice(0,limit),last=page[page.length-1];
   const rows=page.map(roomPublic).filter(x=>x.status==="active");
-  return{ok:true,version:98,rows,hasMore:snap.size>limit,nextBefore:last?millis(last.data().endAt):null,canEdit:isManager(actor),serverNow:now};
+  return{ok:true,version:100,rows,hasMore:snap.size>limit,nextBefore:last?millis(last.data().endAt):null,canEdit:roomOwner(actor),serverNow:now};
 }
 async function roomCreate(req,body){
   const actor=await requireUser(req);ensureRoomManager(actor);
