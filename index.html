@@ -9418,7 +9418,7 @@ async function renderAccounts(){
         <td>${esc(perms||"—")}</td>
         <td>
           ${u.id===currentFirebaseUser?.uid?`<span class="small-help">Tài khoản hiện tại</span>`:
-          manageable?`<div class="account-actions"><button class="secondary" onclick="editAccountProfile('${u.id}')">Chỉnh sửa</button>${u.mssv||u.positionSemester?`<span class="small-help">Có lịch sử — hãy Khóa khi rời BCN</span>`:`<button class="danger" onclick="deleteAccountProfile('${u.id}')">Xóa</button>`}</div>`:
+          manageable?`<div class="account-actions"><button class="secondary" onclick="editAccountProfile('${u.id}')">Chỉnh sửa</button><button class="danger" data-account-delete-id="${esc(u.id)}" onclick="deleteAccountProfile('${u.id}')">Xóa</button></div>`:
           `<span class="small-help">Không có quyền chỉnh tài khoản này</span>`}
         </td>
       </tr>`;
@@ -9615,24 +9615,52 @@ async function resetAccountPassword(uid){
   }catch(e){console.error("resetAccountPassword",e);oscAlert("Không đặt lại được mật khẩu.\n\n"+(e?.message||e))}
   finally{if(btn){btn.disabled=false;btn.textContent="Đặt lại mật khẩu"}}
 }
+const pendingAccountDeletions=new Set();
 async function deleteAccountProfile(uid){
-  if(!canEditClub())return;const u=accountRows.find(x=>x.id===uid);if(!u)return;
+  if(!canEditClub())return;
+  const u=accountRows.find(x=>x.id===uid);
+  if(!u||pendingAccountDeletions.has(uid))return;
   if(uid===currentFirebaseUser?.uid)return oscAlert("Không thể tự xóa tài khoản đang đăng nhập.");
   if(u.role==="superadmin")return oscAlert("Không thể xóa Chủ tịch.");
-  if(!await oscConfirm(`Xóa tài khoản "${u.displayName||u.email}"?\n\nHệ thống sẽ xóa cả hồ sơ quyền Firestore và tài khoản Firebase Authentication.`))return;
+  const email=String(u.email||"").trim().toLowerCase();
+  if(!email)return oscAlert("Không có email hợp lệ để xác nhận xóa. Vui lòng kiểm tra hồ sơ.");
+  if(!await oscConfirm(
+    'XÓA VĨNH VIỄN TÀI KHOẢN BCN?\n\n'+
+    (u.displayName||email)+'\n'+email+
+    '\n\nHệ thống sẽ xóa tài khoản đăng nhập khỏi Firebase Authentication (bao gồm liên kết đăng nhập Google), hồ sơ phân quyền và kết nối OAuth Google Drive của tài khoản này.'+
+    '\n\nDữ liệu Danh sách thành viên, Ban Chủ nhiệm, các sự kiện và tài liệu Drive KHÔNG bị xóa.'+
+    '\n\nThao tác không thể hoàn tác. Bạn muốn tiếp tục?'
+  ))return;
+  const typed=await oscPrompt('Để xác nhận xóa, hãy nhập chính xác EMAIL đăng nhập:\n'+email,"");
+  if(String(typed||"").trim().toLowerCase()!==email){
+    if(typed!==null)oscAlert("Email xác nhận không trùng. Không có tài khoản nào bị xóa.");
+    return;
+  }
+  pendingAccountDeletions.add(uid);
+  const btn=[...document.querySelectorAll("[data-account-delete-id]")].find(b=>b.dataset.accountDeleteId===uid);
+  if(btn){btn.disabled=true;btn.textContent="Đang xóa…";}
   try{
     const token=await currentFirebaseUser.getIdToken();
-    const res=await fetchAccountApi("/api/account-delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({uid})},15000);
+    const res=await fetchAccountApi("/api/account-delete",{
+      method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body:JSON.stringify({uid,confirmationEmail:email})
+    },60000);
     const data=await res.json().catch(()=>({}));
-    if(!res.ok){
-      let detail=data.error||`API trả về lỗi ${res.status}`;
-      if(res.status===404)detail="Không tìm thấy /api/account-delete trên Vercel. Hãy deploy đầy đủ thư mục api và package.json.";
-      throw new Error(detail);
-    }
-    toast("Đã xóa tài khoản");if(data.warning)oscAlert(data.warning);await renderAccounts();
-  }catch(e){console.error("deleteAccountProfile",e);oscAlert("Không xóa được tài khoản.\n\n"+(e?.message||e))}
+    if(!res.ok)throw new Error(data.error||("Không thể xóa tài khoản (HTTP "+res.status+")."));
+    if(data.authDeleted!==true||data.profileDeleted!==true)
+      throw new Error("Chưa xác nhận Firebase Authentication và hồ sơ đã được xóa hoàn toàn.");
+    toast("Đã xóa tài khoản BCN và đăng nhập Firebase");
+    await renderAccounts();
+    oscAlert("Đã xóa tài khoản và liên kết đăng nhập Firebase.\n\nCó thể tạo lại tài khoản mới bằng cùng email. Hồ sơ thành viên và Ban Chủ nhiệm vẫn được giữ nguyên.");
+  }catch(e){
+    console.error("deleteAccountProfile",e);
+    oscAlert("Chưa hoàn tất xóa tài khoản.\n\n"+(e?.message||e)+
+      "\n\nNếu hệ thống báo dọn dẹp chưa xong, hãy tải lại danh sách và thử Xóa lần nữa.");
+  }finally{
+    pendingAccountDeletions.delete(uid);
+    if(btn?.isConnected){btn.disabled=false;btn.textContent="Xóa";}
+  }
 }
-
 
 /* ===== Audit / Trash / Approval ===== */
 async function loadAuditLogs(){if(!canEditClub())return;try{const s=await fbDb.collection("auditLogs").where("semester","==",semester).limit(200).get();auditRows=sortByTimeDesc(s.docs.map(d=>({id:d.id,...d.data()})),"createdAt");renderAuditLogs();await loadImportHistory()}catch(e){console.warn(e)}}
