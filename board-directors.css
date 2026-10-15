@@ -1,0 +1,45 @@
+/* Independent Ban Chủ nhiệm menu */
+#boardDirectorsRoot{min-width:0}
+#boardDirectorsRoot .board-page{max-width:1200px;border:1px solid #ecdfe5;border-radius:18px;background:#fff;box-shadow:0 5px 18px rgba(71,31,45,.04);padding:22px}
+.board-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.board-hero small{color:#8d5a73;font-size:10px;letter-spacing:.1em;font-weight:800}
+.board-hero h2{font-size:24px;color:#642b46;margin:8px 0}
+.board-hero p{line-height:1.65;color:#705b68;font-size:13px;margin:0}
+.board-hero-right{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.board-count{border-radius:999px;background:#f7edf1;color:#79314c;font-size:11px;font-weight:800;padding:7px 12px}
+.board-note{border-left:3px solid #8c405d;background:#fbf5f7;border-radius:8px;padding:12px 14px;margin:19px 0;font-size:12px;line-height:1.6;color:#654556}
+.board-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0;border-bottom:1px solid #f0e5e9;padding-bottom:15px}
+.board-toolbar>label{display:grid;gap:6px;font-weight:750;font-size:12px;color:#644559;flex:1 1 155px;min-width:0}
+.board-toolbar select,.board-toolbar input{background:#fff;border:1px solid #dfd0d8;border-radius:10px;min-height:42px;padding:9px 11px;font-size:13px;width:100%;min-width:0}
+.board-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.board-buttons button{min-height:42px;font-size:12px;white-space:normal}
+.board-notice{font-size:12px;color:#8f395f;min-height:18px;line-height:1.5}
+.board-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 22px}
+.board-stats>div{background:#faf7f8;border:1px solid #eee4e8;border-radius:12px;padding:14px;display:grid;gap:7px}
+.board-stats small{font-size:11px;color:#877480}
+.board-stats strong{font-size:24px;color:#75364f;font-variant-numeric:tabular-nums}
+.board-section-title{display:flex;align-items:center;justify-content:space-between;margin:16px 0 10px}
+.board-section-title h3{margin:0;font-size:16px;color:#60334a}
+.board-section-title span{color:#8c7481;font-size:12px}
+.board-list{display:grid;gap:9px}
+.board-person{border:1px solid #ecdee5;border-radius:12px;padding:13px;display:flex;align-items:center;gap:13px;min-width:0}
+.board-avatar{display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;background:#f8eaf0;border-radius:14px;color:#833954;font-size:19px;font-weight:800}
+.board-person-info{display:grid;gap:4px;flex:1;min-width:0}
+.board-person-info b{font-size:13px;color:#563443;overflow-wrap:anywhere}
+.board-person-info small{font-size:11px;color:#887381}
+.board-position{display:inline-block;width:fit-content;background:#f4e8ed;color:#6d314c;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:800}
+.board-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.board-actions button{min-height:35px;font-size:11px;border-radius:9px}
+.board-empty{background:#fbf9fa;border:1px dashed #ded2d9;border-radius:12px;text-align:center;color:#83727c;padding:25px;font-size:13px}
+.board-footer-info{margin-top:20px;padding:12px 15px;color:#826477;background:#faf6f8;border-radius:10px;font-size:12px;line-height:1.6}
+.board-shade{position:fixed;z-index:200005;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,12,18,.55);padding:16px}
+.board-modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid #ede1e6;border-radius:17px;padding:22px;box-shadow:0 14px 55px rgba(15,10,13,.2)}
+.board-modal header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.board-modal h3{font-size:17px;color:#67334d;margin:0}
+.board-modal header button{font-size:24px;padding:3px 10px}
+.board-modal p{line-height:1.7;font-size:12px;color:#766272;margin:12px 0 18px}
+.board-modal label{display:grid;gap:8px;font-size:12px;font-weight:750;color:#674b5c;margin:12px 0}
+.board-modal select,.board-modal input{width:100%;border:1px solid #dcd0d7;border-radius:10px;min-height:42px;padding:9px 11px;font-size:13px}
+.board-modal footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:20px}
+@media(max-width:690px){#boardDirectorsRoot .board-page{padding:14px}.board-hero{flex-wrap:wrap}.board-person{flex-wrap:wrap}.board-person-info{flex-basis:calc(100% - 70px)}.board-actions{width:100%}.board-buttons{width:100%}.board-buttons button{flex:1}.board-stats{gap:6px}}
+@media(max-width:420px){.board-stats{grid-template-columns:1fr}.board-actions button{flex:1}}

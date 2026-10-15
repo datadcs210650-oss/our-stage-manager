@@ -23,15 +23,22 @@ test("the member office source is server-derived and read-only",()=>{
  assert.match(code,/viewMembers/);
  assert.doesNotMatch(code,/\.update\(|\.set\(|\.delete\(/);
 });
-test("accounts term UI and member profile projection remain in separate modules",()=>{
- const account=fs.readFileSync(path.join(__dirname,"../account-terms.js"),"utf8");
+test("Ban Chủ nhiệm uses member roster, separate from BCN login accounts",()=>{
+ const board=fs.readFileSync(path.join(__dirname,"../lib/board-handler.js"),"utf8");
+ const frontend=fs.readFileSync(path.join(__dirname,"../board-directors.js"),"utf8");
  const office=fs.readFileSync(path.join(__dirname,"../member-office-profile.js"),"utf8");
- const drive=fs.readFileSync(path.join(__dirname,"../drive-hub-v2.js"),"utf8");
- assert.match(account,/window\.openAccountTerms/);
- assert.match(account,/"leadership-"\+action/);
- assert.match(office,/leadership-member-profile/);
- assert.match(office,/window\.renderInfo=function/);
- assert.doesNotMatch(drive,/function viewPeople\(/);
+ const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8");
+ assert.match(board,/collection\("members"\)/);
+ assert.match(board,/collection\("oscBoardAppointments"\)/);
+ assert.doesNotMatch(board,/getAuth\(|collection\("users"\)/);
+ assert.match(frontend,/request\("assign"/);
+ assert.match(office,/board-profile/);
+ assert.match(html,/data-tab="boardDirectors"/);
+ assert.match(html,/data-tab="accounts"/);
+ assert.doesNotMatch(html,/account-terms\.js\?v=/);
+ assert.doesNotMatch(html,/id="accountTermRoot"/);
+ assert.doesNotMatch(html,/id="accPositionTitle"/);
+ assert.doesNotMatch(html,/id="editAccPositionTitle"/);
 });
 test("new Firestore rules prevent direct client mutation of account role and position history",()=>{
  const rule=fs.readFileSync(path.join(__dirname,"../firestore_rules_v96.rules"),"utf8");
