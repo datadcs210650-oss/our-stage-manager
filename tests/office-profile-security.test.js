@@ -21,17 +21,17 @@ test("the member office source is server-derived and read-only",()=>{
  assert.match(code,/oscMssvOwners/);
  assert.match(code,/oscPositionHistory/);
  assert.match(code,/viewMembers/);
- assert.doesNotMatch(code,/\\.update\\(|\\.set\\(|\\.delete\\(/);
+ assert.doesNotMatch(code,/\.update\(|\.set\(|\.delete\(/);
 });
 test("accounts term UI and member profile projection remain in separate modules",()=>{
  const account=fs.readFileSync(path.join(__dirname,"../account-terms.js"),"utf8");
  const office=fs.readFileSync(path.join(__dirname,"../member-office-profile.js"),"utf8");
  const drive=fs.readFileSync(path.join(__dirname,"../drive-hub-v2.js"),"utf8");
- assert.match(account,/window\\.openAccountTerms/);
- assert.match(account,/leadership-\\+/);
+ assert.match(account,/window\.openAccountTerms/);
+ assert.match(account,/"leadership-"\+action/);
  assert.match(office,/leadership-member-profile/);
- assert.match(office,/window\\.renderInfo=function/);
- assert.doesNotMatch(drive,/function viewPeople\\(/);
+ assert.match(office,/window\.renderInfo=function/);
+ assert.doesNotMatch(drive,/function viewPeople\(/);
 });
 test("new Firestore rules prevent direct client mutation of account role and position history",()=>{
  const rule=fs.readFileSync(path.join(__dirname,"../firestore_rules_v96.rules"),"utf8");
@@ -44,8 +44,8 @@ test("new Firestore rules prevent direct client mutation of account role and pos
 });
 test("privileged password reset requires recent manager authentication",()=>{
  const src=fs.readFileSync(path.join(__dirname,"../api/account-password.js"),"utf8");
- assert.match(src,/actor\\.decoded\\.auth_time/);
+ assert.match(src,/actor\.decoded\.auth_time/);
  assert.match(src,/600/);
  assert.match(src,/oscSecurityAudit/);
- assert.doesNotMatch(src,/console\\.log\\(password/);
+ assert.doesNotMatch(src,/console\.log\(password/);
 });
