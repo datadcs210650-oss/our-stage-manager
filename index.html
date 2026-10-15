@@ -2134,6 +2134,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/room-booking.css?v=102">
 <link rel="stylesheet" href="/room-booking-weekly.css?v=102">
 <link rel="stylesheet" href="/drive-hub.css?v=4">
+<link rel="stylesheet" href="/qr-bulk.css?v=1">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
 <body class="auth-login">
@@ -2224,7 +2225,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button data-tab="events">Sự kiện</button>
         <button data-tab="operations">Điều hành nâng cao</button>
         <button data-tab="ticketStudio" class="admin-nav">Ticket Studio</button>
-        <button data-tab="memberQr" class="admin-nav">Mã QR thành viên</button>
+        <button data-tab="memberQr" class="admin-nav">Mã QR</button>
         <button data-tab="lookupPortal">Tra cứu thành viên</button>
         <button data-tab="freeLookup">Tra cứu tự do</button>
         <button data-tab="myAccount">Tài khoản của tôi</button>
@@ -2550,7 +2551,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
           <button class="secondary edit-only" id="eventTemplateBtn">Dùng mẫu</button>
           <button class="secondary edit-only" id="continuationEventBtn">Đồng hành kỳ tiếp theo</button>
           <button class="secondary admin-only-action" type="button" onclick="openTab('ticketStudio')">Ticket Studio</button>
-          <button class="secondary admin-only-action" type="button" onclick="openTab('memberQr')">Mã QR thành viên</button>
+          <button class="secondary admin-only-action" type="button" onclick="openTab('memberQr')">Mã QR</button>
           <button class="primary edit-only" id="createEventBtn">+ Tạo sự kiện</button>
         </div>
       </div>
@@ -2627,8 +2628,26 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 
 
     <section id="memberQr" class="hidden">
-      <div class="section-title"><div><div class="eyebrow">QR THÀNH VIÊN</div><h2>Mã QR check-in thành viên</h2><p class="small-help">Admin mở cổng để thành viên nhập MSSV và nhận mã QR chỉ chứa MSSV. Mã giữ nguyên cho đến khi Admin vô hiệu hóa.</p></div><button class="secondary" onclick="renderMemberQrAdmin()">↻ Làm mới</button></div>
+      <div class="section-title"><div><div class="eyebrow">QR THÀNH VIÊN</div><h2>Mã QR</h2><p class="small-help">Tạo hàng loạt QR từ file MSSV hoặc quản lý cổng cấp mã QR check-in hiện có. Nội dung mã QR chỉ là MSSV.</p></div><button class="secondary" onclick="renderMemberQrAdmin()">↻ Làm mới</button></div>
       <div class="v76-privacy-note"><b>Quyền riêng tư:</b> QR thành viên chỉ chứa MSSV, không chứa email, số điện thoại hoặc dữ liệu liên hệ. Khi Admin vô hiệu hóa một MSSV, hệ thống check-in sẽ từ chối mọi QR có cùng MSSV cho đến khi được kích hoạt lại.</div>
+      <section class="bulk-qr-panel" aria-labelledby="bulkQrHeading">
+        <div class="bulk-qr-head">
+          <div><div class="bulk-qr-eyebrow">TẠO HÀNG LOẠT · KHÔNG TẢI FILE LÊN MÁY CHỦ</div>
+            <h3 id="bulkQrHeading">Tạo mã QR từ danh sách MSSV</h3>
+            <p>Mỗi MSSV tạo một ảnh PNG, bên trong QR <strong>chỉ chứa chuỗi MSSV</strong>. Các ảnh được đóng gói và tải về trong một file ZIP.</p>
+          </div><span class="bulk-qr-limit">Tối đa 500 QR/lần</span>
+        </div>
+        <div class="bulk-qr-actions">
+          <label class="bulk-qr-file-label" for="bulkQrFile"> <span>Chọn file MSSV (Excel / CSV / TXT)</span>
+            <input type="file" id="bulkQrFile" accept=".xlsx,.xls,.csv,.txt" aria-describedby="bulkQrInstructions">
+          </label>
+          <button type="button" class="secondary" id="bulkQrSample">Tải file mẫu</button>
+          <button type="button" class="primary" id="bulkQrDownload" disabled>Tải ZIP ảnh QR</button>
+        </div>
+        <p id="bulkQrInstructions" class="bulk-qr-help">File cần một cột <b>MSSV</b> (hoặc chỉ một cột mã số sinh viên). File hợp lệ sẽ được tạo và tải ZIP tự động; nếu có dòng lỗi hoặc trùng, bạn xem thống kê rồi bấm tải ZIP.</p>
+        <div class="bulk-qr-preview" id="bulkQrPreview" aria-live="polite">Chưa chọn danh sách.</div>
+        <p id="bulkQrMessage" role="status" aria-live="polite" class="bulk-qr-message"></p>
+      </section>
       <div class="member-qr-admin-grid" style="margin-top:14px">
         <div class="member-qr-admin-card"><h3>Cổng cấp QR cho thành viên</h3><p class="small-help">Cổng áp dụng cho học kỳ đang chọn. Thành viên không cần đăng nhập hệ thống quản trị.</p><div id="memberQrPortalState" class="quick-chip">Đang tải…</div><div class="member-qr-link-row"><input id="memberQrPortalLink" readonly><button class="secondary" onclick="copyText(document.getElementById('memberQrPortalLink').value)">Sao chép</button></div><div class="scanner-link-actions" style="margin-top:10px"><button id="memberQrOpenBtn" class="primary" onclick="setMemberQrPortalOpen(true)">Mở cổng</button><button id="memberQrCloseBtn" class="danger" onclick="setMemberQrPortalOpen(false)">Đóng cổng</button><button class="secondary" onclick="window.open(document.getElementById('memberQrPortalLink').value,'_blank','noopener,noreferrer')">Mở trang thành viên</button></div></div>
         <div class="member-qr-admin-card"><h3>Mã đã cấp</h3><p class="small-help">Có thể vô hiệu hóa hoặc kích hoạt lại QR theo MSSV. QR đã vô hiệu hóa sẽ không được chấp nhận khi check-in.</p><div id="memberQrAdminSummary" class="event-student-qr-summary"></div><div id="memberQrAdminList" class="member-qr-list"><div class="empty">Đang tải…</div></div></div>
@@ -2651,7 +2670,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
           <div class="security-note"><b>Đổi mật khẩu trực tiếp, không gửi email.</b> Bạn nhập mật khẩu hiện tại để xác thực rồi đặt mật khẩu mới.</div>
           <div class="free-lookup-builder-section" style="margin-top:16px"><h3>Menu yêu thích</h3><p>Ghim các mục dùng thường xuyên lên đầu sidebar.</p><div id="favoriteMenuSettings" class="favorite-setting-grid"></div></div>
           <div id="authProviderBox" class="auth-provider-box"></div>
-          <div class="modal-actions" style="justify-content:flex-start;margin-top:14px"><button class="primary" id="changeOwnPasswordBtn">Đổi mật khẩu</button><button class="secondary" id="checkHandoffInviteBtn">Kiểm tra lời mời nhận quyền website</button></div>
+          <div class="modal-actions" style="justify-content:flex-start;margin-top:14px"><button class="primary" id="changeOwnPasswordBtn">Đổi mật khẩu</button><button class="secondary hidden" id="checkHandoffInviteBtn" hidden>Nhận quyền Chủ tịch</button></div>
         </div>
       </div>
     </section>
@@ -3581,7 +3600,7 @@ function firestorePlain(v){
   if(v===undefined)return null;
   try{return structuredClone(v)}catch{return JSON.parse(JSON.stringify(v,(k,x)=>x?.toDate?x.toDate().toISOString():x))}
 }
-const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},boardDirectors:{label:"Ban Chủ nhiệm",desc:"Bổ nhiệm & lịch sử theo danh sách thành viên",group:"VẬN HÀNH CLB",icon:"user"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Sự kiện",desc:"Form, QR, vé & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},driveHub:{label:"Kho tài liệu",desc:"Google Drive học kỳ & sự kiện",group:"CỔNG & DỮ LIỆU",icon:"folder"},roomBooking:{label:"Room Booking",desc:"Lịch phòng tuần & lịch sử",group:"VẬN HÀNH CLB",icon:"calendar"},operations:{label:"Điều hành nâng cao",desc:"Quyền tạm thời & quota",group:"CỔNG & DỮ LIỆU",icon:"grid"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR thành viên",desc:"Cấp & vô hiệu hóa QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
+const NAV_META={dashboard:{label:"Tổng quan",desc:"Dashboard & điều hành",group:"TỔNG QUAN",icon:"home"},attention:{label:"Cần chú ý",desc:"Cảnh báo & ưu tiên",group:"TỔNG QUAN",icon:"bell"},manage:{label:"Điểm danh hoạt động",desc:"Điểm, QR & tham gia",group:"VẬN HÀNH CLB",icon:"check"},memberList:{label:"Danh sách thành viên",desc:"Danh sách & trạng thái",group:"VẬN HÀNH CLB",icon:"users"},boardDirectors:{label:"Ban Chủ nhiệm",desc:"Bổ nhiệm & lịch sử theo danh sách thành viên",group:"VẬN HÀNH CLB",icon:"user"},info:{label:"Hồ sơ thành viên",desc:"Thông tin & lịch sử",group:"VẬN HÀNH CLB",icon:"user"},divisions:{label:"Phân ban",desc:"Danh sách & tỷ lệ hoạt động",group:"VẬN HÀNH CLB",icon:"grid"},finance:{label:"Thu Chi CLB",desc:"Quỹ & giao dịch",group:"VẬN HÀNH CLB",icon:"wallet"},events:{label:"Sự kiện",desc:"Form, QR, vé & kết quả",group:"CỔNG & DỮ LIỆU",icon:"calendar"},driveHub:{label:"Kho tài liệu",desc:"Google Drive học kỳ & sự kiện",group:"CỔNG & DỮ LIỆU",icon:"folder"},roomBooking:{label:"Room Booking",desc:"Lịch phòng tuần & lịch sử",group:"VẬN HÀNH CLB",icon:"calendar"},operations:{label:"Điều hành nâng cao",desc:"Quyền tạm thời & quota",group:"CỔNG & DỮ LIỆU",icon:"grid"},ticketStudio:{label:"Ticket Studio",desc:"Vé, QR & check-in",group:"CỔNG & DỮ LIỆU",icon:"grid"},memberQr:{label:"Mã QR",desc:"Tạo hàng loạt, cấp và quản lý QR MSSV",group:"CỔNG & DỮ LIỆU",icon:"grid"},lookupPortal:{label:"Tra cứu thành viên",desc:"Cổng tra cứu công khai",group:"CỔNG & DỮ LIỆU",icon:"search"},freeLookup:{label:"Tra cứu tự do",desc:"Portal dữ liệu tùy chỉnh",group:"CỔNG & DỮ LIỆU",icon:"grid"},myAccount:{label:"Tài khoản của tôi",desc:"Thông tin & mật khẩu",group:"HỆ THỐNG",icon:"account"},approvals:{label:"Chờ duyệt",desc:"Yêu cầu cần phê duyệt",group:"HỆ THỐNG",icon:"clock"},audit:{label:"Nhật ký & Import",desc:"Audit & lịch sử nhập",group:"HỆ THỐNG",icon:"list"},trash:{label:"Thùng rác",desc:"Khôi phục dữ liệu",group:"HỆ THỐNG",icon:"trash"},accounts:{label:"Tài khoản BCN",desc:"Vai trò & phân quyền",group:"HỆ THỐNG",icon:"shield"},settings:{label:"Thiết lập",desc:"Học kỳ & cấu hình",group:"HỆ THỐNG",icon:"settings"}};
 function navLabel(tab){return NAV_META[tab]?.label||tab}
 function navIconSvg(tab){const type=NAV_META[tab]?.icon||"grid",c='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"',s={home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 2.5 2.5L16 9"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V7Z"/><path d="M3 7 16 3v4"/><path d="M16 12h5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/><circle cx="12" cy="12" r="10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',shield:'<path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><path d="M9 12h6M12 9v6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.12-1.3l2-1.55-2-3.46-2.43.98a7 7 0 0 0-2.25-1.3L13.85 3h-4l-.35 2.37a7 7 0 0 0-2.25 1.3L4.82 5.69l-2 3.46 2 1.55A7 7 0 0 0 4.7 12c0 .45.04.88.12 1.3l-2 1.55 2 3.46 2.43-.98a7 7 0 0 0 2.25 1.3L9.85 21h4l.35-2.37a7 7 0 0 0 2.25-1.3l2.43.98 2-3.46-2-1.55c.08-.42.12-.85.12-1.3Z"/>'};return `<svg ${c}>${s[type]||s.grid}</svg>`}
 function enhanceSidebarNavigation(){const nav=$(".nav");if(!nav)return;nav.querySelectorAll(".nav-group-label").forEach(x=>x.remove());let last="";[...nav.querySelectorAll("button[data-tab]")].forEach(btn=>{const tab=btn.dataset.tab,m=NAV_META[tab]||{label:tab,desc:"",group:""};if(m.group&&m.group!==last){const l=document.createElement("div");l.className="nav-group-label";l.textContent=m.group;nav.insertBefore(l,btn);last=m.group}btn.title=m.label;btn.innerHTML=`<span class="nav-icon">${navIconSvg(tab)}</span><span class="nav-copy"><b>${esc(m.label)}</b><small>${esc(m.desc)}</small></span><span class="nav-arrow">›</span>`})}
@@ -9306,6 +9325,7 @@ $("#lookupTestBtn").onclick=async()=>{
 /* tài khoản hiện tại */
 function renderMyAccount(){
   if(!currentFirebaseUser||!currentProfile)return;
+  if(typeof window.refreshHandoffInvitation==="function")window.refreshHandoffInvitation();
   const roleText=role()==="superadmin"?"SUPER ADMIN":role()==="admin"?"ADMIN":"BCN";
   $("#selfDisplayName").textContent=currentProfile.displayName||currentFirebaseUser.displayName||"—";
   $("#selfEmail").textContent=currentFirebaseUser.email||currentProfile.email||"—";
@@ -10947,7 +10967,9 @@ function renderAll(){
 <script src="/v95-operations.js?v=98"></script>
 <script src="/room-booking.js?v=103"></script>
 <script src="/room-booking-weekly.js?v=102"></script>
-<script src="/drive-hub.js?v=4"></script>
+<script src="/drive-hub.js?v=5"></script>
+<script src="/qr-bulk-core.js?v=1"></script>
+<script src="/qr-bulk-ui.js?v=1"></script>
 <script src="/board-directors.js?v=1"></script>
 <script src="/account-handoff.js?v=1"></script>
 <script src="/member-office-profile.js?v=2"></script>
