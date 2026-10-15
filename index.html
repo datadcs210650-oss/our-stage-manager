@@ -2133,7 +2133,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/osc-dialogs.css?v=98">
 <link rel="stylesheet" href="/room-booking.css?v=102">
 <link rel="stylesheet" href="/room-booking-weekly.css?v=102">
-<link rel="stylesheet" href="/drive-hub.css?v=4">
+<link rel="stylesheet" href="/drive-hub.css?v=98">
 <link rel="stylesheet" href="/qr-bulk.css?v=1">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
@@ -2704,7 +2704,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
       <div class="toolbar">
         <input id="accountSearch" placeholder="Tìm theo tên hoặc email…">
         <button class="primary" id="createAccountBtn">+ Tạo tài khoản</button>
-        <button class="secondary" id="accountHandoffBtn">Bàn giao quyền Chủ tịch</button>
+        <button class="secondary hidden" id="accountHandoffBtn" hidden disabled aria-hidden="true">Bàn giao quyền Chủ tịch</button>
       </div>
       <div class="section-note">Chỉ quản lý tài khoản đăng nhập, mật khẩu và quyền sử dụng OSC. <b>Chức vụ theo học kỳ thuộc menu Ban Chủ nhiệm</b> và được lấy từ Danh sách thành viên.</div>
       <div class="table-card accounts-table">
@@ -4671,6 +4671,10 @@ function applyRoleAccess(){
   ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));
   ["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn","#markSelectedLeftBtn"].forEach(s=>toggle(s,em));
   toggle("#uploadFundBtn",ef);
+  // Quyền bàn giao: chỉ Super Admin đang hoạt động. Không dùng chức vụ BCN để suy ra quyền.
+  const handoffAllowed=role()==="superadmin"&&currentProfile?.active===true;
+  toggle("#accountHandoffBtn",handoffAllowed);
+  if($("#accountHandoffBtn"))$("#accountHandoffBtn").disabled=!handoffAllowed;
   $$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));
 
   toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);toggle("#continuationEventBtn",ee);
@@ -9431,6 +9435,7 @@ async function renderAccounts(){
 $("#accountSearch").oninput=renderAccounts;
 $("#createAccountBtn").onclick=()=>openCreateAccount();
 $("#accountHandoffBtn").onclick=()=>{
+  if(role()!=="superadmin"||currentProfile?.active!==true)return;
   if(typeof window.openAccountHandoff!=="function")return oscAlert("Vui lòng tải lại trang để thực hiện bàn giao quyền.");
   window.openAccountHandoff();
 };
@@ -10999,7 +11004,7 @@ function renderAll(){
 <script src="/qr-bulk-core.js?v=1"></script>
 <script src="/qr-bulk-ui.js?v=1"></script>
 <script src="/board-directors.js?v=1"></script>
-<script src="/account-handoff.js?v=1"></script>
+<script src="/account-handoff.js?v=2"></script>
 <script src="/member-office-profile.js?v=2"></script>
 <script src="/osc-v96-stagecraft.js?v=96.1"></script>
 <script>

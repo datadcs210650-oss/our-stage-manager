@@ -61,7 +61,7 @@ window.refreshHandoffInvitation=async function(){
 window.checkAccountHandoff=check;
 window.openAccountHandoff=async()=>{
  try{
-  if(currentProfile?.role!=="superadmin"){await check();return}
+  if(currentProfile?.role!=="superadmin"||currentProfile?.active!==true)return;
   const users=(await api("list")).accounts||[];
   const choices=users.filter(a=>a.active&&a.role!=="superadmin");
   if(!choices.length){alert("Chưa có tài khoản hoạt động để nhận quyền.");return}
