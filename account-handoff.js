@@ -39,6 +39,7 @@ async function check(){
  const result=await api("handoff-accept");
  if(result.requiresRelogin)alert("Đã bàn giao quyền website. Cả hai tài khoản cần đăng xuất và đăng nhập lại.");
 }
+window.checkAccountHandoff=check;
 window.openAccountHandoff=async()=>{
  try{
   if(currentProfile?.role!=="superadmin"){await check();return}
