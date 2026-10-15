@@ -300,3 +300,20 @@
 @media(max-width:680px){#driveHubRoot .dh-v2-people .dh-file-row{flex-direction:column;align-items:stretch}
 #driveHubRoot .dh-v2-people .dh-row-actions{width:100%;justify-content:flex-start}
 #driveHubRoot .dh-toolbar select,#driveHubRoot .dh-toolbar input{max-width:100%;width:100%}}
+
+
+/* Drive Hub V3 — clear personal Google onboarding */
+#driveHubRoot .dh-v2-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0 12px}
+#driveHubRoot .dh-v2-steps>div{display:flex;align-items:center;gap:10px;min-width:0;border:1px solid #eee1e6;background:#fcf8fa;border-radius:12px;padding:13px;color:#765168;font-size:12px;font-weight:700;line-height:1.5}
+#driveHubRoot .dh-v2-steps b{display:grid;place-items:center;flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:#813750;color:#fff;font-size:12px}
+#driveHubRoot .dh-v2-guide{padding:28px;border:1px solid #eadde3;border-radius:17px;max-width:800px;background:#fff;box-shadow:0 5px 18px rgba(75,35,52,.04)}
+#driveHubRoot .dh-v2-guide h3{font-size:20px;margin:0 0 12px;color:#67374c}
+#driveHubRoot .dh-v2-guide p{font-size:13px;line-height:1.75;color:#715a69;max-width:690px}
+#driveHubRoot .dh-v2-guide .primary{border-radius:10px;padding:10px 17px;margin:12px 0}
+#driveHubRoot .dh-v2-muted{font-size:12px!important;color:#887481!important}
+#driveHubRoot .dh-v2-permission{font-size:12px;border-radius:11px;border:1px solid #e3dfe5;background:#f8f6f8;padding:11px 14px;color:#684d5d;line-height:1.7;margin:12px 0 18px}
+#driveHubRoot .dh-v2-permission strong{color:#6c3150}
+@media(max-width:670px){
+ #driveHubRoot .dh-v2-steps{grid-template-columns:1fr;gap:6px}
+ #driveHubRoot .dh-v2-guide{padding:18px}
+}
