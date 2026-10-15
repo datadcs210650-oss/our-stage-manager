@@ -7,8 +7,8 @@ const VALID=/^[A-Z0-9-]{5,25}$/;
 const TTL=60000;
 const norm=s=>String(s||"").trim().toUpperCase();
 const ident=(mssv,semester)=>semester+":"+norm(mssv);
-async function office(mssv,semester){
- const key=ident(mssv,semester),stored=cache.get(key);
+async function office(mssv,semester,memberId){
+ const key=ident(mssv,semester)+":"+String(memberId||""),stored=cache.get(key);
  if(stored&&stored.until>Date.now())return stored.value;
  if(!currentFirebaseUser)throw Error("Chưa đăng nhập.");
  const token=await currentFirebaseUser.getIdToken();
@@ -17,7 +17,7 @@ async function office(mssv,semester){
   const response=await fetch("/api/operations",{
    method:"POST",
    headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-   body:JSON.stringify({action:"leadership-member-profile",mssv:norm(mssv),semester}),
+   body:JSON.stringify({action:"board-profile",mssv:norm(mssv),semester,memberId}),
    signal:controller.signal,cache:"no-store"
   });
   const value=await response.json().catch(()=>({}));
@@ -43,19 +43,19 @@ async function updateOffice(){
   if(!titleEl)return;
   const fallback=String(m.data?.position||"").trim();
   titleEl.textContent=fallback||"Đang tải chức vụ BCN…";
-  const result=await office(number,code);
+  const result=await office(number,code,id);
   // Ignore stale network results when a different member/semester was selected.
   if(typeof selectedInfoId!=="undefined"&&selectedInfoId!==id)return;
   const refreshed=targetCell(),current=refreshed?.querySelector("b");
   if(!current)return;
   current.id="oscMemberOfficeBadge";
-  current.textContent=result.positionTitle||fallback||"Chưa ghi nhận chức vụ BCN kỳ này";
+  current.textContent=result.title||fallback||"Chưa ghi nhận chức vụ Ban Chủ nhiệm kỳ này";
   let history=refreshed.querySelector("#oscMemberOfficeHistory");
   if(!history){history=document.createElement("small");history.id="oscMemberOfficeHistory";history.style.display="block";refreshed.appendChild(history)}
-  const years=(result.history||[]).filter(x=>x.positionTitle);
+  const years=(result.history||[]).filter(x=>x.title);
   history.textContent=years.length?
-    "Đã giữ chức vụ "+result.semesterCount+" học kỳ: "+years.map(x=>x.semester+" — "+x.positionTitle).join(" • "):
-    "Chức vụ học kỳ "+code+" được đồng bộ theo MSSV từ menu Tài khoản BCN.";
+    "Đã giữ chức vụ "+result.semesterCount+" học kỳ: "+years.map(x=>x.semester+" — "+x.title).join(" • "):
+    "Chức vụ học kỳ "+code+" được đồng bộ theo MSSV từ menu Ban Chủ nhiệm.";
  }catch{
   // Preserve legacy member information on network or permission errors.
   const cell=targetCell(),m=typeof selectedInfoId!=="undefined"&&typeof findMember==="function"?findMember(selectedInfoId):null;
