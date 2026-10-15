@@ -41,15 +41,14 @@ async function updateOffice(){
   if(!VALID.test(number)||!/^(SP|SU|FA)\d{2}$/.test(code))return;
   const cell=targetCell(),titleEl=cell?.querySelector("b");
   if(!titleEl)return;
-  const fallback=String(m.data?.position||"").trim();
-  titleEl.textContent=fallback||"Đang tải chức vụ BCN…";
+  titleEl.textContent="Đang tải chức vụ Ban Chủ nhiệm…";
   const result=await office(number,code,id);
   // Ignore stale network results when a different member/semester was selected.
   if(typeof selectedInfoId!=="undefined"&&selectedInfoId!==id)return;
   const refreshed=targetCell(),current=refreshed?.querySelector("b");
   if(!current)return;
   current.id="oscMemberOfficeBadge";
-  current.textContent=result.title||fallback||"Chưa ghi nhận chức vụ Ban Chủ nhiệm kỳ này";
+  current.textContent=result.title||"Chưa bổ nhiệm vào Ban Chủ nhiệm kỳ này";
   let history=refreshed.querySelector("#oscMemberOfficeHistory");
   if(!history){history=document.createElement("small");history.id="oscMemberOfficeHistory";history.style.display="block";refreshed.appendChild(history)}
   const years=(result.history||[]).filter(x=>x.title);
@@ -57,9 +56,8 @@ async function updateOffice(){
     "Đã giữ chức vụ "+result.semesterCount+" học kỳ: "+years.map(x=>x.semester+" — "+x.title).join(" • "):
     "Chức vụ học kỳ "+code+" được đồng bộ theo MSSV từ menu Ban Chủ nhiệm.";
  }catch{
-  // Preserve legacy member information on network or permission errors.
-  const cell=targetCell(),m=typeof selectedInfoId!=="undefined"&&typeof findMember==="function"?findMember(selectedInfoId):null;
-  if(cell?.querySelector("b"))cell.querySelector("b").textContent=m?.data?.position||"Chức vụ chưa tải được";
+  const cell=targetCell();
+  if(cell?.querySelector("b"))cell.querySelector("b").textContent="Không tải được chức vụ Ban Chủ nhiệm. Hãy thử lại.";
  }
 }
 window.oscInvalidateMemberOffice=()=>cache.clear();
