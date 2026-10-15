@@ -3,6 +3,7 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
+const vm=require("node:vm");
 const load=n=>fs.readFileSync(path.join(__dirname,"..",n),"utf8");
 
 test("President handoff starts hidden and is only shown for active superadmin",()=>{
@@ -31,4 +32,26 @@ test("Drive layout is responsive without changing Drive permissions",()=>{
  const handler=load("lib/drive-personal-handler.js");
  assert.match(handler,/requireChair\(actor\)/);
  assert.match(handler,/P\.scopedFolder\(actor,body/);
+});
+
+test("handoff UI clears native hidden attribute only for an active Super Admin",()=>{
+ const html=load("index.html");
+ const start=html.indexOf("  const handoffAllowed=role()");
+ const end=html.indexOf('  $$("#finance [data-addtx]")',start);
+ assert.ok(start>0&&end>start,"handoff logic found in role access routine");
+ const snippet=html.slice(start,end);
+ const run=(roleName,active)=>{
+  const button={hidden:true,disabled:true,visible:false};
+  const context={
+    role:()=>roleName,currentProfile:{active},
+    $:selector=>selector==="#accountHandoffBtn"?button:null,
+    toggle:(selector,show)=>{assert.equal(selector,"#accountHandoffBtn");button.visible=show;}
+  };
+  vm.runInNewContext(snippet,context,{timeout:300});
+  return button;
+ };
+ assert.deepEqual(run("superadmin",true),{hidden:false,disabled:false,visible:true});
+ assert.deepEqual(run("admin",true),{hidden:true,disabled:true,visible:false});
+ assert.deepEqual(run("bcn",true),{hidden:true,disabled:true,visible:false});
+ assert.deepEqual(run("superadmin",false),{hidden:true,disabled:true,visible:false});
 });

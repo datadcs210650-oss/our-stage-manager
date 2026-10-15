@@ -4673,8 +4673,14 @@ function applyRoleAccess(){
   toggle("#uploadFundBtn",ef);
   // Quyền bàn giao: chỉ Super Admin đang hoạt động. Không dùng chức vụ BCN để suy ra quyền.
   const handoffAllowed=role()==="superadmin"&&currentProfile?.active===true;
-  toggle("#accountHandoffBtn",handoffAllowed);
-  if($("#accountHandoffBtn"))$("#accountHandoffBtn").disabled=!handoffAllowed;
+  const handoffBtn=$("#accountHandoffBtn");
+  if(handoffBtn){
+    // The initial HTML uses both the hidden CSS class and the [hidden] attribute.
+    // Updating only the CSS class leaves the button invisible for Super Admin.
+    handoffBtn.hidden=!handoffAllowed;
+    toggle("#accountHandoffBtn",handoffAllowed);
+    handoffBtn.disabled=!handoffAllowed;
+  }
   $$("#finance [data-addtx]").forEach(x=>x.classList.toggle("hidden",!ef));
 
   toggle("#createEventBtn",ee);toggle("#eventTemplateBtn",ee);toggle("#continuationEventBtn",ee);
