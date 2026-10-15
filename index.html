@@ -2133,7 +2133,8 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/osc-dialogs.css?v=98">
 <link rel="stylesheet" href="/room-booking.css?v=102">
 <link rel="stylesheet" href="/room-booking-weekly.css?v=102">
-<link rel="stylesheet" href="/drive-hub.css?v=3">
+<link rel="stylesheet" href="/drive-hub.css?v=4">
+<link rel="stylesheet" href="/account-terms.css?v=1">
 </head>
 <body class="auth-login">
 
@@ -2681,9 +2682,10 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
       <div class="toolbar">
         <input id="accountSearch" placeholder="Tìm theo tên hoặc email…">
         <button class="primary" id="createAccountBtn">+ Tạo tài khoản</button>
-        <button class="secondary" id="leadershipMgmtBtn">Chức vụ & lịch sử nhiệm kỳ</button>
+        <button class="secondary" id="leadershipMgmtBtn">Chức vụ & nhiệm kỳ</button>
       </div>
-      <div class="section-note">Tài khoản được tạo ngay trong hệ thống. Chủ tịch có thể tạo Admin hoặc BCN; Admin chỉ tạo được BCN. Chức danh và MSSV được quản lý theo học kỳ. BCN chỉ xem những mục được cấp quyền.</div>
+      <div class="section-note">Quản lý email, MSSV, quyền truy cập và chức vụ tại đây. Để bổ nhiệm hoặc xem các học kỳ cũ, chọn <b>Chức vụ & nhiệm kỳ</b> phía trên.</div>
+      <div id="accountTermRoot" class="hidden"></div>
       <div class="table-card accounts-table">
         <table>
           <thead><tr><th>Tên</th><th>MSSV</th><th>Email</th><th>Chức vụ học kỳ</th><th>Vai trò</th><th>Trạng thái</th><th>Quyền xem</th><th>Thao tác</th></tr></thead>
@@ -4684,7 +4686,8 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   target.classList.remove("hidden");requestAnimationFrame(()=>target.classList.add("workspace-window-enter"));
   b.scrollIntoView({block:"nearest",behavior:"smooth"});
   $("#pageTitle").textContent=navLabel(tab);noteWorkspace(tab);closeMobileSidebar();
-  if(tab!=="events")stopEventQrSummaryPolling();if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="operations"&&typeof renderV95Operations==="function")renderV95Operations();if(tab==="roomBooking"&&typeof renderRoomBooking==="function")renderRoomBooking();if(tab==="driveHub"&&typeof renderDriveHub==="function")renderDriveHub();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
+  if(tab!=="events")stopEventQrSummaryPolling();if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="operations"&&typeof renderV95Operations==="function")renderV95Operations();if(tab==="roomBooking"&&typeof renderRoomBooking==="function")renderRoomBooking();if(tab==="driveHub"&&typeof renderDriveHub==="function")renderDriveHub();
+  if(tab==="accounts"&&typeof window.renderAccountTerms==="function")window.renderAccountTerms();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
   updateWorkspaceWindowMeta();applyRoleAccess();
 });
 $("#semester").onchange=async e=>{
@@ -9407,10 +9410,8 @@ async function renderAccounts(){
 $("#accountSearch").oninput=renderAccounts;
 $("#createAccountBtn").onclick=()=>openCreateAccount();
 $("#leadershipMgmtBtn").onclick=()=>{
-  if(role()!=="superadmin")return oscAlert("Chỉ Chủ tịch được chỉnh chức vụ và lịch sử nhiệm kỳ.");
-  window.__oscOpenLeadership=true;
-  const b=document.querySelector('.nav button[data-tab="driveHub"]');
-  if(b)b.click();
+  if(typeof window.openAccountTerms!=="function")return oscAlert("Vui lòng tải lại trang để sử dụng chức vụ nhiệm kỳ.");
+  window.openAccountTerms();
 };
 $("#changeOwnPasswordBtn").onclick=()=>openOwnPasswordModal();
 
@@ -10951,7 +10952,12 @@ function renderAll(){
 <script src="/v95-operations.js?v=98"></script>
 <script src="/room-booking.js?v=103"></script>
 <script src="/room-booking-weekly.js?v=102"></script>
-<script src="/drive-hub.js?v=3"></script>
-<script src="/osc-v96-stagecraft.js?v=96.1"></script>
+<script src="/drive-hub.js?v=4"></script>
+<script src="/account-terms.js?v=1"></script>
+<script src="/member-office-profile.js?v=1"></script>
+<script src="/osc-v96-stagecraft.js?v=96.1">
+// Read-only semester catalog for the separate BCN office manager.
+window.oscAvailableTerms=()=>Object.keys(state.semesters||{});
+</script>
 </body>
 </html>
