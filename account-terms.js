@@ -36,10 +36,8 @@ function titleOf(a){
 }
 function termOptions(){
  const from=typeof window!=="undefined"&&typeof semester!=="undefined"?semester:"FA26";
- const options=[from,state.term,...(typeof state!=="undefined"?[]:[])];
- // Populate from clubState if available, plus the selected term.
- if(typeof globalThis!=="undefined"&&globalThis.state?.semesters)
-  options.push(...Object.keys(globalThis.state.semesters));
+ const options=[from,state.term];
+ if(typeof window.oscAvailableTerms==="function")options.push(...window.oscAvailableTerms());
  return [...new Set(options.filter(s=>/^(SP|SU|FA)\d{2}$/.test(s)))].sort((a,b)=>{
   const n=x=>Number(x.slice(2))*3+({SP:0,SU:1,FA:2}[x.slice(0,2)]||0);
   return n(b)-n(a);
