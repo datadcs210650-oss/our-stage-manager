@@ -38,7 +38,26 @@ async function check(){
  if(confirm?.accept!=="yes")return;
  const result=await api("handoff-accept");
  if(result.requiresRelogin)alert("Đã bàn giao quyền website. Cả hai tài khoản cần đăng xuất và đăng nhập lại.");
+ await window.refreshHandoffInvitation?.();
 }
+// Hide the recipient invitation by default and expose it only for the matching
+// authenticated UID while a not-expired handoff is actually pending.
+window.refreshHandoffInvitation=async function(){
+ const btn=document.getElementById("checkHandoffInviteBtn");
+ if(!btn)return;
+ btn.hidden=true;btn.classList.add("hidden");
+ const uid=currentFirebaseUser?.uid;
+ if(!uid||currentProfile?.role==="superadmin")return;
+ try{
+  const state=await api("handoff-status");
+  if(currentFirebaseUser?.uid!==uid)return;
+  if(state.pending?.toUid===uid&&Number(state.pending.expiresMs)>Date.now()){
+   btn.hidden=false;btn.classList.remove("hidden");
+  }
+ }catch{
+  // Fail closed on network, authorization, or permission errors.
+ }
+};
 window.checkAccountHandoff=check;
 window.openAccountHandoff=async()=>{
  try{
@@ -57,7 +76,7 @@ window.openAccountHandoff=async()=>{
   if(!f||f.confirmed!=="yes")return;
   const term=typeof semester==="string"?semester:"FA26";
   await api("handoff-start",{uid:f.uid,previousRole:f.previousRole,semester:term});
-  alert("Đã gửi đề nghị. Người kế nhiệm vào Tài khoản BCN → Bàn giao quyền Chủ tịch để chấp nhận trong 30 phút.");
+  alert("Đã gửi đề nghị. Người kế nhiệm vào Tài khoản của tôi để xác nhận lời mời trong 30 phút.");
  }catch(ex){alert(ex.message||String(ex))}
 };
 })();
