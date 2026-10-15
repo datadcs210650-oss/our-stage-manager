@@ -2651,7 +2651,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
           <div class="security-note"><b>Đổi mật khẩu trực tiếp, không gửi email.</b> Bạn nhập mật khẩu hiện tại để xác thực rồi đặt mật khẩu mới.</div>
           <div class="free-lookup-builder-section" style="margin-top:16px"><h3>Menu yêu thích</h3><p>Ghim các mục dùng thường xuyên lên đầu sidebar.</p><div id="favoriteMenuSettings" class="favorite-setting-grid"></div></div>
           <div id="authProviderBox" class="auth-provider-box"></div>
-          <div class="modal-actions" style="justify-content:flex-start;margin-top:14px"><button class="primary" id="changeOwnPasswordBtn">Đổi mật khẩu</button></div>
+          <div class="modal-actions" style="justify-content:flex-start;margin-top:14px"><button class="primary" id="changeOwnPasswordBtn">Đổi mật khẩu</button><button class="secondary" id="checkHandoffInviteBtn">Kiểm tra lời mời nhận quyền website</button></div>
         </div>
       </div>
     </section>
@@ -9415,6 +9415,10 @@ $("#accountHandoffBtn").onclick=()=>{
   window.openAccountHandoff();
 };
 $("#changeOwnPasswordBtn").onclick=()=>openOwnPasswordModal();
+$("#checkHandoffInviteBtn").onclick=()=>{
+  if(typeof window.checkAccountHandoff==="function")window.checkAccountHandoff().catch(e=>oscAlert(e.message||String(e)));
+  else oscAlert("Vui lòng tải lại trang để kiểm tra lời mời bàn giao.");
+};
 
 function accountPermissionHTML(prefix,p={},disabled=false){
   const row=(k,label)=>{
