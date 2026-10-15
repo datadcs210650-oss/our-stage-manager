@@ -6,7 +6,7 @@
 })(typeof window!=="undefined"?window:null,function(){
  "use strict";
  const MAX_CODES=500,MAX_ROWS=2000,MAX_BYTES=8*1024*1024;
- const valid=/^[A-Z0-9_-]{3,50}$/;
+ const valid=/^[A-Z0-9_-]{4,30}$/;
  const encoder=new TextEncoder();
  function codeOf(value){
   const s=String(value===null||value===undefined?"":value).trim().toUpperCase();
