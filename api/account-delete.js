@@ -27,8 +27,8 @@ async function deleteMatchingDocs(db,collection,uid) {
   }
   throw refusal("Có quá nhiều phiên xác thực cần dọn dẹp. Vui lòng thử lại sau.","osc/cleanup-incomplete");
 }
-async function deleteAccount({ actor,uid,confirmationEmail,auth=getAuth(),db=getDb() }) {
-  const target=await getTargetProfile(uid);
+async function deleteAccount({ actor,uid,confirmationEmail,auth=getAuth(),db=getDb(),targetOverride=null }) {
+  const target=targetOverride||await getTargetProfile(uid);
   ensureTargetManageable(actor,uid,target.data);
   const targetEmail=normalizeEmail(target.data.email);
   if(normalizeEmail(confirmationEmail)!==targetEmail)
