@@ -92,7 +92,6 @@ function header(){
   (chair()?'<button type="button" class="dh-light" data-v2="legacy">Kho sự kiện cũ (chuyển đổi)</button>':"")+
   (S.status?.connected?'<button type="button" class="dh-light" data-v2="disconnect">Ngắt Google cá nhân</button>':
    '<button type="button" data-v2="connect">Liên kết Google cá nhân</button>')+
-  (!chair()?'<button type="button" data-v2="handoff-check">Kiểm tra lời mời nhận quyền Chủ tịch</button>':'')+
   '</div><div class="dh-v2-steps"><div><b>1</b><span>Kết nối Google cá nhân</span></div>'+
   '<div><b>2</b><span>Chọn học kỳ và mở thư mục được chia sẻ</span></div>'+
   '<div><b>3</b><span>Chỉ tải lên/chia sẻ nếu Google cấp quyền</span></div></div>'+
@@ -231,17 +230,6 @@ async function upload(file){
  await call("upload-confirm",{ticket:sess.ticket,fileId:info.id});
  await loadFiles();paint();notify("Đã tải tệp thành công bằng Google cá nhân của bạn.");
 }
-async function handoffCheck(){
- const h=await lead("handoff-status");
- if(!h.pending)return notify("Không có đề nghị đang chờ hoặc dành cho bạn.");
- const d=h.pending;
- const role=chair()?"Người nhận: "+d.toUid:"Bạn được mời nhận quyền Chủ tịch";
- const ans=await dialog({heading:"Đề nghị bàn giao "+d.semester,description:role,
-  select:[{value:"no",label:"Đóng"},...(user()?.uid===d.toUid?[{value:"yes",label:"Xác nhận tiếp nhận chức Chủ tịch"}]:[])]});
- if(ans!=="yes")return;
- const result=await lead("handoff-accept");
- if(result.requiresRelogin)notify("Đã bàn giao. Vui lòng đăng xuất và đăng nhập lại để làm mới quyền.");
-}
 function bindClicks(){
  document.addEventListener("click",async ev=>{
   const b=ev.target.closest("[data-v2]");if(!b||!root()?.contains(b))return;
@@ -287,7 +275,6 @@ function bindClicks(){
     await loadFiles();paint();notify("Đã cập nhật tên.");return;
    }
    if(action==="share"){await sharing(b.dataset.id);return}
-   if(action==="handoff-check"){await handoffCheck();return}
   });
  });
  document.addEventListener("change",ev=>{
