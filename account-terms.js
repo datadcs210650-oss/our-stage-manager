@@ -94,7 +94,7 @@ function modal({heading,description="",fields=[],submit="Lưu",danger=false}){
      f.type==="textarea"?'<textarea name="'+esc(f.name)+'" rows="6">'+esc(f.value||"")+'</textarea>':
      '<input name="'+esc(f.name)+'" type="'+(f.type==="email"?"email":"text")+'" maxlength="'+(f.max||80)+
      '" value="'+esc(f.value||"")+'" '+(f.required===false?"":"required")+'/>')+'</label>').join("")+
-   '<div class="osc-term-modal-actions"><button type="button" data-term-close>Hủy</button>'+
+   '<div class="osc-term-modal-actions">'+(fields.length?'<button type="button" data-term-close>Hủy</button>':'')+
    '<button type="submit" class="'+(danger?"osc-term-danger":"primary")+'">'+esc(submit)+'</button></div></form>';
   const cancel=()=>finish(null);
   const keyboard=ev=>{if(ev.key==="Escape"){ev.preventDefault();cancel()}};
@@ -160,8 +160,7 @@ async function history(uid){
   description:"MSSV: "+(data.mssv||"Chưa có")+"\nĐã giữ chức vụ "+data.semesterCount+" học kỳ.\n\n"+
   (data.semesters||[]).map(x=>x.semester+" — "+x.positionTitle).join("\n")+
   "\n\nThống kê: "+counts,
-  fields:[{name:"action",type:"select",label:"Xem lịch sử",options:[{value:"ok",label:"Đóng cửa sổ"}]}],
-  submit:"Đóng"});
+  fields:[],submit:"Đóng"});
 }
 async function handoff(){
  if(!chair())return notice("Chỉ Chủ tịch mới có quyền bàn giao.");
