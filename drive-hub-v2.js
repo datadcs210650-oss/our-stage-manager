@@ -93,25 +93,30 @@ function header(){
   (S.status?.connected?'<button type="button" class="dh-light" data-v2="disconnect">Ngắt Google cá nhân</button>':
    '<button type="button" data-v2="connect">Liên kết Google cá nhân</button>')+
   (!chair()?'<button type="button" data-v2="handoff-check">Kiểm tra lời mời nhận quyền Chủ tịch</button>':'')+
-  '</div><p id="oscV2Notice" role="status" class="dh-v2-notice">'+e(S.notice)+'</p>'+
-  '<div class="dh-tabs"><button class="'+(S.tab==="drive"?"on":"")+'" data-v2="tab" data-tab="drive">Tài liệu học kỳ</button>'+
-  (chair()?'<button class="'+(S.tab==="people"?"on":"")+'" data-v2="tab" data-tab="people">Chức vụ & nhiệm kỳ</button>':'')+
-  '</div>';
+  '</div><div class="dh-v2-steps"><div><b>1</b><span>Kết nối Google cá nhân</span></div>'+
+  '<div><b>2</b><span>Chọn học kỳ và mở thư mục được chia sẻ</span></div>'+
+  '<div><b>3</b><span>Chỉ tải lên/chia sẻ nếu Google cấp quyền</span></div></div>'+
+  '<p id="oscV2Notice" role="status" class="dh-v2-notice">'+e(S.notice)+'</p>';
 }
 function viewDrive(){
- if(!S.status?.connected)return '<div class="dh-empty"><strong>Chưa kết nối Google Drive cá nhân</strong>'+
-  '<p>BCN, Admin và Chủ tịch phải đồng ý cấp quyền Google Drive trước khi truy cập kho tài liệu.</p>'+
-  '<button data-v2="connect">Kết nối Google</button></div>';
+ if(!S.status?.connected)return '<div class="dh-v2-guide"><h3>Chưa liên kết Google Drive</h3>'+
+  '<p>Bạn cần đăng nhập bằng Google của chính mình và chọn <strong>Cho phép</strong> để OSC đọc hoặc tải tài liệu. '+
+  'Đăng nhập website OSC không đồng nghĩa với đã cấp quyền Drive.</p>'+
+  '<button class="primary" data-v2="connect">Kết nối tài khoản Google của tôi ↗</button>'+
+  '<p class="dh-v2-muted">Sau khi kết nối, thư mục học kỳ chỉ hiện nếu Gmail CLB đã chia sẻ quyền xem hoặc chỉnh sửa cho bạn.</p></div>';
  if(!S.meta){
-  return '<div class="dh-empty">Không thể mở thư mục học kỳ '+e(S.sem)+'. '+
-   e(S.notice||"Học kỳ chưa gắn Drive hoặc tài khoản Google chưa được chia sẻ quyền.")+
-   (chair()?'<p><button data-v2="link-set">Thiết lập link Drive học kỳ</button></p>':"")+'</div>';
+  return '<div class="dh-v2-guide"><h3>Chưa truy cập được Drive học kỳ '+e(S.sem)+'</h3>'+
+   '<p>'+e(S.notice||"Học kỳ chưa có link hoặc tài khoản Google cá nhân chưa được Gmail CLB chia sẻ quyền.")+'</p>'+
+   '<p class="dh-v2-muted">Bạn có thể kiểm tra Gmail đã kết nối, hoặc nhờ người quản lý Gmail CLB cấp quyền Viewer/Editor cho thư mục này.</p>'+
+   (chair()?'<button class="primary" data-v2="link-set">Liên kết / sửa link Drive học kỳ</button>':"")+'</div>';
  }
  let html='<div class="dh-heading"><h3>'+e(S.meta.name||("Drive "+S.sem))+'</h3>'+
   '<div><a target="_blank" rel="noopener noreferrer" href="'+e(S.meta.folderUrl)+'">Mở Drive học kỳ ↗</a>'+
   '<button data-v2="copy" data-url="'+e(S.meta.folderUrl)+'">Sao chép link</button>'+
   (chair()?'<button data-v2="link-set">Thay đổi link học kỳ</button><button data-v2="policy">Chính sách chia sẻ</button>':"")+
-  '</div></div><p class="dh-tip">Chủ sở hữu thư mục: Gmail CLB. Các thao tác được Google Drive kiểm tra theo tài khoản đang kết nối.</p>';
+  '</div></div><p class="dh-v2-permission"><strong>Quyền hiện tại: '+(S.meta.canUpload?"Người chỉnh sửa (Editor)":"Người xem (Viewer)")+
+  '</strong> · Tài liệu được Google Drive lưu trữ, không chiếm dung lượng Vercel. '+
+  (S.meta.canUpload?"Bạn có thể tải tệp tối đa 100 MB qua OSC.":"Bạn có thể đọc tài liệu nhưng không được tải tệp lên.")+'</p>';
  html+='<div class="dh-breadcrumb"><button data-v2="root">📁 '+e(S.sem)+'</button>'+S.path.map((v,i)=>
   '<span aria-hidden="true">›</span><button data-v2="crumb" data-depth="'+i+'">'+e(v.name)+'</button>').join("")+'</div>';
  html+='<div class="dh-heading"><h3>'+e(S.path.length?S.path[S.path.length-1].name:"Thư mục học kỳ")+'</h3><div>'+
@@ -140,24 +145,9 @@ function viewDrive(){
  if(!S.folders.length&&!S.items.length)html+='<div class="dh-empty">Chưa có tệp hoặc thư mục con trong vị trí này.</div>';
  return html;
 }
-function viewPeople(){
- return '<div class="dh-heading"><h3>Quản lý chức vụ BCN theo học kỳ</h3><div>'+
-  '<button data-v2="people-refresh">Tải danh sách</button>'+
-  '<button data-v2="titles-edit">Thiết lập chức vụ '+e(S.sem)+'</button></div></div>'+
-  '<p class="dh-tip">Chức danh hiển thị tách biệt khỏi quyền hệ thống. MSSV và chức vụ mỗi kỳ được lưu riêng; không tự gia hạn quyền khi chuyển kỳ.</p>'+
-  '<div class="dh-v2-people">'+S.accounts.map(a=>'<div class="dh-file-row"><div class="dh-file-info">'+
-   '<span class="dh-file-name">'+e(a.displayName||a.email)+'</span>'+
-   '<small>'+e(a.email)+' · '+e(a.role==="superadmin"?"Chủ tịch":a.role==="admin"?"Admin":"BCN")+
-   ' · MSSV: '+e(a.mssv||"Chưa gán")+'</small></div>'+
-   '<div class="dh-row-actions"><button data-v2="history" data-uid="'+e(a.uid)+'">Lịch sử</button>'+
-   '<button data-v2="assign" data-uid="'+e(a.uid)+'" data-name="'+e(a.displayName||a.email)+'">Chỉnh chức vụ</button></div></div>').join("")+'</div>'+
-  '<div class="dh-heading"><h3>Bàn giao quyền Chủ tịch</h3><div>'+
-  '<button data-v2="handoff-start">Đề nghị bàn giao</button><button data-v2="handoff-check">Kiểm tra đề nghị</button></div></div>'+
-  '<p class="dh-tip">Cần xác thực lại tài khoản trong 10 phút gần đây. Người kế nhiệm phải có email đã xác minh, xác nhận tiếp nhận; hai bên sẽ phải đăng nhập lại.</p>';
-}
 function paint(){
  if(!root())return;
- root().innerHTML=header()+(S.tab==="people"?viewPeople():viewDrive());
+ root().innerHTML=header()+viewDrive();
 }
 async function linkSet(){
  const link=await dialog({heading:"Thư mục Drive tổng học kỳ "+S.sem,
@@ -241,55 +231,6 @@ async function upload(file){
  await call("upload-confirm",{ticket:sess.ticket,fileId:info.id});
  await loadFiles();paint();notify("Đã tải tệp thành công bằng Google cá nhân của bạn.");
 }
-async function peopleRefresh(){
- const list=await lead("list");S.accounts=list.accounts||[];paint();
-}
-async function assign(uid,name){
- const mssv=await dialog({heading:"MSSV của "+name,description:"Mỗi mã số sinh viên chỉ liên kết với một tài khoản."});if(!mssv)return;
- const title=await dialog({heading:"Chức vụ "+S.sem,description:"Lưu chức vụ của đúng học kỳ, không ghi đè học kỳ khác."});if(!title)return;
- async function save(confirmHistoryChange){
-  return lead("assign",{uid,semester:S.sem,mssv,positionTitle:title,confirmHistoryChange});
- }
- try{await save(false)}catch(err){
-  if(err.code!=="osc/position-confirm")throw err;
-  const yes=await dialog({heading:"Sửa lịch sử chức vụ?",description:"Thao tác được lưu nhật ký. Bạn xác nhận sửa bản ghi học kỳ này?",
-   select:[{value:"no",label:"Hủy"},{value:"yes",label:"Xác nhận"}]});
-  if(yes!=="yes")return;await save(true);
- }
- await peopleRefresh();notify("Đã lưu MSSV và chức vụ cho "+S.sem+".");
-}
-async function history(uid){
- const h=await lead("history",{uid});S.history=h;
- const details=h.semesters.map(x=>x.semester+" · "+x.positionTitle+" ("+x.systemRoleAtTerm+")").join("\n");
- await dialog({heading:"Lịch sử BCN — "+h.displayName,
-  description:"MSSV: "+h.mssv+"\nTham gia "+h.semesterCount+" học kỳ\n"+
-  "Thống kê: "+Object.entries(h.titleCounts).map(([t,n])=>t+": "+n+" kỳ").join(", ")+"\n"+details,
-  select:[{value:"ok",label:"Đóng"}]});
-}
-async function titlesEdit(){
- const existing=await lead("titles-get",{semester:S.sem});
- const raw=await dialog({heading:"Danh sách chức vụ "+S.sem,
-  description:"Nhập các chức vụ, cách nhau bằng dấu ;. Hệ thống chỉ đổi nhãn hiển thị, không nâng quyền bảo mật.",
-  value:(existing.titles||[]).join("; ")});
- if(raw===null)return;
- await lead("titles-set",{semester:S.sem,titles:raw.split(";").map(x=>x.trim()).filter(Boolean)});
- notify("Đã lưu danh mục chức vụ.");
-}
-async function handoffStart(){
- const choices=S.accounts.filter(a=>a.active&&a.role!=="superadmin");
- if(!choices.length)return notify("Chưa có tài khoản hợp lệ để nhận quyền.");
- const uid=await dialog({heading:"Người kế nhiệm",description:"Người nhận cần có email đăng nhập đã xác minh.",
-  select:choices.map(a=>({value:a.uid,label:a.displayName+" · "+a.email}))});
- if(!uid)return;
- const role=await dialog({heading:"Quyền của bạn sau bàn giao",select:[
-  {value:"admin",label:"Admin"},{value:"bcn",label:"BCN"}]});
- if(!role)return;
- const check=await dialog({heading:"Xác nhận đề nghị bàn giao",description:"Cần đăng nhập lại gần đây. Người kế nhiệm xác nhận tiếp nhận thì quyền Chủ tịch mới chuyển.",
-  select:[{value:"no",label:"Hủy"},{value:"yes",label:"Xác nhận gửi đề nghị"}]});
- if(check!=="yes")return;
- await lead("handoff-start",{uid,semester:S.sem,previousRole:role});
- notify("Đã tạo đề nghị bàn giao. Người kế nhiệm cần vào Kho tài liệu → Nhận quyền Chủ tịch trong 30 phút.");
-}
 async function handoffCheck(){
  const h=await lead("handoff-status");
  if(!h.pending)return notify("Không có đề nghị đang chờ hoặc dành cho bạn.");
@@ -306,7 +247,6 @@ function bindClicks(){
   const b=ev.target.closest("[data-v2]");if(!b||!root()?.contains(b))return;
   const action=b.dataset.v2;
   await withBusy(async()=>{
-   if(action==="tab"){S.tab=b.dataset.tab;paint();if(S.tab==="people")await peopleRefresh();return}
    if(action==="connect"){
     const d=await call("connect-start");const u=new URL(d.url);
     if(u.protocol!=="https:"||u.hostname!=="accounts.google.com")throw Error("Đường dẫn OAuth không hợp lệ.");
@@ -347,11 +287,6 @@ function bindClicks(){
     await loadFiles();paint();notify("Đã cập nhật tên.");return;
    }
    if(action==="share"){await sharing(b.dataset.id);return}
-   if(action==="people-refresh"){await peopleRefresh();return}
-   if(action==="assign"){await assign(b.dataset.uid,b.dataset.name);return}
-   if(action==="history"){await history(b.dataset.uid);return}
-   if(action==="titles-edit"){await titlesEdit();return}
-   if(action==="handoff-start"){await handoffStart();return}
    if(action==="handoff-check"){await handoffCheck();return}
   });
  });
@@ -372,9 +307,9 @@ function bindClicks(){
 bindClicks();
 window.renderDriveHubV2=async function(){
  S.sem=String(typeof semester!=="undefined"?semester:"FA26").toUpperCase();
- S.tab=window.__oscOpenLeadership?"people":"drive";window.__oscOpenLeadership=false;
+ S.tab="drive";
  S.notice="";S.meta=null;S.folder="";S.path=[];S.next="";
- try{await loadBase();if(S.tab==="people"&&chair())await peopleRefresh()}catch(err){S.notice=err.message||String(err);paint()}
+ try{await loadBase()}catch(err){S.notice=err.message||String(err);paint()}
 };
 window.renderDriveHub=window.renderDriveHubV2;
 })();
