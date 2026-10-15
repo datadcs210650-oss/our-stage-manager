@@ -2,6 +2,8 @@
 
 const {
   getAuth,
+  getDb,
+  admin,
   sendJson,
   ensurePost,
   readJsonBody,
@@ -16,6 +18,13 @@ module.exports = async function handler(req, res) {
   if (!ensurePost(req, res)) return;
   try {
     const actor = await requireManager(req);
+    // Password reset is account takeover-capable. Require fresh authentication.
+    const authenticatedAt = Number(actor.decoded.auth_time || 0);
+    if (!Number.isFinite(authenticatedAt) || Date.now()/1000-authenticatedAt > 600) {
+      const err = new Error("Vui lòng đăng xuất và đăng nhập lại trước khi đặt lại mật khẩu cho thành viên.");
+      err.code = "osc/forbidden";
+      throw err;
+    }
     const body = readJsonBody(req);
     const uid = validateUid(body.uid);
     const target = await getTargetProfile(uid);
@@ -31,7 +40,11 @@ module.exports = async function handler(req, res) {
     const auth = getAuth();
     await auth.updateUser(uid, { password });
     await auth.revokeRefreshTokens(uid);
-
+    // Audit only identities, never password values.
+    await getDb().collection("oscSecurityAudit").add({
+      action:"account-password-reset",targetUid:uid,by:actor.decoded.uid,
+      at:admin.firestore.FieldValue.serverTimestamp()
+    }).catch(e=>console.error("OSC security audit write failed",String(e.code||"unknown")));
     sendJson(res, 200, { ok: true, uid });
   } catch (error) {
     handleError(res, error);
