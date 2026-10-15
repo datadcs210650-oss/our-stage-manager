@@ -31,7 +31,7 @@ test("Ban Chủ nhiệm uses member roster, separate from BCN login accounts",()
  assert.match(board,/collection\("members"\)/);
  assert.match(board,/collection\("oscBoardAppointments"\)/);
  assert.doesNotMatch(board,/getAuth\(|collection\("users"\)/);
- assert.match(frontend,/board-assign/);
+ assert.match(frontend,/request\("assign"/);
  assert.match(office,/board-profile/);
  assert.match(html,/data-tab="boardDirectors"/);
  assert.match(html,/data-tab="accounts"/);
