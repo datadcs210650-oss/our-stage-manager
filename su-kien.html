@@ -592,7 +592,7 @@ body.v41-event-page #successMessage{white-space:pre-line!important;overflow-wrap
   <div id="loading" class="message">Đang tải cổng sự kiện…</div>
   <div id="closed" class="head closed" style="display:none">
     <div class="brand"><img src="/logo-ui-centered.png"><span>OUR STAGE</span></div>
-    <h1>Cổng sự kiện đã đóng</h1><p>Cổng này hiện không nhận thêm phản hồi.</p>
+    <h1 id="closedTitle">Cổng sự kiện đã đóng</h1><p>Cổng này hiện không nhận thêm phản hồi.</p>
   </div>
   <div id="formView" style="display:none">
     <div class="head">
@@ -654,6 +654,7 @@ firebase.initializeApp({
 });
 const db=firebase.firestore(),$=s=>document.querySelector(s);try{db.settings({experimentalAutoDetectLongPolling:true,useFetchStreams:false})}catch(e){}
 const eventId=new URLSearchParams(location.search).get("event")||"";
+function validPublicEventId(id){return /^[A-Za-z0-9_-]{1,180}$/.test(String(id||""))}
 let eventConfig=null;
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
@@ -806,15 +807,15 @@ function eventTs(v){return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(v?new D
 function scheduleEventRecheck(){if(eventScheduleTimer)clearTimeout(eventScheduleTimer);if(!eventConfig)return;const now=Date.now(),times=[eventTs(eventConfig.openAt),eventTs(eventConfig.closeAt)].filter(x=>x>now);if(times.length)eventScheduleTimer=setTimeout(()=>applyPublicEventState(),Math.min(...times)-now+150)}
 function applyPublicEventState({forceRender=false}={}){
   if(eventSubmissionComplete||eventSeatSelecting)return;
-  if(!eventConfig){showClosed("Cổng sự kiện không tồn tại.");return}
+  if(!eventConfig){showClosed("Cổng sự kiện không tồn tại.","Không tìm thấy sự kiện");return}
   const now=Date.now(),start=eventTs(eventConfig.openAt),end=eventTs(eventConfig.closeAt);
 
-  if(eventConfig.isOpen!==true){showClosed("Cổng sự kiện đã được đóng.");return}
+  if(eventConfig.isOpen!==true){showClosed("Sự kiện hiện không nhận thêm phản hồi.",publicClosedHeading(eventConfig));return}
   if(start&&now<start){
-    showClosed(`Cổng sẽ mở lúc ${new Date(start).toLocaleString("vi-VN")}.`);
+    showClosed(`Cổng sẽ mở lúc ${new Date(start).toLocaleString("vi-VN")}.`,publicClosedHeading(eventConfig,"upcoming"));
     scheduleEventRecheck();return;
   }
-  if(end&&now>=end){showClosed("Cổng sự kiện đã hết thời gian nhận phản hồi.");return}
+  if(end&&now>=end){showClosed("Sự kiện đã hết thời gian nhận phản hồi.",publicClosedHeading(eventConfig));return}
 
   $("#closed").style.display="none";
   $("#loading").style.display="none";
@@ -828,13 +829,13 @@ function applyPublicEventState({forceRender=false}={}){
 }
 async function init(){
   
-  if(!eventId){showClosed("Link sự kiện không hợp lệ.");return}
+  if(!validPublicEventId(eventId)){showClosed("Link sự kiện không hợp lệ.","Liên kết sự kiện không hợp lệ");return}
 
   eventUnsub=db.collection("eventPortals").doc(eventId).onSnapshot(
     {includeMetadataChanges:false},
     snap=>{
       if(eventSubmissionComplete)return;
-      if(!snap.exists){showClosed("Cổng sự kiện không tồn tại.");return}
+      if(!snap.exists){eventConfig=null;showClosed("Cổng sự kiện không tồn tại.","Không tìm thấy sự kiện");return}
       const incoming=snap.data()||{};
       const nextSignature=publicRemoteSignature(incoming);
       const schemaChanged=publicSchemaSignature(incoming)!==eventRenderedSchemaSignature;
@@ -850,12 +851,56 @@ async function init(){
     },
     e=>{
       console.error("event portal snapshot",e);
-      showClosed("Cổng sự kiện đã đóng, hết hạn hoặc hiện không thể truy cập.");
+      // Closed portals cannot be read by anonymous users under Firestore Rules.
+      // Resolve only their public name/status via a minimal server endpoint.
+      void resolveClosedPublicEvent();
     }
   );
 }
 
-function showClosed(message="Cổng sự kiện hiện không nhận phản hồi."){$("#loading").style.display="none";$("#formView").style.display="none";$("#closed").style.display="block";const p=$("#closed p");if(p)p.textContent=message}
+async function resolveClosedPublicEvent(){
+  const fallbackMessage="Không thể tải thông tin sự kiện. Liên kết có thể đã hết hạn hoặc bạn không có quyền truy cập.";
+  showClosed("Đang kiểm tra trạng thái sự kiện…","Đang kiểm tra sự kiện");
+  if(!validPublicEventId(eventId)){
+    showClosed(fallbackMessage,"Không thể truy cập sự kiện");return;
+  }
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),8000);
+  try{
+    const response=await fetch("/api/event-public-status?event="+encodeURIComponent(eventId),{
+      method:"GET",headers:{"Accept":"application/json"},cache:"no-store",signal:controller.signal
+    });
+    if(!response.ok)throw Error("Không thể tra cứu tên sự kiện.");
+    const result=await response.json();
+    if(result?.ok===true&&result.closed===true&&typeof result.title==="string"&&result.title.trim()){
+      const title=publicClosedHeading({title:result.title});
+      showClosed(result.reason==="expired"?
+        "Sự kiện đã hết thời gian nhận phản hồi.":
+        "Sự kiện hiện không nhận thêm phản hồi.",title);
+      document.title=title+" • Our Stage";
+      return;
+    }
+  }catch(e){
+    console.warn("Không lấy được tiêu đề sự kiện đã đóng",String(e?.message||e));
+  }finally{
+    clearTimeout(timeout);
+  }
+  showClosed(fallbackMessage,"Không thể truy cập sự kiện");
+}
+function publicClosedHeading(config,status="closed"){
+  // Only a successfully loaded event record may provide a public event name.
+  // Always use textContent: event titles must not be interpreted as HTML.
+  const title=String(config?.title||"").replace(/[\x00-\x1F\x7F]/g," ").trim().slice(0,200);
+  if(!title)return status==="upcoming"?"Cổng sự kiện chưa mở":"Cổng sự kiện đã đóng";
+  return title+(status==="upcoming"?" chưa mở":" đã đóng");
+}
+function showClosed(message="Cổng sự kiện hiện không nhận phản hồi.",heading="Cổng sự kiện đã đóng"){
+  $("#loading").style.display="none";
+  $("#formView").style.display="none";
+  $("#closed").style.display="block";
+  const title=$("#closedTitle");if(title)title.textContent=heading;
+  const p=$("#closed p");if(p)p.textContent=message;
+}
 function renderFields({force=false}={}){
   const form=$("#eventForm"),mount=$("#eventFieldsMount"),status=$("#eventFieldStatus");
   if(!form||!mount)return;
