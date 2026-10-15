@@ -430,6 +430,9 @@ module.exports=async function handler(req,res){
       if(action.length>70)throw bad("Thao tác Drive không hợp lệ.");
       return require("../lib/drive-personal-handler")(req,res);
     }
+    if(action.startsWith("board-")){
+      return require("../lib/board-handler")(req,res);
+    }
     if(action.startsWith("leadership-")){
       if(action.length>70)throw bad("Thao tác chức vụ không hợp lệ.");
       return require("../lib/leadership-handler")(req,res);
