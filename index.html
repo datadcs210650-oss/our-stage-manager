@@ -2135,6 +2135,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/room-booking-weekly.css?v=102">
 <link rel="stylesheet" href="/drive-hub.css?v=98">
 <link rel="stylesheet" href="/qr-bulk.css?v=1">
+<link rel="stylesheet" href="/member-compare.css?v=1">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
 <body class="auth-login">
@@ -2257,7 +2258,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <span class="secure-session-chip" id="secureSessionChip" title="Phiên đăng nhập có giới hạn thời gian">◉ SESSION</span>
         <button class="global-search-btn manual-sync-btn" id="manualSyncBtn" type="button" title="Tải dữ liệu mới nhất từ Firestore và đồng bộ cổng tra cứu">↻ <span>Đồng bộ</span></button>
         <span class="manual-sync-status" id="manualSyncStatus">RT ECO</span>
-        <button class="admin-chip" id="adminChip">ADMIN ▾</button>
+        <button class="admin-chip" id="adminChip" type="button" title="Tài khoản đang đăng nhập">Tài khoản ▾</button>
       </div>
     </header>
     <div id="workspaceDock" class="workspace-dock" aria-label="Các cửa sổ chức năng đã mở"></div>
@@ -2353,10 +2354,23 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button class="secondary" id="uploadExcelBtn">Upload Excel</button>
         <input class="file-input" id="excelInput" type="file" accept=".xlsx,.xls">
         <button class="secondary" id="exportMembersBtn">Xuất DS học kỳ</button>
+        <button class="secondary" id="memberCompareOpenBtn" type="button">Đối chiếu MSSV</button>
         <button class="secondary" id="memberFilterBtn">Bộ lọc</button>
         <select id="savedFilterSelect" class="compact-select"><option value="">Bộ lọc đã lưu</option></select>
         <button class="primary" id="addMemberListBtn">+ Thêm thành viên</button>
       </div>
+      <section id="memberComparePanel" class="osc-member-compare" aria-label="Đối chiếu MSSV" hidden>
+        <div class="osc-member-compare-head">
+          <div><div class="eyebrow">ĐỐI CHIẾU CỤC BỘ</div><h3>Đối chiếu MSSV học kỳ <span id="memberCompareTerm"></span></h3><p>Chọn Excel/CSV có cột MSSV. Hệ thống chỉ so mã với thành viên của học kỳ hiện tại, không tải file lên máy chủ và không lưu tên, email hay thông tin từ file đối chiếu.</p></div>
+          <button id="memberCompareClose" type="button" class="secondary">Đóng và xóa kết quả</button>
+        </div>
+        <div class="osc-member-compare-controls">
+          <label for="memberCompareFile">Danh sách cần đối chiếu (.xlsx, .xls, .csv; tối đa 8 MB)<input id="memberCompareFile" type="file" accept=".xlsx,.xls,.csv" aria-describedby="memberCompareStatus"></label>
+          <button id="memberCompareDownload" type="button" class="primary" disabled>Tải MSSV trùng (.xlsx)</button>
+        </div>
+        <p id="memberCompareStatus" role="status">Chưa chọn file. Không có dữ liệu đối chiếu nào được lưu.</p>
+        <div id="memberComparePreview" class="osc-member-compare-preview"></div>
+      </section>
       <div class="import-order-note">Thứ tự danh sách được giữ theo đúng thứ tự dòng trong file Excel. Khi upload lại danh sách, các thành viên trong file sẽ được sắp đúng theo thứ tự file và không còn bị xáo trộn do Firestore.</div>
       <div id="memberBulkBar" class="member-bulk-bar hidden">
         <span>Đã chọn <strong id="memberSelectedCount">0</strong> thành viên</span>
@@ -2707,6 +2721,13 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <button class="secondary hidden" id="accountHandoffBtn" hidden disabled aria-hidden="true">Bàn giao quyền Chủ tịch</button>
       </div>
       <div class="section-note">Chỉ quản lý tài khoản đăng nhập, mật khẩu và quyền sử dụng OSC. <b>Chức vụ theo học kỳ thuộc menu Ban Chủ nhiệm</b> và được lấy từ Danh sách thành viên.</div>
+      <section class="osc-temp-access" aria-labelledby="oscTempAccessTitle">
+        <div class="osc-temp-access-head">
+          <div><div class="eyebrow">PHÂN QUYỀN BCN</div><h3 id="oscTempAccessTitle">Cấp quyền BCN theo thời gian</h3><p>Chỉ cấp quyền tạm thời; hệ thống tự ngừng quyền khi đến giờ kết thúc. Có thể thu hồi ngay bất kỳ lúc nào.</p></div>
+          <div class="osc-temp-access-actions"><button type="button" class="secondary" onclick="v95RefreshTemporaryPermissions()">Làm mới</button><button type="button" class="primary" onclick="v95OpenTempGrant()">+ Cấp quyền theo giờ</button></div>
+        </div>
+        <div id="v95TempList" class="v95-list compact" role="status">Mở mục này để tải danh sách quyền theo giờ…</div>
+      </section>
       <div class="table-card accounts-table">
         <table>
           <thead><tr><th>Tên</th><th>Email đăng nhập</th><th>Quyền hệ thống</th><th>Trạng thái</th><th>Quyền xem</th><th>Thao tác</th></tr></thead>
@@ -3113,6 +3134,13 @@ let realtimeFirstSnapshot={members:true,finance:true,events:true,config:true};
 let lookupLastAutoSyncAt=0,lookupAutoSyncInFlight=false,lookupAutoSyncPending=false;
 
 function role(){return currentProfile?.role||""}
+function updateAdminIdentityChip(){
+  const chip=$("#adminChip");if(!chip)return;
+  const label=String(currentProfile?.displayName||currentFirebaseUser?.displayName||"").trim().replace(/\s+/g," ").slice(0,80);
+  const roleLabel=role()==="superadmin"?"Super Admin":role()==="admin"?"Admin":"BCN";
+  chip.textContent=(label||roleLabel)+" ▾";
+  chip.title=label?label+" · "+roleLabel:roleLabel;
+}
 function canEditClub(){return role()==="admin"||role()==="superadmin"}
 function isBCN(){return role()==="bcn"}
 let temporaryPermissionExpiryTimer=null;
@@ -3269,7 +3297,7 @@ function watchOwnProfileRealtime(){
     currentProfile={id:snap.id,...snap.data()};
     const afterSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{},temporaryPermissions:currentProfile?.temporaryPermissions||null});
     scheduleTemporaryPermissionExpiry();
-    $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
+    updateAdminIdentityChip();
     renderAll();
     applyRoleAccess();
     if(beforeSig&&beforeSig!==afterSig){
@@ -4355,7 +4383,7 @@ function forceShowAuthorizedShell(){
   document.body.classList.add("auth-admin");
   $("#loginScreen")?.classList.add("hidden");
   $("#app")?.classList.remove("hidden");
-  if($("#adminChip"))$("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
+  if($("#adminChip"))updateAdminIdentityChip();
 }
 
 async function bootstrapAuthorizedSession(user){
@@ -4449,7 +4477,7 @@ fbAuth.onAuthStateChanged(async user=>{
   if(authFlowHold)return;
   if(!user){
     stopSecureSessionWatch();stopAttendancePortalWatchers();stopEventQrSummaryPolling();stopEventStudentQrScanner({silent:true,keepWatch:false}).catch(()=>{});if(checkinUnsub){try{checkinUnsub()}catch{}checkinUnsub=null}
-    persistSafeLocalState();currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
+    persistSafeLocalState();window.OSCMemberCompare?.clear();currentFirebaseUser=null;currentProfile=null;initialRouteApplied=false;
     document.body.classList.remove("auth-admin","sidebar-open");document.body.classList.add("auth-login");
     $("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden");return;
   }
@@ -4514,7 +4542,7 @@ function showApp(){
   document.body.classList.add("auth-admin");
   $("#loginScreen").classList.add("hidden");
   $("#app").classList.remove("hidden");
-  $("#adminChip").textContent=(role()==="bcn"?"BCN":role().toUpperCase())+" ▾";
+  updateAdminIdentityChip();
   renderAll();
   applyRoleAccess();
   scheduleTemporaryPermissionExpiry();
@@ -4671,6 +4699,8 @@ function applyRoleAccess(){
   ["#downloadAttendanceTemplateBtn","#uploadAttendanceBtn","#qrAttendanceBtn"].forEach(s=>toggle(s,ea));
   ["#addMemberBtn","#downloadTemplateBtn","#uploadExcelBtn","#addMemberListBtn","#deleteSelectedMembersBtn","#markSelectedLeftBtn"].forEach(s=>toggle(s,em));
   toggle("#uploadFundBtn",ef);
+  toggle("#memberCompareOpenBtn",canViewModule("members"));
+  if(!canViewModule("members"))window.OSCMemberCompare?.clear();
   // Quyền bàn giao: chỉ Super Admin đang hoạt động. Không dùng chức vụ BCN để suy ra quyền.
   const handoffAllowed=role()==="superadmin"&&currentProfile?.active===true;
   const handoffBtn=$("#accountHandoffBtn");
@@ -4719,10 +4749,11 @@ $$(".nav button[data-tab]").forEach(b=>b.onclick=()=>{
   b.scrollIntoView({block:"nearest",behavior:"smooth"});
   $("#pageTitle").textContent=navLabel(tab);noteWorkspace(tab);closeMobileSidebar();
   if(tab!=="events")stopEventQrSummaryPolling();if(tab==="dashboard")renderDashboard();if(tab==="attention")renderAttention();if(tab==="divisions")renderDivisions();if(tab==="settings")renderSettings();if(tab==="operations"&&typeof renderV95Operations==="function")renderV95Operations();if(tab==="roomBooking"&&typeof renderRoomBooking==="function")renderRoomBooking();if(tab==="driveHub"&&typeof renderDriveHub==="function")renderDriveHub();
-  if(tab==="boardDirectors"&&typeof window.renderBoardDirectors==="function")window.renderBoardDirectors();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts")renderAccounts();
+  if(tab==="boardDirectors"&&typeof window.renderBoardDirectors==="function")window.renderBoardDirectors();if(tab==="lookupPortal")renderLookupPortal();if(tab==="freeLookup")renderFreeLookup();if(tab==="events"){renderEvents();startEventQrSummaryPolling();repairCurrentSemesterEventFields().catch(e=>console.warn("event repair",e));}if(tab==="ticketStudio")renderTicketStudio();if(tab==="memberQr")renderMemberQrAdmin();if(tab==="myAccount")renderMyAccount();if(tab==="approvals")loadApprovalRequests();if(tab==="audit")loadAuditLogs();if(tab==="trash")loadTrashBin();if(tab==="accounts"){renderAccounts();window.v95RefreshTemporaryPermissions?.(false);}
   updateWorkspaceWindowMeta();applyRoleAccess();
 });
 $("#semester").onchange=async e=>{
+  window.OSCMemberCompare?.clear();
   semester=e.target.value;
   selectedInfoId=null;
   selectedDivisionId="";
@@ -11003,10 +11034,12 @@ function renderAll(){
 <script src="/seat-studio-admin.js?v=95"></script>
 <script src="/ticket-studio-admin.js?v=95"></script>
 <script src="/event-routing-admin.js?v=95"></script>
-<script src="/v95-operations.js?v=98"></script>
+<script src="/v95-operations.js?v=99"></script>
 <script src="/room-booking.js?v=103"></script>
 <script src="/room-booking-weekly.js?v=102"></script>
 <script src="/drive-hub.js?v=5"></script>
+<script src="/member-compare-core.js?v=1"></script>
+<script src="/member-compare.js?v=1"></script>
 <script src="/qr-bulk-core.js?v=1"></script>
 <script src="/qr-bulk-ui.js?v=1"></script>
 <script src="/board-directors.js?v=1"></script>

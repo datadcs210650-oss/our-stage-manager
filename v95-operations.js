@@ -22,9 +22,8 @@ function selectedEventOptions(){
 }
 function operationsShell(){
   if(!canEditClub())return '<div class="empty">Chỉ Admin hoặc Super Admin có quyền truy cập Điều hành nâng cao.</div>';
-  return '<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER</div><h2>Điều hành nâng cao</h2><p>Quản lý quyền tạm thời và theo dõi quota Firebase. Lịch phòng được chuyển sang menu Room Booking.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>'+
-    '<div class="v95-grid"><section class="v95-card"><div class="v95-card-head"><div><h3>Temporary Permissions</h3><p>Cấp quyền BCN tự hết hạn theo giờ kết thúc sự kiện.</p></div><button class="primary" onclick="v95OpenTempGrant()">+ Cấp quyền</button></div><div id="v95TempList" class="v95-list compact"></div></section>'+
-    '<section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section></div>';
+  return '<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER</div><h2>Điều hành nâng cao</h2><p>Theo dõi quota Firebase và vận hành hệ thống. Quyền BCN theo giờ được quản lý tại menu Tài khoản BCN.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>'+
+    '<div class="v95-grid"><section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section></div>';
 }
 async function renderV95Operations(){
   const root=q("#v95OperationsRoot");if(!root)return;
@@ -37,9 +36,6 @@ async function v95RefreshOperations(show=true){
   if(!canEditClub()||opLoading)return;
   opLoading=true;
   try{
-    const r=await api("/api/operations",{action:"temp-list"});
-    opTemp=r.rows||[];
-    renderTemp();
     await v95LoadQuota(false);
     if(show&&typeof toast==="function")toast("Đã cập nhật Điều hành nâng cao");
   }catch(e){console.error("v95 operations",e);if(show)oscAlert("Không tải được Điều hành nâng cao: "+(e.message||e))}
@@ -47,20 +43,40 @@ async function v95RefreshOperations(show=true){
 }
 window.v95RefreshOperations=v95RefreshOperations;
 
+let tempLoading=false,tempLoaded=false;
+async function v95RefreshTemporaryPermissions(show=true){
+  const root=q("#v95TempList");
+  if(!root||!canEditClub()||!currentFirebaseUser||tempLoading)return;
+  const uid=currentFirebaseUser.uid;
+  tempLoading=true;root.textContent="Đang tải danh sách quyền theo giờ…";
+  try{
+    const response=await api("/api/operations",{action:"temp-list"});
+    if(!canEditClub()||currentFirebaseUser?.uid!==uid)return;
+    opTemp=response.rows||[];tempLoaded=true;renderTemp();
+    if(show&&typeof toast==="function")toast("Đã cập nhật quyền BCN theo giờ");
+  }catch(e){
+    tempLoaded=false;root.textContent="Không tải được quyền theo giờ: "+String(e.message||e);
+  }finally{tempLoading=false}
+}
+window.v95RefreshTemporaryPermissions=v95RefreshTemporaryPermissions;
 function renderTemp(){
   const root=q("#v95TempList");if(!root)return;
-  const active=opTemp.filter(x=>x.temporaryPermissions?.active);
-  root.innerHTML=active.length?active.map(x=>`<div class="v95-list-row"><div><b>${esc95(x.displayName||x.email)}</b><span>${esc95(x.temporaryPermissions.label||"Quyền tạm thời")}</span><small>Hết hạn ${fmt(x.temporaryPermissions.expiresAt)}</small></div><button class="danger" onclick="v95ClearTemp('${x.uid}')">Thu hồi</button></div>`).join(""):'<div class="empty">Không có quyền tạm thời đang hoạt động.</div>';
+  const active=opTemp.filter(x=>x.active===true&&x.role==="bcn"&&x.temporaryPermissions?.active);
+  root.innerHTML=active.length?active.map(x=>`<div class="v95-list-row"><div><b>${esc95(x.displayName||x.email)}</b><span>${esc95(x.temporaryPermissions.label||"Quyền tạm thời")}</span><small>Hết hạn ${fmt(x.temporaryPermissions.expiresAt)}</small></div><button class="danger" onclick="v95ClearTemp(${esc95(JSON.stringify(x.uid))})">Thu hồi</button></div>`).join(""):'<div class="empty">Không có quyền tạm thời đang hoạt động.</div>';
 }
 function permissionChecks(){
   const rows=[["Attendance","Điểm danh"],["Members","Thành viên"],["Finance","Thu chi"],["Events","Sự kiện"]];
   return rows.map(([k,l])=>`<div class="v95-perm-row"><b>${l}</b><label><input type="checkbox" data-v95-perm="view${k}"> Xem</label><label><input type="checkbox" data-v95-perm="edit${k}" onchange="if(this.checked)this.closest('.v95-perm-row').querySelector('[data-v95-perm=view${k}]').checked=true"> Sửa</label></div>`).join("")+`<div class="v95-perm-row"><b>Tra cứu</b><label><input type="checkbox" data-v95-perm="viewLookup"> Xem</label></div>`;
 }
-function v95OpenTempGrant(){
+async function v95OpenTempGrant(){
+  if(!canEditClub())return;
+  if(!tempLoaded)await v95RefreshTemporaryPermissions(false);
+  if(!tempLoaded)return;
   const users=opTemp.filter(x=>x.active&&x.role==="bcn"),events=(state.events||[]).filter(e=>e.semester===semester);
+  if(!users.length)return oscAlert("Chưa có tài khoản BCN đang hoạt động để cấp quyền.");
   q("#modalWrap").innerHTML=`<div class="overlay"><div class="modal" style="width:min(760px,100%)"><div class="modal-head"><div><h2>Cấp quyền tạm thời</h2><div class="small-help">Quyền tự vô hiệu khi hết hạn; không cần cron.</div></div><button onclick="closeModal()">×</button></div><div class="form-grid">
-    <label>BCN<select id="v95TempUser">${users.map(x=>`<option value="${x.uid}">${esc95(x.displayName||x.email)}</option>`).join("")}</select></label>
-    <label>Sự kiện<select id="v95TempEvent" onchange="v95TempEventChanged()"><option value="">Không gắn sự kiện</option>${events.map(e=>`<option value="${e.id}">${esc95(e.title)}</option>`).join("")}</select></label>
+    <label>BCN<select id="v95TempUser">${users.map(x=>`<option value="${esc95(x.uid)}">${esc95(x.displayName||x.email)}</option>`).join("")}</select></label>
+    <label>Sự kiện<select id="v95TempEvent" onchange="v95TempEventChanged()"><option value="">Không gắn sự kiện</option>${events.map(e=>`<option value="${esc95(e.id)}">${esc95(e.title)}</option>`).join("")}</select></label>
     <label>Hết hạn<input id="v95TempExpires" type="datetime-local"></label><label>Nhãn quyền<input id="v95TempLabel" value="Hỗ trợ sự kiện" maxlength="120"></label>
   </div><div class="v95-permissions">${permissionChecks()}</div><div class="modal-actions"><button class="ghost" onclick="closeModal()">Hủy</button><button class="primary" onclick="v95SaveTemp()">Cấp quyền</button></div></div></div>`;
   q("#modalWrap").classList.remove("hidden");if(typeof syncModalBodyState==="function")syncModalBodyState();
@@ -68,9 +84,9 @@ function v95OpenTempGrant(){
 window.v95OpenTempGrant=v95OpenTempGrant;
 function v95TempEventChanged(){const id=q("#v95TempEvent")?.value,e=(state.events||[]).find(x=>x.id===id);if(e?.closeAt){const ms=e.closeAt?.toMillis?.()||e.closeAt?.toDate?.()?.getTime?.()||new Date(e.closeAt).getTime();if(ms>Date.now())q("#v95TempExpires").value=dtLocal(ms)}}
 window.v95TempEventChanged=v95TempEventChanged;
-async function v95SaveTemp(){try{const permissions={};document.querySelectorAll("[data-v95-perm]").forEach(x=>permissions[x.dataset.v95Perm]=x.checked);const uid=q("#v95TempUser")?.value,eventId=q("#v95TempEvent")?.value||"",label=q("#v95TempLabel")?.value||"",value=q("#v95TempExpires")?.value;if(!value)return oscAlert("Hãy chọn thời gian hết hạn.");await api("/api/operations",{action:"temp-set",uid,eventId,label,expiresAt:new Date(value).toISOString(),permissions});closeModal();toast("Đã cấp quyền tạm thời");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
+async function v95SaveTemp(){try{const permissions={};document.querySelectorAll("[data-v95-perm]").forEach(x=>permissions[x.dataset.v95Perm]=x.checked);const uid=q("#v95TempUser")?.value,eventId=q("#v95TempEvent")?.value||"",label=q("#v95TempLabel")?.value||"",value=q("#v95TempExpires")?.value;if(!value)return oscAlert("Hãy chọn thời gian hết hạn.");await api("/api/operations",{action:"temp-set",uid,eventId,label,expiresAt:new Date(value).toISOString(),permissions});closeModal();toast("Đã cấp quyền tạm thời");await v95RefreshTemporaryPermissions(false)}catch(e){oscAlert(e.message||e)}}
 window.v95SaveTemp=v95SaveTemp;
-async function v95ClearTemp(uid){if(!await oscConfirm("Thu hồi quyền tạm thời ngay?"))return;try{await api("/api/operations",{action:"temp-clear",uid});toast("Đã thu hồi quyền");await v95RefreshOperations(false)}catch(e){oscAlert(e.message||e)}}
+async function v95ClearTemp(uid){if(!await oscConfirm("Thu hồi quyền tạm thời ngay?"))return;try{await api("/api/operations",{action:"temp-clear",uid});toast("Đã thu hồi quyền");await v95RefreshTemporaryPermissions(false)}catch(e){oscAlert(e.message||e)}}
 window.v95ClearTemp=v95ClearTemp;
 
 async function v95LoadQuota(show=true){

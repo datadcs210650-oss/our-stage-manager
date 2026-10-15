@@ -1,0 +1,65 @@
+/* V99: user identity + temporary BCN access + local MSSV comparison */
+body.auth-admin #adminChip{
+ max-width:clamp(125px,18vw,250px);min-width:0;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;
+}
+body.auth-admin #accounts .osc-temp-access,
+body.auth-admin #memberList .osc-member-compare{
+ border:1px solid #e8dce0;border-radius:16px;background:#fff;
+ box-shadow:0 8px 24px rgba(70,39,53,.04);
+ margin:15px 0 20px;padding:20px;min-width:0;
+}
+body.auth-admin #memberComparePanel[hidden]{display:none!important}
+body.auth-admin #accounts .osc-temp-access-head,
+body.auth-admin #memberList .osc-member-compare-head{
+ display:flex;align-items:flex-start;justify-content:space-between;
+ flex-wrap:wrap;gap:14px;margin:0 0 14px;
+}
+body.auth-admin :is(.osc-temp-access-head,.osc-member-compare-head)>div:first-child{
+ min-width:0;flex:1 1 320px;
+}
+body.auth-admin :is(.osc-temp-access-head,.osc-member-compare-head) h3{
+ color:#4f293b;font-size:17px;font-weight:800;margin:5px 0 8px;
+}
+body.auth-admin :is(.osc-temp-access-head,.osc-member-compare-head) p{
+ color:#756b70;font-size:12px;line-height:1.7;margin:0;max-width:760px;
+}
+body.auth-admin .osc-temp-access-actions,
+body.auth-admin .osc-member-compare-controls{
+ display:flex;align-items:center;flex-wrap:wrap;gap:9px;min-width:0;
+}
+body.auth-admin .osc-temp-access-actions{justify-content:flex-end}
+body.auth-admin #accounts #v95TempList{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
+ gap:11px;color:#807179;font-size:12px;
+}
+body.auth-admin #accounts #v95TempList .v95-list-row{
+ min-width:0;display:flex;align-items:center;justify-content:space-between;
+ gap:12px;border:1px solid #ece2e6;border-radius:13px;
+ background:#fbf9fa;padding:14px;
+}
+body.auth-admin #accounts #v95TempList .v95-list-row>div{min-width:0;overflow-wrap:anywhere}
+body.auth-admin #accounts #v95TempList .v95-list-row :is(b,span,small){display:block;line-height:1.65}
+body.auth-admin #accounts #v95TempList .v95-list-row b{color:#523447;font-size:13px}
+body.auth-admin #accounts #v95TempList .v95-list-row small{color:#8a7880}
+body.auth-admin #memberList .osc-member-compare-controls{padding:13px;border-radius:12px;background:#f9f6f7}
+body.auth-admin #memberList .osc-member-compare-controls label{
+ min-width:0;flex:1 1 280px;display:grid;gap:7px;
+ font-size:12px;font-weight:720;color:#53474d;
+}
+body.auth-admin #memberList .osc-member-compare-controls input{
+ width:100%;max-width:600px;padding:8px;border-radius:9px;
+ background:#fff;border:1px solid #e4d5db;
+}
+body.auth-admin #memberCompareStatus{
+ color:#6d5c65;font-size:12px;line-height:1.7;margin:13px 0 6px;
+}
+body.auth-admin #memberComparePreview{
+ font-size:12px;color:#6f334d;line-height:1.65;
+ overflow-wrap:anywhere;min-width:0;
+}
+@media(max-width:700px){
+ body.auth-admin :is(#accounts .osc-temp-access,#memberList .osc-member-compare){padding:14px}
+ body.auth-admin #accounts .osc-temp-access-actions{justify-content:flex-start}
+ body.auth-admin #adminChip{max-width:152px}
+}
