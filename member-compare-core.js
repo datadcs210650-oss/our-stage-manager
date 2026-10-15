@@ -59,5 +59,31 @@
    }
    return{matched,missing,rosterCount:set.size,validCount:used.size};
  }
- return{MAX_ROWS,MAX_BYTES,clean,parseRows,compare};
+ function joinRoster(codes,roster){
+   // Input spreadsheet contributes ONLY MSSV. Names are read from OSC's roster.
+   const index=new Map();
+   for(const member of roster||[]){
+     const mssv=clean(member?.mssv);
+     if(!mssv)continue;
+     const group=index.get(mssv)||[];
+     group.push({id:String(member.id||""),name:String(member.name||"").trim(),mssv});
+     index.set(mssv,group);
+   }
+   const rows=[],used=new Set();let missing=0,ambiguous=0;
+   for(const value of codes||[]){
+     const code=clean(value);if(!code||used.has(code))continue;
+     used.add(code);
+     const group=index.get(code)||[];
+     if(!group.length){missing++;continue}
+     const duplicate=group.length!==1;
+     if(duplicate)ambiguous++;
+     const item=group[0];
+     rows.push({mssv:code,name:duplicate?"Trùng MSSV trong danh sách CLB":item.name||"Chưa có tên",id:duplicate?"":item.id,ambiguous:duplicate});
+   }
+   return{rows,missing,ambiguous};
+ }
+ function alreadyJoined(mode,value){
+   return mode==="checkbox"?value===true:Number(value||0)>0;
+ }
+ return{MAX_ROWS,MAX_BYTES,clean,parseRows,compare,joinRoster,alreadyJoined};
 });

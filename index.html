@@ -2135,7 +2135,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/room-booking-weekly.css?v=102">
 <link rel="stylesheet" href="/drive-hub.css?v=98">
 <link rel="stylesheet" href="/qr-bulk.css?v=1">
-<link rel="stylesheet" href="/member-compare.css?v=1">
+<link rel="stylesheet" href="/member-compare.css?v=2">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
 <body class="auth-login">
@@ -2369,6 +2369,18 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
           <button id="memberCompareDownload" type="button" class="primary" disabled>Tải MSSV trùng (.xlsx)</button>
         </div>
         <p id="memberCompareStatus" role="status">Chưa chọn file. Không có dữ liệu đối chiếu nào được lưu.</p>
+        <div class="osc-compare-record-controls" aria-labelledby="memberCompareActivityTitle">
+          <label id="memberCompareActivityTitle" for="memberCompareActivity">
+            Hoạt động ghi nhận trong học kỳ
+            <select id="memberCompareActivity"><option value="">Chọn hoạt động trong học kỳ</option></select>
+          </label>
+          <label class="osc-compare-points-label" for="memberComparePoints" hidden>
+            Điểm ghi nhận (đối với hoạt động nhập điểm)
+            <input type="number" id="memberComparePoints" min="0" step="any" placeholder="Nhập điểm" hidden>
+          </label>
+          <button type="button" id="memberCompareRecord" class="primary" disabled>Ghi nhận tham gia (0)</button>
+        </div>
+        <p id="memberCompareRecordHint" class="osc-compare-record-hint">Đối chiếu MSSV trước khi ghi nhận tham gia.</p>
         <div id="memberComparePreview" class="osc-member-compare-preview"></div>
       </section>
       <div class="import-order-note">Thứ tự danh sách được giữ theo đúng thứ tự dòng trong file Excel. Khi upload lại danh sách, các thành viên trong file sẽ được sắp đúng theo thứ tự file và không còn bị xáo trộn do Firestore.</div>
@@ -11038,8 +11050,8 @@ function renderAll(){
 <script src="/room-booking.js?v=103"></script>
 <script src="/room-booking-weekly.js?v=102"></script>
 <script src="/drive-hub.js?v=5"></script>
-<script src="/member-compare-core.js?v=1"></script>
-<script src="/member-compare.js?v=1"></script>
+<script src="/member-compare-core.js?v=2"></script>
+<script src="/member-compare.js?v=2"></script>
 <script src="/qr-bulk-core.js?v=1"></script>
 <script src="/qr-bulk-ui.js?v=1"></script>
 <script src="/board-directors.js?v=1"></script>

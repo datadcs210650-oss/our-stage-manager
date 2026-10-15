@@ -63,3 +63,77 @@ body.auth-admin #memberComparePreview{
  body.auth-admin #accounts .osc-temp-access-actions{justify-content:flex-start}
  body.auth-admin #adminChip{max-width:152px}
 }
+
+
+/* V100 — MSSV match list and activity-attendance controls */
+body.auth-admin #memberList .osc-compare-record-controls{
+ display:grid;grid-template-columns:minmax(240px,1.5fr) minmax(150px,.6fr) max-content;
+ gap:10px;align-items:end;background:#faf8f8;border:1px solid #eee5e8;
+ border-radius:14px;padding:14px;margin:14px 0 8px;min-width:0;
+}
+body.auth-admin #memberList .osc-compare-record-controls label{
+ display:flex;flex-direction:column;gap:8px;color:#66535e;
+ font-size:12px;font-weight:740;min-width:0;
+}
+body.auth-admin #memberList .osc-compare-record-controls label[hidden]{display:none!important}
+body.auth-admin #memberList .osc-compare-record-controls select,
+body.auth-admin #memberList .osc-compare-record-controls input{
+ box-sizing:border-box;width:100%;max-width:none;min-width:0;min-height:43px;
+ padding:10px 12px;border:1px solid #dfd2d9;border-radius:10px;
+ background:#fff;color:#513747;font-size:12px;font-weight:600;
+}
+body.auth-admin #memberList .osc-compare-record-controls button{
+ min-height:43px;align-self:end;white-space:normal;
+}
+body.auth-admin #memberList .osc-compare-record-hint{
+ font-size:12px;color:#75626a;line-height:1.6;margin:10px 0 16px;
+}
+body.auth-admin #memberList .osc-compare-summary{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;padding:10px 4px;font-size:12px;font-weight:790;color:#5d3849;
+}
+body.auth-admin #memberList .osc-compare-table-wrap{
+ overflow:auto;max-width:100%;border:1px solid #e9dde2;border-radius:13px;
+ background:#fff;
+}
+body.auth-admin #memberList table.osc-compare-table{
+ width:100%;min-width:650px;border-collapse:collapse;table-layout:auto;
+}
+body.auth-admin #memberList table.osc-compare-table thead th{
+ padding:11px 13px!important;background:#faf5f7!important;
+ border-bottom:1px solid #e8dce1!important;
+ color:#6f3e54!important;letter-spacing:0!important;
+ font-size:11px!important;text-align:left!important;
+}
+body.auth-admin #memberList table.osc-compare-table tbody td{
+ padding:11px 13px!important;color:#54434b!important;
+ border-bottom:1px solid #f0e9ec!important;
+ font-size:12px!important;text-align:left!important;
+ overflow-wrap:anywhere;white-space:normal;
+}
+body.auth-admin #memberList table.osc-compare-table tbody td:first-child{width:54px;color:#9c8e94!important}
+body.auth-admin #memberList table.osc-compare-table tbody td:last-child,
+body.auth-admin #memberList table.osc-compare-table thead th:last-child{
+ text-align:center!important;width:130px;
+}
+body.auth-admin #memberList table.osc-compare-table tbody tr:hover{background:#fff9fb!important}
+body.auth-admin #memberList table.osc-compare-table .osc-compare-ambiguous{
+ background:#fff7ee!important;
+}
+body.auth-admin #memberList table.osc-compare-table input[type="checkbox"]{
+ accent-color:#781d3b;width:17px;height:17px;min-height:17px;
+}
+body.auth-admin #memberList .osc-compare-more{
+ display:block;width:100%;margin-top:10px;min-height:39px;border:1px solid #e7d9df;
+ background:#fff;color:#69384f;
+}
+@media(max-width:840px){
+ body.auth-admin #memberList .osc-compare-record-controls{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ }
+ body.auth-admin #memberList .osc-compare-record-controls button{grid-column:1/-1}
+}
+@media(max-width:530px){
+ body.auth-admin #memberList .osc-compare-record-controls{grid-template-columns:minmax(0,1fr)}
+ body.auth-admin #memberList .osc-compare-record-controls button{grid-column:1}
+}
