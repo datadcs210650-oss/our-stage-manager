@@ -130,7 +130,8 @@ function roomOwner(actor){
   return actor?.profile?.role==="superadmin";
 }
 function ensureRoomManager(actor){
-  if(!roomOwner(actor))throw bad("Chỉ Super Admin được thêm phòng, lập, chỉnh sửa hoặc hủy lịch phòng.","osc/forbidden");
+  if(!actor?.profile||actor.profile.role!=="superadmin")
+    throw bad("Chỉ Super Admin được thêm phòng, lập, chỉnh sửa hoặc hủy lịch phòng.","osc/forbidden");
 }
 async function assertNoRoomOverlap(tx,db,data,exceptId=""){
   // Look back 24h because any booking is limited to 24 hours.
