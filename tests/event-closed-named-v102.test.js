@@ -112,7 +112,7 @@ test("Firestore-denied closed page fetches title using same-origin name-only API
 
 test("Hobby function count does not exceed 12 and closed metadata shares Event Control function",()=>{
  const apiFiles=fs.readdirSync(require("node:path").join(__dirname,"..","api")).filter(x=>x.endsWith(".js"));
- assert.equal(apiFiles.length,12);
+ assert.ok(apiFiles.length<=10,"Preserve at least two of the twelve Vercel Hobby Functions for future features.");
  assert.equal(apiFiles.includes("event-public-status.js"),false);
  assert.equal(apiFiles.includes("event-control.js"),true);
  const eventApi=read("api/event-control.js");
