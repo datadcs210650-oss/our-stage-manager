@@ -47,6 +47,7 @@ test("closed title uses textContent, preventing injected markup",()=>{
 });
 function mockApi(event){
  let reads=0;
+ const {publicClosedStatus}=require("../lib/event-closed-status.js");
  const db={collection:name=>{
   assert.equal(name,"eventPortals");
   return{doc:id=>({get:async()=>{
@@ -54,17 +55,11 @@ function mockApi(event){
    return event==null?{exists:false}:{exists:true,data:()=>event};
   }})};
  }};
- const ctx={
-  module:{exports:{}},
-  require:name=>{assert.equal(name,"../lib/firebase-admin");return{
-   getDb:()=>db,
-   sendJson:(res,status,payload)=>{res.status=status;res.payload=payload;return payload}
-  }},
-  console:{error:()=>{}},
-  Date
+ const sendJson=(res,status,payload)=>{res.status=status;res.payload=payload;return payload};
+ return{
+  handle:(req,res)=>publicClosedStatus(req,res,{getDb:()=>db,sendJson}),
+  get reads(){return reads}
  };
- vm.runInNewContext(read("api/event-public-status.js"),ctx);
- return{handle:ctx.module.exports,get reads(){return reads}};
 }
 test("public status API exposes ONLY a title and closed status, not private fields",async()=>{
  const api=mockApi({title:"Stage by Night",isOpen:false,fields:[{label:"Email"}],
@@ -104,12 +99,24 @@ test("missing, invalid and non-GET requests fail without reading documents",asyn
  assert.equal(missing.reads,1);
 });
 test("Firestore-denied closed page fetches title using same-origin name-only API",()=>{
- const html=read("su-kien.html"),api=read("api/event-public-status.js");
+ const html=read("su-kien.html"),api=read("lib/event-closed-status.js"),dispatch=read("api/event-control.js");
  assert.match(html,/void resolveClosedPublicEvent\(\);/);
- assert.match(html,/fetch\("\/api\/event-public-status\?event="\+encodeURIComponent\(eventId\)/);
+ assert.match(html,/fetch\("\/api\/event-control\?action=public-closed-status&event="\+encodeURIComponent\(eventId\)/);
+ assert.match(dispatch,/req\.query\?\.action==="public-closed-status"/);
  assert.match(html,/publicClosedHeading\(\{title:result\.title\}\)/);
  assert.match(html,/if\(!validPublicEventId\(eventId\)\)/);
  assert.match(api,/EVENT_ID=\/\^\[A-Za-z0-9_-\]\{1,180\}\$\//);
  const rules=read("firestore_rules_v96.rules");
  assert.match(rules,/allow get: if viewEvents\(\) \|\| resource\.data\.isOpen == true;/);
+});
+
+test("Hobby function count does not exceed 12 and closed metadata shares Event Control function",()=>{
+ const apiFiles=fs.readdirSync(require("node:path").join(__dirname,"..","api")).filter(x=>x.endsWith(".js"));
+ assert.equal(apiFiles.length,12);
+ assert.equal(apiFiles.includes("event-public-status.js"),false);
+ assert.equal(apiFiles.includes("event-control.js"),true);
+ const eventApi=read("api/event-control.js");
+ assert.match(eventApi,/const \{publicClosedStatus\}=require\("\.\.\/lib\/event-closed-status"\)/);
+ assert.match(eventApi,/if\(req\.query\?\.action==="public-closed-status"\)/);
+ assert.match(eventApi,/service:"event-control",version:95/);
 });

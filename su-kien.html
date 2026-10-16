@@ -867,7 +867,7 @@ async function resolveClosedPublicEvent(){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),8000);
   try{
-    const response=await fetch("/api/event-public-status?event="+encodeURIComponent(eventId),{
+    const response=await fetch("/api/event-control?action=public-closed-status&event="+encodeURIComponent(eventId),{
       method:"GET",headers:{"Accept":"application/json"},cache:"no-store",signal:controller.signal
     });
     if(!response.ok)throw Error("Không thể tra cứu tên sự kiện.");

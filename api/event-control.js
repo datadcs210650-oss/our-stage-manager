@@ -2,6 +2,7 @@
 
 const crypto=require("crypto");
 const {getDb,sendJson,readJsonBody,requireUser}=require("../lib/firebase-admin");
+const {publicClosedStatus}=require("../lib/event-closed-status");
 
 function bad(message,code="osc/bad-request"){const e=new Error(message);e.code=code;return e}
 function cleanId(v,label="ID"){const s=String(v||"").trim();if(!s||s.length>180||s.includes("/"))throw bad(label+" không hợp lệ.");return s}
@@ -72,7 +73,12 @@ async function live(req,body){
 function status(code){if(code==="osc/unauthenticated")return 401;if(["osc/forbidden","osc/inactive","osc/no-profile"].includes(code))return 403;if(code==="osc/event-not-found")return 404;return 400}
 module.exports=async function handler(req,res){
   try{
-    if(req.method==="GET")return sendJson(res,200,{ok:true,service:"event-control",version:95});
+    if(req.method==="GET"){
+      if(req.query?.action==="public-closed-status"){
+        return publicClosedStatus(req,res,{getDb,sendJson});
+      }
+      return sendJson(res,200,{ok:true,service:"event-control",version:95});
+    }
     if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return sendJson(res,405,{ok:false,error:"Chỉ hỗ trợ GET/POST."})}
     const body=readJsonBody(req),action=String(body.action||"");if(action!=="admin-live")throw bad("Thao tác Event Control không hợp lệ.");
     return sendJson(res,200,await live(req,body));
