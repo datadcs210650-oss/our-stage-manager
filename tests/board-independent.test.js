@@ -44,7 +44,7 @@ test("UI contains distinct board and account sections and no login/board cross-b
  assert.doesNotMatch(boardJs,/leadership-assign|getAuth|accountRows|collection\("users"\)/);
  assert.match(profile,/board-profile/);
  assert.match(profile,/memberId/);
- const create=read("api/account-create.js"),update=read("api/account-update.js");
+ const create=read("lib/account-create.js"),update=read("lib/account-update.js");
  assert.doesNotMatch(create,/oscMssvOwners|oscPositionHistory|positionTitle/);
  assert.doesNotMatch(update,/oscMssvOwners|oscPositionHistory|positionTitle/);
 });

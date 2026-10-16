@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/api/account-create",
+      "destination": "/api/accounts?operation=create"
+    },
+    {
+      "source": "/api/account-update",
+      "destination": "/api/accounts?operation=update"
+    },
+    {
+      "source": "/api/account-password",
+      "destination": "/api/accounts?operation=password"
+    },
+    {
+      "source": "/api/account-delete",
+      "destination": "/api/accounts?operation=delete"
+    },
+    {
       "source": "/tra-cuu",
       "destination": "/tra-cuu.html"
     },

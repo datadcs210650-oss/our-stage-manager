@@ -50,7 +50,7 @@ test("new Firestore rules prevent direct client mutation of account role and pos
  assert.match(rule,/Explicit default deny/);
 });
 test("privileged password reset requires recent manager authentication",()=>{
- const src=fs.readFileSync(path.join(__dirname,"../api/account-password.js"),"utf8");
+ const src=fs.readFileSync(path.join(__dirname,"../lib/account-password.js"),"utf8");
  assert.match(src,/actor\.decoded\.auth_time/);
  assert.match(src,/600/);
  assert.match(src,/oscSecurityAudit/);

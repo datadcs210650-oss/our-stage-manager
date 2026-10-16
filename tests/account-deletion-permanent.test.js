@@ -3,7 +3,7 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
-const {deleteAccount}=require("../api/account-delete");
+const {deleteAccount}=require("../lib/account-delete");
 function setup(opts={}){
  const uid="targetOldUid0123",email="old.bcn@example.com",calls=[];
  const state={authExists:true,disabled:false,deleted:false,profileDeleted:false,active:true,failCleanup:!!opts.failCleanup};
