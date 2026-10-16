@@ -2136,6 +2136,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/drive-hub.css?v=98">
 <link rel="stylesheet" href="/qr-bulk.css?v=1">
 <link rel="stylesheet" href="/member-compare.css?v=2">
+<link rel="stylesheet" href="/dashboard-activity.css?v=1">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
 <body class="auth-login">
@@ -2284,7 +2285,11 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
         <div id="dashboardCommandCenter" class="command-center-grid"></div>
       </div>
       <div class="dashboard-grid">
-        <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">HOẠT ĐỘNG</span><h3>Tỷ lệ tham gia</h3></div></div><div id="dashboardActivityChart" class="mini-chart"></div></div>
+        <div class="dashboard-panel dashboard-activity-panel">
+          <div class="panel-head"><div><span class="eyebrow">HOẠT ĐỘNG</span><h3>Tỷ lệ tham gia</h3></div><button class="ghost" type="button" id="dashboardActivityExpandBtn" onclick="toggleDashboardActivityExpanded()" hidden>Hiện toàn bộ</button></div>
+          <p id="dashboardActivityMeta" class="dashboard-activity-meta" aria-live="polite"></p>
+          <div id="dashboardActivityChart" class="mini-chart dashboard-activity-chart" role="region" aria-label="Tỷ lệ tham gia của toàn bộ hoạt động trong học kỳ" tabindex="0"></div>
+        </div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">THÀNH VIÊN</span><h3>Hoạt động nổi bật trong kỳ</h3></div><button class="ghost" onclick="openTab('info')">Xem hồ sơ</button></div><div id="dashboardMemberRanking" class="member-ranking-list"></div></div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">TÀI CHÍNH</span><h3>Thu / chi theo tháng</h3></div></div><div id="dashboardFinanceChart" class="mini-chart"></div></div>
         <div class="dashboard-panel"><div class="panel-head"><div><span class="eyebrow">HỌC KỲ</span><h3>Checklist vận hành</h3></div></div><div id="dashboardChecklist"></div></div>
@@ -2826,6 +2831,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 
 <script src="/firebase-public-config.js"></script>
 <script src="/osc-dialogs.js?v=98"></script>
+<script src="/dashboard-activity-summary.js?v=1"></script>
 <script>
 const firebaseConfig=window.__FIREBASE_CONFIG__||{};
 const firebaseConfigReady=
@@ -5547,11 +5553,13 @@ async function setScore(id,itemId,val){
   }
   m.scores[itemId]=next;
   persistStateOnly();renderQLTV();
+  if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboardActivityChart();
   try{
     await fbDb.collection("members").doc(id).update({[`scores.${itemId}`]:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentFirebaseUser?.uid||""});
     await logAudit({action:"update",module:"attendance",entityType:"member",entityId:id,summary:`Sửa điểm ${m.name} • ${act.item.name}`,before,after:next,undo:{type:"memberScore",memberId:id,itemId,value:before}});
   }catch(e){
     m.scores[itemId]=before;renderQLTV();
+    if($("#dashboard")&&!$("#dashboard").classList.contains("hidden"))renderDashboardActivityChart();
     oscAlert("Không lưu được điểm: "+(e.message||e));
   }
 }
@@ -6452,16 +6460,51 @@ async function downloadSemesterEndReportPDF(){
   }
 }
 
+let dashboardActivityExpanded=false;
+function toggleDashboardActivityExpanded(){
+  dashboardActivityExpanded=!dashboardActivityExpanded;
+  const chart=$("#dashboardActivityChart"),btn=$("#dashboardActivityExpandBtn");
+  if(chart)chart.classList.toggle("expanded",dashboardActivityExpanded);
+  if(btn)btn.textContent=dashboardActivityExpanded?"Thu gọn":"Hiện toàn bộ";
+}
+function renderDashboardActivityChart(){
+  const chart=$("#dashboardActivityChart"),meta=$("#dashboardActivityMeta"),btn=$("#dashboardActivityExpandBtn");
+  if(!chart)return;
+  if(!canViewModule("attendance")){
+    chart.innerHTML=permissionPlaceholder("Biểu đồ hoạt động");
+    if(meta)meta.textContent="";
+    if(btn)btn.hidden=true;
+    return;
+  }
+  // Same semester configuration as QLTV/settings; no slice or cached activity subset.
+  const rows=window.OSCDashboardActivity.rows(sem(),members(),semester);
+  if(meta)meta.textContent=rows.length+" hoạt động • "+(rows[0]?.total??members().length)+" thành viên • "+(sem().name||semester);
+  if(btn){
+    btn.hidden=rows.length<=8;
+    btn.textContent=dashboardActivityExpanded?"Thu gọn":"Hiện toàn bộ";
+  }
+  const oldScroll=chart.scrollTop;
+  chart.classList.toggle("expanded",dashboardActivityExpanded);
+  chart.innerHTML=rows.map(a=>{
+    const caption=a.group+" • "+a.name+(a.date?" • "+a.date:"");
+    return `<div class="bar-row dashboard-activity-row" title="${esc(caption)}">
+      <div class="dashboard-activity-label"><span>${esc(a.name)}</span><small>${esc(a.group)}${a.date?" • "+esc(a.date):""}</small></div>
+      <div class="bar-track" role="progressbar" aria-label="${esc(caption)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${a.percentage}">
+        <div class="bar-fill" style="width:${a.percentage}%"></div>
+      </div>
+      <div class="dashboard-activity-value"><b>${a.percentage}%</b><small>${a.joined}/${a.total}</small></div>
+    </div>`;
+  }).join("")||'<div class="empty">Chưa thiết lập hoạt động trong học kỳ này.</div>';
+  chart.scrollTop=oldScroll;
+}
+
 function renderDashboard(){
   if(!$("#dashboardStats"))return;
   $("#dashboardGreeting").textContent=`${sem().name||semester} — ${currentProfile?.displayName||"Our Stage"}`;
   $("#dashboardSubtitle").textContent=`${semesterPeriodText()} • ${semesterLocked()?"Dữ liệu đã khóa":"Dữ liệu đang mở"} • Quyền: ${permittedModuleSummary().join(", ")||"Tài khoản cá nhân"}`;
   $("#dashboardStats").innerHTML=dashboardStatsData().map(s=>`<div class="dash-stat" onclick="openTab('${s.tab}')"><span>${esc(s.label)}</span><strong>${esc(s.value)}</strong><small>${esc(s.small)}</small></div>`).join("");
 
-  const acts=getAllActivities();
-  $("#dashboardActivityChart").innerHTML=canViewModule("attendance")
-    ? (acts.slice(0,8).map(a=>{const joined=members().filter(m=>activityJoined(a.group,a.item,m.scores?.[a.item.id])).length,p=members().length?Math.round(joined/members().length*100):0;return `<div class="bar-row"><span>${esc(a.item.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${p}%"></div></div><b>${p}%</b></div>`}).join("")||`<div class="empty">Chưa có hoạt động.</div>`)
-    : permissionPlaceholder("Biểu đồ hoạt động");
+  renderDashboardActivityChart();
 
   const rankRoot=$("#dashboardMemberRanking");
   if(rankRoot){

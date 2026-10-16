@@ -1,0 +1,70 @@
+/* V103 - complete, synchronized semester activity participation dashboard */
+#dashboard .dashboard-activity-panel{min-width:0}
+#dashboard .dashboard-activity-panel .panel-head{align-items:center;gap:12px;flex-wrap:wrap}
+#dashboard .dashboard-activity-panel #dashboardActivityExpandBtn{
+  flex:0 0 auto;min-height:32px;padding:7px 11px;
+  border:1px solid #ebdce3;border-radius:9px;background:#fcf8f9;
+  color:#7d3651;font-size:11px;font-weight:750;cursor:pointer;
+}
+#dashboard .dashboard-activity-panel #dashboardActivityExpandBtn[hidden]{display:none!important}
+#dashboard .dashboard-activity-meta{
+  color:#85747c;font-size:11px;font-weight:650;line-height:1.55;
+  margin:2px 0 12px;overflow-wrap:anywhere;
+}
+#dashboard .dashboard-activity-chart{
+  box-sizing:border-box;display:grid;align-content:start;
+  gap:0;max-height:500px;min-width:0;overflow-y:auto;
+  overflow-x:hidden;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:#d6bdc8 transparent;
+  padding:0 4px 0 0;
+}
+#dashboard .dashboard-activity-chart.expanded{
+  max-height:none!important;overflow:visible!important;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-row{
+  display:grid;grid-template-columns:minmax(130px,1.15fr) minmax(60px,1.2fr) 58px;
+  align-items:center;gap:11px;min-width:0;min-height:67px;
+  padding:10px 0;border-bottom:1px solid #f1e9ed;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-row:last-child{border-bottom:0}
+#dashboard .dashboard-activity-chart .dashboard-activity-label{
+  display:grid;align-content:center;gap:4px;min-width:0;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-label span{
+  font-size:12px;font-weight:770;color:#44313c;
+  white-space:normal;overflow-wrap:anywhere;line-height:1.4;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-label small{
+  color:#96828d;font-size:10px;line-height:1.45;
+  font-weight:520;white-space:normal;overflow-wrap:anywhere;
+}
+#dashboard .dashboard-activity-chart .bar-track{
+  height:10px;min-width:0;border-radius:999px;
+  background:#f2e9ed;overflow:hidden;
+}
+#dashboard .dashboard-activity-chart .bar-fill{
+  min-width:0!important;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#a94362,#772441);
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-value{
+  display:grid;justify-items:end;gap:4px;min-width:0;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-value b{
+  font-size:12px;font-weight:810;color:#742743;
+}
+#dashboard .dashboard-activity-chart .dashboard-activity-value small{
+  font-size:10px;font-weight:550;color:#94848d;
+}
+#dashboard .dashboard-activity-chart:focus-visible{
+  outline:2px solid rgba(124,36,70,.45);outline-offset:3px;border-radius:8px;
+}
+@media(max-width:560px){
+  #dashboard .dashboard-activity-chart .dashboard-activity-row{
+    grid-template-columns:minmax(106px,1.35fr) minmax(45px,1fr) 48px;gap:7px;
+  }
+  #dashboard .dashboard-activity-chart .dashboard-activity-label span{font-size:11px}
+  #dashboard .dashboard-activity-chart .dashboard-activity-label small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  #dashboard .dashboard-activity-chart *{scroll-behavior:auto!important}
+}
