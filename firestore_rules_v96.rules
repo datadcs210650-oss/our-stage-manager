@@ -20,8 +20,16 @@ service cloud.firestore {
       return get(userPath()).data;
     }
 
+    // BCN accounts with an expiration timestamp lose Firestore access at expiry,
+    // even if a browser stays open or Firebase Auth has not yet been disabled.
+    function accountNotExpired() {
+      return me().role != "bcn"
+        || !me().keys().hasAny(["accountExpiresAt"])
+        || me().accountExpiresAt == null
+        || (me().accountExpiresAt is timestamp && me().accountExpiresAt > request.time);
+    }
     function active() {
-      return userExists() && me().active == true;
+      return userExists() && me().active == true && accountNotExpired();
     }
 
     function superAdmin() {

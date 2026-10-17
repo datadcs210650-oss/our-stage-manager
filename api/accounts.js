@@ -8,7 +8,8 @@ const ROUTES=Object.freeze({
   create:()=>require("../lib/account-create"),
   update:()=>require("../lib/account-update"),
   password:()=>require("../lib/account-password"),
-  delete:()=>require("../lib/account-delete")
+  delete:()=>require("../lib/account-delete"),
+  expire:()=>require("../lib/account-expire-handler")
 });
 
 module.exports=async function handler(req,res){

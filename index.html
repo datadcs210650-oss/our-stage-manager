@@ -2137,6 +2137,7 @@ body.sidebar-collapsed .sidebar .brand-text{display:none!important}
 <link rel="stylesheet" href="/qr-bulk.css?v=1">
 <link rel="stylesheet" href="/member-compare.css?v=2">
 <link rel="stylesheet" href="/dashboard-activity.css?v=1">
+<link rel="stylesheet" href="/bcn-expiry.css?v=1">
 <link rel="stylesheet" href="/board-directors.css?v=1">
 </head>
 <body class="auth-login">
@@ -3311,6 +3312,7 @@ function watchOwnProfileRealtime(){
     currentProfile={id:snap.id,...snap.data()};
     const afterSig=JSON.stringify({role:currentProfile?.role||"",permissions:currentProfile?.permissions||{},temporaryPermissions:currentProfile?.temporaryPermissions||null});
     scheduleTemporaryPermissionExpiry();
+    window.OSCBCNExpiry?.schedule();
     updateAdminIdentityChip();
     renderAll();
     applyRoleAccess();
@@ -4430,6 +4432,7 @@ async function bootstrapAuthorizedSession(user){
   }
 
   startSecureSessionWatch();
+  window.OSCBCNExpiry?.schedule();
 
   await runLoginStep("thông báo / QR / nhật ký",()=>watchSuiteCollections(),{warn:false});
   try{watchOwnProfileRealtime()}catch(e){console.warn("own profile realtime",e)}
@@ -4459,8 +4462,13 @@ async function validateAccess(user){
     setLoginError("Tài khoản đã xác thực nhưng chưa có document quyền trong Firestore: users/"+user.uid+".");
     return false;
   }
+  if(window.OSCBCNExpiry?.isExpired(p)){
+    await window.OSCBCNExpiry.lockNow(user);
+    setLoginError("Tài khoản BCN đã hết thời hạn và bị khóa. Vui lòng liên hệ Admin để gia hạn.");
+    return false;
+  }
   if(p.active!==true){
-    setLoginError("Tài khoản hiện chưa được phép truy cập hệ thống. Hãy kiểm tra trường active = true trong users/"+user.uid+".");
+    setLoginError(p.accountLockedReason==="expired"?"Tài khoản BCN đã hết thời hạn và bị khóa. Vui lòng liên hệ Admin để gia hạn.":"Tài khoản hiện chưa được phép truy cập hệ thống. Hãy kiểm tra trường active = true trong users/"+user.uid+".");
     return false;
   }
   if(!["superadmin","admin","bcn"].includes(String(p.role||"").toLowerCase())){
@@ -4488,7 +4496,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)enforceSes
 window.addEventListener("focus",()=>enforceSessionIdleNow().catch(()=>{}));
 function showSessionWarning(){if($("#sessionWarning"))return;const box=document.createElement("div");box.id="sessionWarning";box.className="session-warning";box.innerHTML=`<b>Phiên làm việc sắp hết hạn</b><p>Hệ thống chỉ tự đăng xuất sau 4 giờ không có thao tác. Hãy tương tác với trang để tiếp tục phiên.</p>`;document.body.appendChild(box)}
 function startSecureSessionWatch(){clearInterval(sessionWatchTimer);const stored=readStoredActivity(),now=Date.now();lastUserActivity=stored&&now-stored<SESSION_IDLE_LIMIT?stored:now;persistUserActivity(lastUserActivity);sessionWarned=false;sessionWatchTimer=setInterval(()=>{enforceSessionIdleNow().catch(()=>{})},30000);enforceSessionIdleNow().catch(()=>{})}
-function stopSecureSessionWatch(){clearInterval(sessionWatchTimer);sessionWatchTimer=null;$("#sessionWarning")?.remove();try{sessionStorage.removeItem(SESSION_ACTIVITY_KEY)}catch{}}
+function stopSecureSessionWatch(){clearInterval(sessionWatchTimer);sessionWatchTimer=null;window.OSCBCNExpiry?.stop();$("#sessionWarning")?.remove();try{sessionStorage.removeItem(SESSION_ACTIVITY_KEY)}catch{}}
 
 fbAuth.onAuthStateChanged(async user=>{
   if(authFlowHold)return;
@@ -9531,7 +9539,7 @@ async function renderAccounts(){
         <td>${esc(u.displayName||"")}</td>
         <td>${esc(u.email||"")}</td>
         <td><span class="account-role">${esc(u.role==="superadmin"?"Chủ tịch":(u.role||"bcn").toUpperCase())}</span></td>
-        <td>${u.active===false?"Đã khóa":"Hoạt động"}</td>
+        <td>${u.role==="bcn"&&accountExpiryMs(u.accountExpiresAt)>0&&accountExpiryMs(u.accountExpiresAt)<=Date.now()?"Đã hết hạn • Khóa":u.active===false?"Đã khóa":"Hoạt động"}${u.role==="bcn"&&accountExpiryMs(u.accountExpiresAt)>0?`<div class="small-help">Hạn: ${esc(new Date(accountExpiryMs(u.accountExpiresAt)).toLocaleString("vi-VN"))}</div>`:""}</td>
         <td>${esc(perms||"—")}</td>
         <td>
           ${u.id===currentFirebaseUser?.uid?`<span class="small-help">Tài khoản hiện tại</span>`:
@@ -9596,6 +9604,25 @@ function setPermissionInputsDisabled(prefix,disabled){
 const PERMISSION_PRESETS={all:{label:"BCN toàn quyền",p:{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true}},hr:{label:"Nhân sự",p:{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:false,editFinance:false,viewEvents:true,editEvents:false,viewLookup:true}},finance:{label:"Tài chính",p:{viewAttendance:false,editAttendance:false,viewMembers:true,editMembers:false,viewFinance:true,editFinance:true,viewEvents:true,editEvents:false,viewLookup:true}},event:{label:"Sự kiện",p:{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:false,viewFinance:false,editFinance:false,viewEvents:true,editEvents:true,viewLookup:true}},readonly:{label:"Chỉ xem",p:{viewAttendance:true,editAttendance:false,viewMembers:true,editMembers:false,viewFinance:true,editFinance:false,viewEvents:true,editEvents:false,viewLookup:true}}};
 function permissionPresetHTML(prefix){return `<div class="permission-preset-row">${Object.entries(PERMISSION_PRESETS).map(([k,x])=>`<button type="button" class="secondary" onclick="applyPermissionPreset('${prefix}','${k}')">${esc(x.label)}</button>`).join("")}</div>`}
 function applyPermissionPreset(prefix,key){const p=PERMISSION_PRESETS[key]?.p;if(!p)return;for(const [k,v] of Object.entries(p)){const suffix=k[0].toUpperCase()+k.slice(1),el=$("#"+prefix+suffix);if(el&&!el.disabled)el.checked=!!v}for(const k of ["Attendance","Members","Finance","Events"])syncPermissionRow(prefix,k)}
+function accountExpiryMs(v){
+  return v?.toMillis?.()||v?.toDate?.()?.getTime?.()||(typeof v==="string"?Date.parse(v):Number(v||0))||0;
+}
+function accountExpiryLocalInput(value){
+  const ms=accountExpiryMs(value);if(!ms)return "";
+  const d=new Date(ms),pad=n=>String(n).padStart(2,"0");
+  return [d.getFullYear(),pad(d.getMonth()+1),pad(d.getDate())].join("-")+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+function accountExpiryInputISO(id){
+  const raw=$("#"+id)?.value||"";if(!raw)return null;
+  const ms=new Date(raw).getTime();
+  if(!Number.isFinite(ms)||ms<=Date.now()){
+    oscAlert("Thời hạn tài khoản BCN phải là thời điểm trong tương lai.");return false;
+  }
+  if(ms>Date.now()+10*366*86400000){
+    oscAlert("Thời hạn tài khoản không được vượt quá 10 năm.");return false;
+  }
+  return new Date(ms).toISOString();
+}
 function openCreateAccount(){
   if(!canEditClub())return;
   const canCreateAdmin=role()==="superadmin";
@@ -9605,6 +9632,7 @@ function openCreateAccount(){
       <label>Tên hiển thị<input id="accName" maxlength="100"></label>
       <label>Email<input id="accEmail" type="email" autocomplete="off" maxlength="254"></label>
       <label>Mật khẩu<input id="accPass" type="password" placeholder="Tối thiểu 8 ký tự" autocomplete="new-password" minlength="8" maxlength="128"></label>
+      <label>Hết hạn tài khoản BCN (không bắt buộc)<input id="accExpiresAt" type="datetime-local"><small>Để trống nếu không giới hạn thời gian. Khi hết hạn, hệ thống sẽ khóa đăng nhập.</small></label>
       <label>Vai trò<select id="accRole" onchange="setPermissionInputsDisabled('acc',this.value==='admin')">
         <option value="bcn">BCN — Xem/chỉnh sửa theo quyền</option>
         ${canCreateAdmin?'<option value="admin">Admin — Quyền quản trị (trừ thiết lập phòng và link Drive học kỳ)</option>':""}
@@ -9634,7 +9662,9 @@ async function createAccount(){
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang tạo…"}
     const token=await currentFirebaseUser.getIdToken();
-    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions})},15000);
+    const accountExpiresAt=newRole==="bcn"?accountExpiryInputISO("accExpiresAt"):null;
+    if(accountExpiresAt===false)return;
+    const res=await fetchAccountApi("/api/account-create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({displayName,email,password,role:newRole,permissions,accountExpiresAt})},15000);
     const data=await res.json().catch(()=>({}));
     if(!res.ok){
       const detail=data.error||`API trả về lỗi ${res.status}`;
@@ -9660,6 +9690,7 @@ async function editAccountProfile(uid){
         <option value="bcn" ${u.role==="bcn"?"selected":""}>BCN — Xem/chỉnh sửa theo quyền</option>
         ${canEditRole?`<option value="admin" ${u.role==="admin"?"selected":""}>Admin — Toàn quyền</option>`:""}
       </select></label>
+      <label>Hết hạn tài khoản BCN<input id="editAccExpiresAt" type="datetime-local" value="${esc(accountExpiryLocalInput(u.accountExpiresAt))}"><small>Để trống nếu không giới hạn thời gian. Hạn cũ đã hết phải được gia hạn trước khi mở khóa.</small></label>
       <label>Trạng thái<select id="editAccActive"><option value="1" ${u.active!==false?"selected":""}>Hoạt động</option><option value="0" ${u.active===false?"selected":""}>Khóa</option></select></label>
     </div>
     <div class="permission-admin-note">Đổi email sẽ cập nhật đồng thời Firebase Authentication và Firestore nhưng giữ nguyên UID, vai trò, quyền và dữ liệu của tài khoản.</div>
@@ -9680,7 +9711,9 @@ async function saveAccountProfile(uid){
   const newEmail=$("#editAccEmail").value.trim().toLowerCase();
   if(!displayName)return oscAlert("Vui lòng nhập tên hiển thị.");
   if(!newEmail)return oscAlert("Vui lòng nhập email đăng nhập.");
-  const payload={uid,displayName,email:newEmail,role:newRole,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
+  const accountExpiresAt=newRole==="bcn"?accountExpiryInputISO("editAccExpiresAt"):null;
+  if(accountExpiresAt===false)return;
+  const payload={uid,displayName,email:newEmail,role:newRole,accountExpiresAt,active:$("#editAccActive").value==="1",permissions:newRole==="admin"?{viewAttendance:true,editAttendance:true,viewMembers:true,editMembers:true,viewFinance:true,editFinance:true,viewEvents:true,editEvents:true,viewLookup:true,editLookup:false}:readAccountPermissions("editAcc")};
   const btn=$("#saveAccountProfileBtn");
   try{
     if(btn){btn.disabled=true;btn.textContent="Đang lưu…"}
@@ -11120,6 +11153,7 @@ function renderAll(){
 <script src="/qr-bulk-ui.js?v=1"></script>
 <script src="/board-directors.js?v=1"></script>
 <script src="/account-handoff.js?v=2"></script>
+<script src="/bcn-expiry.js?v=1"></script>
 <script src="/member-office-profile.js?v=3"></script>
 <script src="/osc-v96-stagecraft.js?v=96.1"></script>
 <script>

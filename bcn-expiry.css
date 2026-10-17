@@ -1,0 +1,7 @@
+/* Blocking 5-second BCN account-expiry notice */
+#oscBcnExpiryOverlay{position:fixed;inset:0;z-index:2147483646;background:rgba(20,14,23,.85);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;backdrop-filter:blur(5px)}
+.osc-bcn-expiry-panel{max-width:500px;width:100%;box-sizing:border-box;border-radius:22px;background:#fff;padding:36px 30px;box-shadow:0 28px 90px #0006;text-align:center;font-family:inherit;color:#341b2a}
+.osc-bcn-expiry-symbol{display:flex;justify-content:center;align-items:center;margin:0 auto 18px;width:54px;height:54px;border-radius:50%;background:#fbe2e8;color:#922844;font-size:33px;font-weight:900}
+.osc-bcn-expiry-panel h2{margin:0 0 14px;font-size:22px;line-height:1.4;color:#70203a}
+.osc-bcn-expiry-panel p{margin:0 0 20px;line-height:1.7;font-size:14px}
+.osc-bcn-expiry-panel .osc-bcn-expiry-counter{color:#a22243;font-weight:800;font-size:16px;margin-bottom:0}
