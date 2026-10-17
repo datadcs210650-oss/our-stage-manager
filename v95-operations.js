@@ -96,7 +96,7 @@ async function v95LoadQuota(show=true){
 window.v95LoadQuota=v95LoadQuota;
 function renderQuota(){
   const root=q("#v95Quota");if(!root||!opQuota)return;
-  if(!opQuota.available){root.innerHTML=`<div class="v95-warning"><b>Chưa đọc được quota tự động</b><span>${esc95(opQuota.error||"Cloud Monitoring chưa khả dụng.")}</span><small>Giới hạn tham chiếu: Reads 50.000 • Writes 20.000 • Deletes 20.000/ngày.</small></div>`;return}
+  if(!opQuota.available){const code=String(opQuota.errorCode||"").replace(/[^A-Z0-9_]/g,"").slice(0,45),project=String(opQuota.projectId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);root.innerHTML=`<div class="v95-warning"><b>Chưa đọc được quota tự động</b><span>${esc95(opQuota.error||"Cloud Monitoring chưa khả dụng.")}</span>${code?`<small>Mã chẩn đoán: <b>${esc95(code)}</b> • HTTP ${Number(opQuota.httpStatus||0)}${project?" • Project: "+esc95(project):""}</small>`:""}<small>Chỉ là số liệu Cloud Monitoring, không phải giới hạn Firebase của mọi dịch vụ. Giới hạn tham chiếu Firestore Standard: Reads 50.000 • Writes 20.000 • Deletes 20.000/ngày.</small></div>`;return}
   const labels={reads:"Reads",writes:"Writes",deletes:"Deletes"};
   root.innerHTML=`<div class="v95-quota-grid">${Object.entries(opQuota.quota||{}).map(([k,x])=>`<div><span>${labels[k]||k}</span><b>${Number(x.remaining||0).toLocaleString("vi-VN")} còn lại</b><small>${Number(x.used||0).toLocaleString("vi-VN")} / ${Number(x.limit||0).toLocaleString("vi-VN")} đã dùng</small><div class="v95-bar"><i style="width:${Number(x.percent||0)}%"></i></div></div>`).join("")}</div><div class="small-help" style="margin-top:9px">Cloud Monitoring có thể trễ vài phút • reset theo Pacific Time.</div>`;
 }
