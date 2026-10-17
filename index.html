@@ -3305,6 +3305,14 @@ function watchOwnProfileRealtime(){
   if(!currentFirebaseUser)return;
   profileRealtimeUnsub=fbDb.collection("users").doc(currentFirebaseUser.uid).onSnapshot(snap=>{
     if(!snap.exists||snap.data()?.active!==true){
+      // If the backend already locked an expired BCN, still show the requested
+      // five-second explanation before signing out. Data access is already denied.
+      if(snap.exists&&snap.data()?.accountLockedReason==="expired"&&
+         window.OSCBCNExpiry?.isExpired(snap.data())&&currentFirebaseUser){
+        currentProfile={id:snap.id,...snap.data()};
+        window.OSCBCNExpiry.start();
+        return;
+      }
       fbAuth.signOut();
       return;
     }

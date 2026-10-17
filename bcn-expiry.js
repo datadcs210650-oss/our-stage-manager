@@ -81,5 +81,5 @@ for(const event of ["focus","pageshow"]){
   window.addEventListener(event,()=>{if(currentFirebaseUser?.uid&&isExpired(currentProfile))showCountdown(currentFirebaseUser.uid)});
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&currentFirebaseUser?.uid&&isExpired(currentProfile))showCountdown(currentFirebaseUser.uid)});
-window.OSCBCNExpiry={expiryMs,isExpired,lockNow,schedule,stop};
+window.OSCBCNExpiry={expiryMs,isExpired,lockNow,schedule,stop,start:()=>currentFirebaseUser&&showCountdown(currentFirebaseUser.uid)};
 })();

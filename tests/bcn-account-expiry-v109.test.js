@@ -77,6 +77,9 @@ test("BCN sees an explicit 5-second notice and is logged out, including google l
  assert.match(script,/lockNow\(user\)/);
  assert.match(script,/await fbAuth\.signOut\(\)/);
  assert.match(script,/aria-modal/);
+ assert.match(html,/accountLockedReason==="expired"/);
+ assert.match(html,/window\.OSCBCNExpiry\.start\(\)/);
+ assert.match(script,/start:\(\)=>currentFirebaseUser&&showCountdown/);
  assert.match(styles,/#oscBcnExpiryOverlay/);
  assert.doesNotMatch(script,/localStorage|private_key/);
 });
