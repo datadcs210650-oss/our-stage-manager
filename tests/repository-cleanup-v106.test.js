@@ -33,5 +33,5 @@ test("retired account-term files are not loaded; active system and rules are pre
  assert.ok(fs.existsSync(path.join(root,"firestore_rules_v95.rules")));
  assert.ok(fs.existsSync(path.join(root,"firestore_rules_v96.rules")));
  const entries=fs.readdirSync(path.join(root,"api")).filter(x=>x.endsWith(".js"));
- assert.equal(entries.length,9,"Vercel Function budget unchanged");
+ assert.equal(entries.length,8,"Unused quota Function is removed; other APIs are preserved");
 });

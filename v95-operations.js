@@ -4,7 +4,7 @@
 
 const q=s=>document.querySelector(s);
 const esc95=v=>typeof esc==="function"?esc(v):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-let opRooms=[],opTemp=[],opQuota=null,opLoading=false;
+let opRooms=[],opTemp=[];
 let controlTimer=null,controlEventId="",controlData=null;
 
 async function api(path,body={},timeout=20000){
@@ -20,29 +20,6 @@ function dtLocal(ms){if(!ms)return"";const d=new Date(ms),p=n=>String(n).padStar
 function selectedEventOptions(){
   return (state?.events||[]).filter(e=>e.semester===semester).map(e=>`<option value="${esc95(e.id)}">${esc95(e.title||"Sự kiện")}</option>`).join("");
 }
-function operationsShell(){
-  if(!canEditClub())return '<div class="empty">Chỉ Admin hoặc Super Admin có quyền truy cập Điều hành nâng cao.</div>';
-  return '<div class="v95-hero"><div><div class="eyebrow">OPERATIONS CENTER</div><h2>Điều hành nâng cao</h2><p>Theo dõi quota Firebase và vận hành hệ thống. Quyền BCN theo giờ được quản lý tại menu Tài khoản BCN.</p></div><button class="secondary" onclick="v95RefreshOperations()">↻ Làm mới</button></div>'+
-    '<div class="v95-grid"><section class="v95-card"><div class="v95-card-head"><div><h3>Firebase Quota hôm nay</h3><p>Số liệu qua Google Cloud Monitoring.</p></div><button class="secondary" onclick="v95LoadQuota()">↻</button></div><div id="v95Quota"></div></section></div>';
-}
-async function renderV95Operations(){
-  const root=q("#v95OperationsRoot");if(!root)return;
-  root.innerHTML=operationsShell();
-  await v95RefreshOperations(false);
-}
-window.renderV95Operations=renderV95Operations;
-
-async function v95RefreshOperations(show=true){
-  if(!canEditClub()||opLoading)return;
-  opLoading=true;
-  try{
-    await v95LoadQuota(false);
-    if(show&&typeof toast==="function")toast("Đã cập nhật Điều hành nâng cao");
-  }catch(e){console.error("v95 operations",e);if(show)oscAlert("Không tải được Điều hành nâng cao: "+(e.message||e))}
-  finally{opLoading=false}
-}
-window.v95RefreshOperations=v95RefreshOperations;
-
 let tempLoading=false,tempLoaded=false;
 async function v95RefreshTemporaryPermissions(show=true){
   const root=q("#v95TempList");
@@ -88,18 +65,6 @@ async function v95SaveTemp(){try{const permissions={};document.querySelectorAll(
 window.v95SaveTemp=v95SaveTemp;
 async function v95ClearTemp(uid){if(!await oscConfirm("Thu hồi quyền tạm thời ngay?"))return;try{await api("/api/operations",{action:"temp-clear",uid});toast("Đã thu hồi quyền");await v95RefreshTemporaryPermissions(false)}catch(e){oscAlert(e.message||e)}}
 window.v95ClearTemp=v95ClearTemp;
-
-async function v95LoadQuota(show=true){
-  const root=q("#v95Quota");if(!root||!canEditClub())return;if(show)root.innerHTML='<div class="small-help">Đang tải số liệu Cloud Monitoring…</div>';
-  try{opQuota=await api("/api/firebase-quota",{});renderQuota()}catch(e){root.innerHTML=`<div class="v95-warning">${esc95(e.message||e)}</div>`}
-}
-window.v95LoadQuota=v95LoadQuota;
-function renderQuota(){
-  const root=q("#v95Quota");if(!root||!opQuota)return;
-  if(!opQuota.available){const code=String(opQuota.errorCode||"").replace(/[^A-Z0-9_]/g,"").slice(0,45),project=String(opQuota.projectId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);root.innerHTML=`<div class="v95-warning"><b>Chưa đọc được quota tự động</b><span>${esc95(opQuota.error||"Cloud Monitoring chưa khả dụng.")}</span>${code?`<small>Mã chẩn đoán: <b>${esc95(code)}</b> • HTTP ${Number(opQuota.httpStatus||0)}${project?" • Project: "+esc95(project):""}</small>`:""}<small>Chỉ là số liệu Cloud Monitoring, không phải giới hạn Firebase của mọi dịch vụ. Giới hạn tham chiếu Firestore Standard: Reads 50.000 • Writes 20.000 • Deletes 20.000/ngày.</small></div>`;return}
-  const labels={reads:"Reads",writes:"Writes",deletes:"Deletes"};
-  root.innerHTML=`<div class="v95-quota-grid">${Object.entries(opQuota.quota||{}).map(([k,x])=>`<div><span>${labels[k]||k}</span><b>${Number(x.remaining||0).toLocaleString("vi-VN")} còn lại</b><small>${Number(x.used||0).toLocaleString("vi-VN")} / ${Number(x.limit||0).toLocaleString("vi-VN")} đã dùng</small><div class="v95-bar"><i style="width:${Number(x.percent||0)}%"></i></div></div>`).join("")}</div><div class="small-help" style="margin-top:9px">Cloud Monitoring có thể trễ vài phút • reset theo Pacific Time.</div>`;
-}
 
 /* ===== Live Event Control ===== */
 async function openV95EventControl(eventId){

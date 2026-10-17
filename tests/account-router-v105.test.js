@@ -30,7 +30,7 @@ test("four original OSC account URLs rewrite to one API function, with stable op
 
 test("one account handler function replaces four entries without erasing original implementation",()=>{
  const paths=fs.readdirSync(path.join(ROOT,"api")).filter(f=>f.endsWith(".js"));
- assert.equal(paths.length,9,"Vercel entrypoint total should now be 9");
+ assert.equal(paths.length,8,"Vercel API entrypoints drop to 8 after removing unused quota endpoint");
  assert.ok(paths.includes("accounts.js"));
  for(const operation of Object.keys(mappings)){
    assert.ok(!paths.includes("account-"+operation+".js"));

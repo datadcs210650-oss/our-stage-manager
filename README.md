@@ -8,7 +8,7 @@ Hệ thống quản lý nội bộ Câu lạc bộ Our Stage: thành viên theo 
 | --- | --- | --- |
 | Quản trị OSC | `index.html` | Giao diện chính; các module dùng JS/CSS ở thư mục gốc |
 | Trang công khai | `su-kien.html`, `diem-danh.html`, `tra-cuu*.html`, `ve-su-kien.html`, v.v. | Giữ đường dẫn qua `vercel.json` |
-| Vercel Functions | `api/` | 9 entrypoint ở thời điểm dọn dẹp; các thao tác tài khoản dùng chung `api/accounts.js` |
+| Vercel Functions | `api/` | 8 entrypoint (đã loại bỏ Firebase Quota API); các thao tác tài khoản dùng chung `api/accounts.js` |
 | Server logic | `lib/` | Xác thực, phân quyền, Firebase, Google Drive, quản lý tài khoản và dịch vụ |
 | Bài kiểm thử | `tests/` | Hồi quy chức năng và bảo mật; chạy ở GitHub Actions |
 | Tài liệu đang dùng | `docs/` | Triển khai, phân quyền, Google Drive và kiến trúc API |

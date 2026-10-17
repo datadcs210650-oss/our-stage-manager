@@ -1,73 +1,92 @@
 (function(){
 "use strict";
-// Read-only projection of Office History in existing OSC Member Profiles.
-// Never writes to member records; the source of truth is user term history.
+// Read-only OSC Board title projection for member profiles and their PDFs.
+// Appointments are derived from the member roster, NEVER the website login role.
 const cache=new Map();
-const VALID=/^[A-Z0-9-]{5,25}$/;
+const TERM=/^(SP|SU|FA)\d{2}$/;
+const MSSV=/^[A-Z0-9_-]{3,50}$/;
 const TTL=60000;
-const norm=s=>String(s||"").trim().toUpperCase();
-const ident=(mssv,semester)=>semester+":"+norm(mssv);
-async function office(mssv,semester,memberId){
- const key=ident(mssv,semester)+":"+String(memberId||""),stored=cache.get(key);
- if(stored&&stored.until>Date.now())return stored.value;
- if(!currentFirebaseUser)throw Error("Chưa đăng nhập.");
- const token=await currentFirebaseUser.getIdToken();
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
- try{
-  const response=await fetch("/api/operations",{
-   method:"POST",
-   headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-   body:JSON.stringify({action:"board-profile",mssv:norm(mssv),semester,memberId}),
-   signal:controller.signal,cache:"no-store"
-  });
-  const value=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(value.error||"Không thể tra cứu chức vụ.");
-  cache.set(key,{until:Date.now()+TTL,value});
-  return value;
- }finally{clearTimeout(timer)}
+let generation=0;
+const norm=v=>String(v||"").trim().toUpperCase();
+
+async function getForMember(member){
+  if(!member||!TERM.test(String(member.semester||""))||!MSSV.test(norm(member.mssv))||!member.id)
+    throw Error("Hồ sơ thành viên chưa đủ thông tin để tra cứu chức vụ.");
+  if(!currentFirebaseUser)throw Error("Bạn chưa đăng nhập OSC.");
+  const uid=currentFirebaseUser.uid,term=member.semester,mssv=norm(member.mssv),id=String(member.id);
+  const key=[uid,term,mssv,id].join(":"),cached=cache.get(key);
+  if(cached&&cached.until>Date.now())return cached.value;
+  const token=await currentFirebaseUser.getIdToken();
+  if(currentFirebaseUser?.uid!==uid)throw Error("Phiên đăng nhập đã thay đổi.");
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+    const response=await fetch("/api/operations",{
+      method:"POST",
+      headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({action:"board-profile",mssv,semester:term,memberId:id}),
+      signal:controller.signal,cache:"no-store"
+    });
+    const value=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(value.error||"Không thể tra cứu chức vụ.");
+    if(currentFirebaseUser?.uid!==uid)throw Error("Phiên đăng nhập đã thay đổi.");
+    // Only read-only data returned by the authenticated Board API may be shown.
+    const result={
+      title:String(value.title||"").trim().slice(0,80),
+      history:(Array.isArray(value.history)?value.history:[])
+        .filter(x=>TERM.test(String(x?.semester||""))&&norm(x?.mssv)===mssv)
+        .map(x=>({semester:x.semester,title:String(x.title||"").trim().slice(0,80)}))
+        .filter(x=>x.title)
+    };
+    cache.set(key,{until:Date.now()+TTL,value:result});
+    return result;
+  }finally{clearTimeout(timer)}
 }
-function targetCell(){
- const container=document.querySelector("#memberInfoCard");
- if(!container)return null;
- const cells=[...container.querySelectorAll(".member-profile-cell")];
- return cells.find(x=>x.querySelector("span")?.textContent?.trim()==="Chức vụ")||null;
+function selectedMember(){
+  if(typeof selectedInfoId==="undefined"||typeof findMember!=="function")return null;
+  return findMember(selectedInfoId);
 }
 async function updateOffice(){
- try{
-  if(typeof selectedInfoId==="undefined"||typeof findMember!=="function")return;
-  const id=selectedInfoId,m=findMember(id);
-  if(!m||!m.mssv||!m.semester)return;
-  const code=String(m.semester),number=norm(m.mssv);
-  if(!VALID.test(number)||!/^(SP|SU|FA)\d{2}$/.test(code))return;
-  const cell=targetCell(),titleEl=cell?.querySelector("b");
+  const member=selectedMember();
+  if(!member)return;
+  const id=member.id,gen=++generation,card=document.querySelector("#memberInfoCard");
+  const cell=[...(card?.querySelectorAll(".member-profile-cell")||[])]
+    .find(x=>x.querySelector("span")?.textContent?.trim()==="Chức vụ");
+  const titleEl=cell?.querySelector("b");
   if(!titleEl)return;
-  titleEl.textContent="Đang tải chức vụ Ban Chủ nhiệm…";
-  const result=await office(number,code,id);
-  // Ignore stale network results when a different member/semester was selected.
-  if(typeof selectedInfoId!=="undefined"&&selectedInfoId!==id)return;
-  const refreshed=targetCell(),current=refreshed?.querySelector("b");
-  if(!current)return;
-  current.id="oscMemberOfficeBadge";
-  current.textContent=result.title||"Chưa bổ nhiệm vào Ban Chủ nhiệm kỳ này";
-  let history=refreshed.querySelector("#oscMemberOfficeHistory");
-  if(!history){history=document.createElement("small");history.id="oscMemberOfficeHistory";history.style.display="block";refreshed.appendChild(history)}
-  const years=(result.history||[]).filter(x=>x.title);
-  history.textContent=years.length?
-    "Đã giữ chức vụ "+result.semesterCount+" học kỳ: "+years.map(x=>x.semester+" — "+x.title).join(" • "):
-    "Chức vụ học kỳ "+code+" được đồng bộ theo MSSV từ menu Ban Chủ nhiệm.";
- }catch{
-  const cell=targetCell();
-  if(cell?.querySelector("b"))cell.querySelector("b").textContent="Không tải được chức vụ Ban Chủ nhiệm. Hãy thử lại.";
- }
+  // No appointment => genuinely empty cell, not a synthetic position.
+  titleEl.textContent="";
+  const currentRows=[...card.querySelectorAll("[data-osc-office-term]")];
+  currentRows.forEach(x=>x.textContent="");
+  try{
+    const value=await getForMember(member);
+    if(gen!==generation||selectedMember()?.id!==id||document.querySelector("#memberInfoCard")!==card)return;
+    const byTerm=new Map(value.history.map(x=>[x.semester,x.title]));
+    titleEl.textContent=value.title||"";
+    titleEl.id="oscMemberOfficeBadge";
+    currentRows.forEach(x=>{
+      if(card.contains(x))x.textContent=byTerm.get(x.getAttribute("data-osc-office-term"))||"";
+    });
+  }catch(err){
+    if(gen===generation&&selectedMember()?.id===id&&card.contains(titleEl)){
+      titleEl.textContent="Không tải được chức vụ";
+      titleEl.title=String(err?.message||"");
+    }
+  }
 }
-window.oscInvalidateMemberOffice=()=>cache.clear();
+window.oscInvalidateMemberOffice=()=>{
+  generation++;
+  cache.clear();
+  if(document.querySelector("#info")&&!document.querySelector("#info").classList.contains("hidden"))
+    void updateOffice();
+};
+window.OSCMemberOffice={getForMember,refresh:updateOffice};
 window.loadMemberOfficeBadge=updateOffice;
 const previous=window.renderInfo;
 if(typeof previous==="function"){
- window.renderInfo=function(){
-  const value=previous.apply(this,arguments);
-  updateOffice();
-  return value;
- };
+  window.renderInfo=function(){
+    const result=previous.apply(this,arguments);
+    void updateOffice();
+    return result;
+  };
 }
 })();
