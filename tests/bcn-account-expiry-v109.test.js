@@ -66,7 +66,7 @@ test("BCN sees an explicit 5-second notice and is logged out, including google l
  for(const item of ["accExpiresAt","editAccExpiresAt","accountExpiryInputISO","accountExpiryLocalInput"])
   assert.ok(html.includes(item),item);
  assert.match(html,/window\.OSCBCNExpiry\?\.isExpired\(p\)/);
- assert.match(html,/window\.OSCBCNExpiry\?\.lockNow\(user\)/);
+ assert.match(html,/await window\.OSCBCNExpiry\.lockNow\(user\)/);
  assert.match(html,/window\.OSCBCNExpiry\?\.schedule\(\)/);
  assert.match(html,/window\.OSCBCNExpiry\?\.stop\(\)/);
  assert.match(html,/bcn-expiry\.js\?v=1/);
